@@ -1,1 +1,1 @@
-from .main import app
+print("AIMX is running 🚀")
