@@ -1,21 +1,22 @@
 from typing import Dict, Any, Optional, List
 from openai import AsyncOpenAI
 from fastapi import HTTPException
-
+from app.services.output_formatter import format_ai_response
 from app.core.config import settings
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.services.memory.event_log import log_decision_event
 
 
+
 class AIService:
     def __init__(self) -> None:
         """
-        تهيئة محرك AIMX (Async – MVP Stable Version)
+        AIMX Async Engine (MVP Stable)
         """
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-        # Short-term institutional memory (In-Memory MVP)
+        # In-memory short-term memory
         self.sessions: Dict[str, List[Dict[str, str]]] = {}
         self.max_history: int = 10
 
@@ -27,22 +28,19 @@ class AIService:
         session_id: str,
         message: str,
         context: Optional[Dict[str, Any]] = None,
-        company_id: Optional[str] = None
+        company_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Core AIMX Decision Engine (Async)
-        """
+
         context = context or {}
         company_id = company_id or "default"
         key = self._memory_key(company_id, session_id)
 
+        # Ensure session exists
         if key not in self.sessions:
             self.sessions[key] = []
 
         try:
-            # -----------------------------
-            # Company Context Block
-            # -----------------------------
+            # 1) Company context block
             context_block = (
                 "COMPANY CONTEXT (CORE BRAIN MODEL):\n"
                 f"Stage: {context.get('stage', 'N/A')}\n"
@@ -51,21 +49,21 @@ class AIService:
                 f"Resources: {context.get('resources', 'N/A')}\n"
             )
 
+            # 2) Build messages
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
                 {"role": "system", "content": AIMX_DECISION_PROMPT},
                 {"role": "system", "content": context_block},
             ]
 
-            # Previous session memory
+
+            # add previous memory
             messages.extend(self.sessions[key])
 
-            # User message
+            # add user
             messages.append({"role": "user", "content": message})
 
-            # -----------------------------
-            # OpenAI Call (Async)
-            # -----------------------------
+            # 3) OpenAI call
             model_name = getattr(settings, "MODEL", "gpt-4o-mini")
 
             resp = await self.client.chat.completions.create(
@@ -76,52 +74,37 @@ class AIService:
 
             answer_text = resp.choices[0].message.content or "لم يتم توليد رد."
 
-            # -----------------------------
-            # Event Log (Persistence – MVP)
-            # -----------------------------
+            # 4) Event log (don’t break if log fails)
             try:
                 log_decision_event(
                     company_id=company_id,
                     session_id=session_id,
-                    payload={
-                        "answer": answer_text,
-                        "context": context
-                    }
+                    payload={"answer": answer_text, "context": context},
                 )
             except Exception as log_err:
-                # لا نكسر النظام بسبب اللوق
                 print(f"[EVENT LOG WARNING] {log_err}")
 
-            # -----------------------------
-            # Update Short Memory
-            # -----------------------------
+            # 5) Update short memory
             self.sessions[key].append({"role": "user", "content": message})
             self.sessions[key].append({"role": "assistant", "content": answer_text})
 
-            # Trim memory (keep last N pairs)
             if len(self.sessions[key]) > self.max_history * 2:
-                self.sessions[key] = self.sessions[key][-self.max_history * 2:]
+                self.sessions[key] = self.sessions[key][-self.max_history * 2 :]
 
-            # -----------------------------
-            # Final Output
-            # -----------------------------
-            return {
-                "executive_summary": answer_text,
-                "raw_decision": {
-                    "full_text": answer_text,
-                    "context": context,
-                    "session_id": session_id,
-                    "company_id": company_id
-                }
-            }
+            return format_ai_response (
+                answer_text=answer_text,
+                context=context,
+                session_id=session_id,
+                company_id=company_id,
+                followup_question=None,
+     )
 
         except Exception as e:
             print(f"[CRITICAL AI ERROR] {str(e)}")
             raise HTTPException(
                 status_code=500,
-                detail="AIMX engine failed to process the request."
+                detail=f"AIMX engine failed: {str(e)}",
             )
 
 
-# Singleton instance
 ai_engine = AIService()
