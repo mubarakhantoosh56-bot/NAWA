@@ -1,47 +1,79 @@
-import json
-from pathlib import Path
+from typing import Dict, Any, Optional, List
 from datetime import datetime
-from typing import Dict, Any, Optional
+import json
+import os
+import hashlib
+print("[event_log.py loaded from]", __file__)
 
-BASE_DIR = Path(__file__).resolve().parent
-LOG_DIR = BASE_DIR / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _log_path(company_id: str, session_id: str) -> Path:
-    safe_company = company_id.replace("/", "_")
-    safe_session = session_id.replace("/", "_")
-    return LOG_DIR / f"{safe_company}__{safe_session}.jsonl"
-
-
-def log_decision_event(company_id: str, session_id: str, payload: Dict[str, Any]) -> None:
-    path = _log_path(company_id, session_id)
-    event = {
-        "ts": datetime.utcnow().isoformat(),
-        "type": "decision",
-        "company_id": company_id,
-        "session_id": session_id,
-        "payload": payload,
-    }
-    with path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(event, ensure_ascii=False) + "\n")
-
-
-#def get_last_decision_event(company_id: str, session_id: str) -> Optional[Dict[str, Any]]:
-    path = _log_path(company_id, session_id)
-    if not path.exists():
-        return None
-
-    last_line = None
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                last_line = line
-
-    if not last_line:
-        return None
-
+def _safe_json(obj: Any) -> Any:
     try:
-        return json.loads(last_line)
+        json.dumps(obj)
+        return obj
     except Exception:
-        return None
+        return str(obj)
+
+
+def _make_idempotency_key(
+    company_id: str,
+    session_id: str,
+    user_message: str,
+    executive_summary: str,
+) -> str:
+    raw = f"{company_id}|{session_id}|{user_message}|{executive_summary}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+# ✅ القديم: File-based log (optional)
+def log_decision_event(company_id: str, session_id: str, payload: Dict[str, Any]) -> None:
+    try:
+        os.makedirs("logs", exist_ok=True)
+        path = os.path.join("logs", "decision_events.jsonl")
+        record = {
+            "ts": datetime.utcnow().isoformat(),
+            "company_id": company_id,
+            "session_id": session_id,
+            "payload": payload,
+        }
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"[FILE LOG ERROR] {e}")
+
+
+# ✅ الجديد: DB log (Institutional Memory)
+async def log_decision_event_db(
+    repo,
+    company_id: str,
+    session_id: str,
+    user_message: str,
+    executive_summary: str,
+    logic_json: Dict[str, Any],
+    context: Dict[str, Any],
+    tags: Optional[List[str]] = None,
+) -> None:
+    try:
+        event = {
+            "company_id": company_id,
+            "session_id": session_id,
+            "event_type": "decision",
+            "user_message": user_message,
+            "executive_summary": executive_summary,
+            "logic_json": _safe_json(logic_json),
+            "context": _safe_json(context),
+            "tags": tags or [],
+            "idempotency_key": _make_idempotency_key(
+                company_id=company_id,
+                session_id=session_id,
+                user_message=user_message,
+                executive_summary=executive_summary,
+            ),
+        }
+        print("[DB LOG] inserting event for", company_id, session_id)
+        await repo.insert_event(event)
+        print("[DB LOG] inserted (or skipped by idempotency)")
+
+        import traceback
+
+    except Exception as e:
+        print(f"[DB LOG ERROR] {e}")
+        traceback.print_exc()

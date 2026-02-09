@@ -23,10 +23,7 @@ async def chat_endpoint(request: ChatRequest):
     context=request.context,
     company_id=request.company_id
 )
-        return {
-            "executive_summary": result.get("executive_summary", ""),
-            "raw_decision": result.get("raw_decision", {})
-        }
+        return result 
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
