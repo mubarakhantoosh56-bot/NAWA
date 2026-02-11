@@ -3,7 +3,6 @@ import json
 
 
 def _safe_json_parse(text: str) -> Optional[Dict[str, Any]]:
-    """Try parse JSON from a string; return None if fails."""
     try:
         return json.loads(text)
     except Exception:
@@ -19,33 +18,27 @@ def format_ai_response(
     parsed: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Output Contract:
-    - ceo_text: string (human-readable, no JSON)
-    - logic_json: object | null (structured decision)
-    - meta: includes company_id, session_id, context
-    - followup_question: optional (OFF حاليا)
+    Output Contract (API):
+    - ceo_text: string
+    - logic_json: object (raw_decision)
+    - meta: company_id, session_id, context
+    - followup_question: optional
     """
 
     context = context or {}
-
-    # 1) Prefer parsed passed from openai_client; otherwise try parse from answer_text
     data = parsed or _safe_json_parse(answer_text)
 
-    # 2) If model returned strict decision JSON:
-    # expected keys: executive_summary (string) + raw_decision (object)
-    if isinstance(data, dict) and "executive_summary" in data and "raw_decision" in data:
-        ceo_text = data.get("executive_summary") or ""
-        logic_json = data.get("raw_decision") or {}
-    else:
-        # fallback: treat whole output as CEO text
-        ceo_text = answer_text or ""
-        logic_json = None
+    # ✅ enforce strict schema
+    if not (isinstance(data, dict) and "executive_summary" in data and "raw_decision" in data):
+        raise ValueError("Model did NOT respect strict decision schema (executive_summary/raw_decision).")
 
-    # 3) Make sure CEO text never includes JSON blob by accident
-    # (basic safety: if it starts like JSON, strip and keep short message)
+    ceo_text = data.get("executive_summary") or ""
+    logic_json = data.get("raw_decision") or {}
+
+    # حماية بسيطة: لا نخلي ceo_text يصير JSON بالغلط
     stripped = ceo_text.strip()
     if stripped.startswith("{") and stripped.endswith("}"):
-        ceo_text = "تم توليد تحليل منظم، لكن عرض الـ CEO يحتاج تنسيق. (راجع logic_json)."
+        ceo_text = "تم توليد تحليل منظم. راجع logic_json."
 
     return {
         "ceo_text": ceo_text,

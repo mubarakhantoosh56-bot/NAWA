@@ -45,4 +45,5 @@ FIELD RULES:
 - confidence / trust_score: numbers (0-100 preferred).
 - All arrays must be arrays (can be empty). Never null.
 - raw_decision must ALWAYS be a fully populated object (never null).
+- If you are unsure about any field, keep it empty but NEVER output null and NEVER omit keys.
 """

@@ -50,7 +50,6 @@ class AIService:
                 min_size=1,
                 max_size=5,
             )
-            # repo will use pool.acquire internally (important)
             self.repo = MemoryRepository(db=self.db_pool)
             print("[DB] Institutional Memory Enabled ✅")
         except Exception as e:
@@ -84,32 +83,63 @@ class AIService:
                 f"Resources: {context.get('resources', 'N/A')}\n"
             )
 
-            # 2) DB memory block
+            # 2) DB memory block (Session -> fallback Company)
             memory_block = ""
             await self._ensure_db()
+
             if self.repo is not None:
                 try:
-                    # تجيب أحدث الأحداث للشركة (مو شرط نفس السيشن)
+                    # (A) أول شي: نفس السيشن
                     recent = await self.repo.fetch_recent_events(
                         company_id=company_id,
-                        session_id=None,
-                        limit=10,
+                        session_id=session_id,
+                        limit=8,
                     )
+
+                    # (B) إذا فاضي (مثل s100 جديد): fallback على الشركة كلها
+                    if not recent:
+                        recent = await self.repo.fetch_recent_events(
+                            company_id=company_id,
+                            session_id=None,
+                            limit=10,
+                        )
+
                     memory_block = build_memory_block(recent) or ""
+
+                    # ✅ Debug خفيف حتى نتأكد injection شغال
+                    print("[MEMORY] events_fetched =", len(recent))
+                    if memory_block:
+                        preview = "\n".join(memory_block.splitlines()[:3])
+                        print("[MEMORY] block_preview:\n", preview)
+                    else:
+                        print("[MEMORY] block is EMPTY")
+
                 except Exception as e:
                     print(f"[MEMORY BLOCK WARNING] {e}")
                     memory_block = ""
 
-            # 3) build messages
             messages: List[Dict[str, str]] = [
+                # 1️⃣ Global guardrails
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
-                {"role": "system", "content": AIMX_DECISION_PROMPT},
-                {"role": "system", "content": context_block},
-            ]
-            if memory_block:
-                messages.append({"role": "system", "content": memory_block})
 
-            # include last short memory
+                # 2️⃣ Strict output contract + schema
+                {"role": "system", "content": AIMX_DECISION_PROMPT},
+        ]
+
+                # 3️⃣ Institutional Memory (إذا موجود)
+            if memory_block:
+                    messages.append({
+                        "role": "system",
+                        "content": memory_block
+                    })
+
+                # 4️⃣ Company Context (آخر system message قبل user)
+                    messages.append({
+                        "role": "system",
+                        "content": context_block
+                })
+
+            # include last short memory (in-memory)
             messages.extend(self.sessions[key])
             messages.append({"role": "user", "content": message})
 
@@ -128,11 +158,6 @@ class AIService:
                 parsed = json.loads(answer_text)
             except Exception:
                 parsed = None
-
-            print("[DEBUG] parsed type =", type(parsed))
-            print("[DEBUG] parsed value =", parsed)
-            print("[DEBUG] repo =", self.repo)
-            print("[DEBUG] db_enabled =", getattr(self, "db_enabled", None))
 
             # 5) old file log (optional)
             try:
@@ -176,7 +201,7 @@ class AIService:
                 session_id=session_id,
                 company_id=company_id,
                 followup_question=None,
-                parsed=parsed,  # ✅ مهم
+                parsed=parsed,
             )
 
         except Exception as e:

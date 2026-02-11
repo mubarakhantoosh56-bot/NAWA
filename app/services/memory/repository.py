@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
-
 import json
+
+
 class MemoryRepository:
     def __init__(self, db):
         self.db = db  # asyncpg pool
@@ -10,7 +11,7 @@ class MemoryRepository:
         INSERT INTO memory_events
         (company_id, session_id, event_type, user_message, executive_summary, logic_json, context, tags, idempotency_key)
         VALUES
-        ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9)
+        ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::text[],$9)
         ON CONFLICT (idempotency_key) DO NOTHING
         """
         async with self.db.acquire() as conn:
@@ -23,11 +24,17 @@ class MemoryRepository:
                 event.get("executive_summary"),
                 json.dumps(event.get("logic_json", {}), ensure_ascii=False),
                 json.dumps(event.get("context", {}), ensure_ascii=False),
-                event.get("tags", []),
+                event.get("tags") or [],
                 event.get("idempotency_key"),
             )
 
-    async def fetch_recent_events(self, company_id: str, session_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+    async def fetch_recent_events(
+        self,
+        company_id: str,
+        session_id: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+
         if session_id:
             query = """
             SELECT created_at, event_type, user_message, executive_summary, logic_json

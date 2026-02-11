@@ -8,7 +8,7 @@ router = APIRouter(tags=["AI"])
 
 
 class ChatRequest(BaseModel):
-    company_id: str                 # ✅ الجديد
+    company_id: str
     session_id: str
     message: str
     context: Optional[Dict[str, Any]] = None
@@ -18,12 +18,11 @@ class ChatRequest(BaseModel):
 async def chat_endpoint(request: ChatRequest):
     try:
         result = await ai_engine.chat(
-    session_id=request.session_id,
-    message=request.message,
-    context=request.context,
-    company_id=request.company_id
-)
-        return result 
-
+            session_id=request.session_id,
+            message=request.message,
+            context=request.context,
+            company_id=request.company_id,
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
