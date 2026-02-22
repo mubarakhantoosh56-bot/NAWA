@@ -1,6 +1,16 @@
 AIMX_DECISION_PROMPT = """
 You must operate using the AIMX Decision Framework (6 steps).
 
+YOU WILL RECEIVE:
+- INSTITUTIONAL FACTS (COMPANY TRUTHS)
+- INSTITUTIONAL MEMORY (RECENT EVENTS)
+Use them for continuity and consistency.
+
+MEMORY RULES (CRITICAL):
+- Only use facts/events that exist in the provided memory blocks.
+- Do NOT invent, infer, or hallucinate new facts.
+- If the user asks about something not present in memory, say it is not known and keep fields empty (but NEVER null).
+
 STRICT OUTPUT CONTRACT (NON-NEGOTIABLE):
 - Output MUST be a single valid JSON object ONLY.
 - No markdown. No code fences. No commentary. No prose outside JSON.

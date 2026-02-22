@@ -1,0 +1,56 @@
+from typing import Any, Dict, List
+
+
+def extract_facts_from_decision(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    يحول raw_decision (Decision Framework) إلى Facts بسيطة قابلة للحفظ.
+    يرجع قائمة من dicts، كل واحد يمثل fact.
+    """
+    facts: List[Dict[str, Any]] = []
+
+    raw = payload.get("raw_decision") or {}
+    if not isinstance(raw, dict):
+        return facts
+
+    # 1) Problem type
+    pc = raw.get("problem_classification") or {}
+    p_type = (pc.get("type") or "").strip()
+    p_conf = int(pc.get("confidence") or 0)
+
+    if p_type:
+        facts.append({
+            "fact_type": "problem",
+            "fact_key": "type",
+            "fact_value": p_type,
+            "confidence": p_conf if 0 <= p_conf <= 100 else 70,
+        })
+
+    # 2) Root causes (top 3)
+    rce = raw.get("root_cause_engine") or {}
+    root_causes = rce.get("root_causes") or []
+    if isinstance(root_causes, list):
+        for i, rc in enumerate(root_causes[:3]):
+            s = str(rc).strip()
+            if s:
+                facts.append({
+                    "fact_type": "root_cause",
+                    "fact_key": f"rc_{i+1}",
+                    "fact_value": s,
+                    "confidence": 70,
+                })
+
+    # 3) Urgent actions (top 5)
+    sg = raw.get("solution_generator") or {}
+    urgent = sg.get("urgent_30_days") or []
+    if isinstance(urgent, list):
+        for i, a in enumerate(urgent[:5]):
+            s = str(a).strip()
+            if s:
+                facts.append({
+                    "fact_type": "action",
+                    "fact_key": f"urgent_{i+1}",
+                    "fact_value": s,
+                    "confidence": 70,
+                })
+
+    return facts
