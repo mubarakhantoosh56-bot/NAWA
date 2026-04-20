@@ -73,6 +73,31 @@ class MemoryRepository:
     # -------------------------
     # Facts (memory_facts)
     # -------------------------
+    async def get_fact_by_key(
+        self,
+        company_id: str,
+        fact_key: str,
+    ) -> Optional[Dict[str, Any]]:
+        query = """
+        SELECT fact_type, fact_key, fact_value, confidence, updated_at
+        FROM public.memory_facts
+        WHERE company_id=$1 AND fact_key=$2
+        LIMIT 1
+        """
+        async with self.db.acquire() as conn:
+            row = await conn.fetchrow(query, company_id, fact_key)
+
+        if not row:
+            return None
+
+        return {
+            "fact_type": row["fact_type"],
+            "fact_key": row["fact_key"],
+            "fact_value": row["fact_value"],
+            "confidence": row["confidence"],
+            "updated_at": row["updated_at"],
+        }
+
     async def upsert_fact(
         self,
         company_id: str,
@@ -84,12 +109,19 @@ class MemoryRepository:
         source_event_id: Optional[str] = None,
     ) -> None:
         """
-        Uses the constraint name directly to avoid ON CONFLICT mismatch.
-        Requires UNIQUE constraint:
-          memory_facts_company_key_unique (company_id, fact_key)
+        Confidence Evolution + Conflict Detection v1
+
+        Rules:
+        - If same fact_key and same fact_value:
+            raise confidence slightly
+        - If same fact_key but different fact_value:
+            print conflict warning
+            if new confidence >= existing confidence:
+                replace value
+            else:
+                keep old value
         """
-        # تنظيف بسيط حتى ما ننخزن garbage
-        fact_type = (fact_type or "other").strip()
+        fact_type = (fact_type or "other").strip().lower()
         fact_key = (fact_key or "").strip()
         fact_value = (fact_value or "").strip()
 
@@ -102,6 +134,79 @@ class MemoryRepository:
         if conf > 100:
             conf = 100
 
+        existing = await self.get_fact_by_key(company_id=company_id, fact_key=fact_key)
+
+        if existing:
+            existing_value = (existing.get("fact_value") or "").strip()
+            existing_conf = int(existing.get("confidence") or 0)
+
+            # 1) نفس القيمة → نرفع الثقة
+            if existing_value.lower() == fact_value.lower():
+                new_conf = min(100, max(existing_conf, conf) + 5)
+
+                query = """
+                UPDATE public.memory_facts
+                SET
+                  session_id = $3,
+                  fact_type = $4,
+                  confidence = $5,
+                  source_event_id = $6,
+                  updated_at = NOW()
+                WHERE company_id = $1 AND fact_key = $2
+                """
+                async with self.db.acquire() as conn:
+                    await conn.execute(
+                        query,
+                        company_id,
+                        fact_key,
+                        session_id,
+                        fact_type,
+                        new_conf,
+                        source_event_id,
+                    )
+
+                print(f"[FACTS] confidence increased for '{fact_key}' -> {new_conf}")
+                return
+
+            # 2) قيمة مختلفة → conflict
+            print(
+                f"[FACT CONFLICT] company={company_id} key={fact_key} | "
+                f"old='{existing_value}' ({existing_conf}) vs new='{fact_value}' ({conf})"
+            )
+
+            # إذا الجديد أقوى أو يساوي القديم → نحدث
+            if conf >= existing_conf:
+                query = """
+                UPDATE public.memory_facts
+                SET
+                  session_id = $3,
+                  fact_type = $4,
+                  fact_value = $5,
+                  confidence = $6,
+                  source_event_id = $7,
+                  updated_at = NOW()
+                WHERE company_id = $1 AND fact_key = $2
+                """
+                async with self.db.acquire() as conn:
+                    await conn.execute(
+                        query,
+                        company_id,
+                        fact_key,
+                        session_id,
+                        fact_type,
+                        fact_value,
+                        conf,
+                        source_event_id,
+                    )
+
+                print(f"[FACTS] conflict resolved by replacing '{fact_key}' with higher-confidence value")
+                return
+
+            # إذا القديم أقوى → نبقي القديم
+            print(f"[FACTS] kept existing value for '{fact_key}' because existing confidence is higher")
+            return
+
+        # 3) إذا ماكو existing fact → insert جديد
         query = """
         INSERT INTO public.memory_facts
         (company_id, session_id, fact_type, fact_key, fact_value, confidence, source_event_id)
@@ -112,7 +217,7 @@ class MemoryRepository:
           session_id = EXCLUDED.session_id,
           fact_type = EXCLUDED.fact_type,
           fact_value = EXCLUDED.fact_value,
-          confidence = EXCLUDED.confidence,
+          confidence = GREATEST(public.memory_facts.confidence, EXCLUDED.confidence),
           source_event_id = EXCLUDED.source_event_id,
           updated_at = NOW()
         """
@@ -149,3 +254,27 @@ class MemoryRepository:
             }
             for r in rows
         ]
+
+    async def build_company_profile(self, company_id: str) -> Dict[str, Any]:
+        facts = await self.fetch_facts(company_id=company_id, limit=100)
+
+        profile = {
+            "product_name": None,
+            "product_type": None,
+            "target_market": None,
+            "stage": None,
+            "goal": None,
+            "launch_timeline": None,
+            "revenue": None,
+            "team_size": None,
+        }
+
+        for f in facts:
+            key = (f.get("fact_key") or "").strip()
+            value = (f.get("fact_value") or "").strip()
+
+            if key in profile and value:
+                if profile[key] is None:
+                    profile[key] = value
+
+        return profile
