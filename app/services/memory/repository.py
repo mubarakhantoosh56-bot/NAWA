@@ -109,7 +109,7 @@ class MemoryRepository:
         source_event_id: Optional[str] = None,
     ) -> None:
         """
-        Confidence Evolution + Conflict Detection v1
+        Confidence Evolution + Conflict Detection + Expansion Markets
 
         Rules:
         - If same fact_key and same fact_value:
@@ -120,6 +120,8 @@ class MemoryRepository:
                 replace value
             else:
                 keep old value
+        - expansion_market is special:
+            allow multiple rows with different fact_value
         """
         fact_type = (fact_type or "other").strip().lower()
         fact_key = (fact_key or "").strip()
@@ -134,13 +136,82 @@ class MemoryRepository:
         if conf > 100:
             conf = 100
 
+        # -----------------------------------------
+        # Special case: expansion_market
+        # allow multiple values per company
+        # -----------------------------------------
+        if fact_key == "expansion_market":
+            exists_query = """
+            SELECT confidence
+            FROM public.memory_facts
+            WHERE company_id=$1 AND fact_key=$2 AND LOWER(fact_value)=LOWER($3)
+            LIMIT 1
+            """
+            async with self.db.acquire() as conn:
+                existing_row = await conn.fetchrow(exists_query, company_id, fact_key, fact_value)
+
+            # إذا موجود من قبل → زيد الثقة فقط
+            if existing_row:
+                existing_conf = int(existing_row["confidence"] or 0)
+                new_conf = min(100, max(existing_conf, conf) + 5)
+
+                update_query = """
+                UPDATE public.memory_facts
+                SET
+                    confidence = $4,
+                    session_id = $5,
+                    fact_type = $6,
+                    source_event_id = $7,
+                    updated_at = NOW()
+                WHERE company_id=$1 AND fact_key=$2 AND LOWER(fact_value)=LOWER($3)
+                """
+                async with self.db.acquire() as conn:
+                    await conn.execute(
+                        update_query,
+                        company_id,
+                        fact_key,
+                        fact_value,
+                        new_conf,
+                        session_id,
+                        fact_type,
+                        source_event_id,
+                    )
+
+                print(f"[FACTS] confidence increased for expansion market '{fact_value}' -> {new_conf}")
+                return
+
+            # إذا جديد → ضيفه كسطر مستقل
+            insert_query = """
+            INSERT INTO public.memory_facts
+            (company_id, session_id, fact_type, fact_key, fact_value, confidence, source_event_id)
+            VALUES
+            ($1,$2,$3,$4,$5,$6,$7)
+            """
+            async with self.db.acquire() as conn:
+                await conn.execute(
+                    insert_query,
+                    company_id,
+                    session_id,
+                    fact_type,
+                    fact_key,
+                    fact_value,
+                    conf,
+                    source_event_id,
+                )
+
+            print(f"[FACTS] inserted new expansion market '{fact_value}'")
+            return
+
+        # -----------------------------------------
+        # Normal facts
+        # -----------------------------------------
         existing = await self.get_fact_by_key(company_id=company_id, fact_key=fact_key)
 
         if existing:
             existing_value = (existing.get("fact_value") or "").strip()
             existing_conf = int(existing.get("confidence") or 0)
 
-            # 1) نفس القيمة → نرفع الثقة
+            # نفس القيمة → نرفع الثقة
             if existing_value.lower() == fact_value.lower():
                 new_conf = min(100, max(existing_conf, conf) + 5)
 
@@ -168,7 +239,7 @@ class MemoryRepository:
                 print(f"[FACTS] confidence increased for '{fact_key}' -> {new_conf}")
                 return
 
-            # 2) قيمة مختلفة → conflict
+            # قيمة مختلفة → conflict
             print(
                 f"[FACT CONFLICT] company={company_id} key={fact_key} | "
                 f"old='{existing_value}' ({existing_conf}) vs new='{fact_value}' ({conf})"
@@ -206,7 +277,7 @@ class MemoryRepository:
             print(f"[FACTS] kept existing value for '{fact_key}' because existing confidence is higher")
             return
 
-        # 3) إذا ماكو existing fact → insert جديد
+        # إذا ماكو existing fact → insert جديد
         query = """
         INSERT INTO public.memory_facts
         (company_id, session_id, fact_type, fact_key, fact_value, confidence, source_event_id)
@@ -262,6 +333,8 @@ class MemoryRepository:
             "product_name": None,
             "product_type": None,
             "target_market": None,
+            "primary_market": None,
+            "expansion_markets": [],
             "stage": None,
             "goal": None,
             "launch_timeline": None,
@@ -273,7 +346,15 @@ class MemoryRepository:
             key = (f.get("fact_key") or "").strip()
             value = (f.get("fact_value") or "").strip()
 
-            if key in profile and value:
+            if not value:
+                continue
+
+            if key == "expansion_market":
+                if value not in profile["expansion_markets"]:
+                    profile["expansion_markets"].append(value)
+                continue
+
+            if key in profile:
                 if profile[key] is None:
                     profile[key] = value
 

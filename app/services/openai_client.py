@@ -41,37 +41,43 @@ Schema:
 STRICT RULES:
 
 1. ALWAYS extract:
-   - timelines (e.g., "3 months" → launch_timeline)
-   - markets (e.g., "Iraq" → target_market)
-   - goals (e.g., "we want to launch" → goal)
+   - timelines (e.g., "3 months" -> launch_timeline)
+   - markets (e.g., "Iraq" -> target_market)
+   - primary/base market (e.g., "main market" -> primary_market)
+   - expansion markets (e.g., "expand to Saudi" -> expansion_market)
+   - goals (e.g., "we want to launch" -> goal)
 
 2. Normalize keys EXACTLY as:
-   - launch timeline → "launch_timeline"
-   - market → "target_market"
-   - goal → "goal"
-   - revenue → "revenue"
-   - product name → "product_name"
+   - launch timeline -> "launch_timeline"
+   - target/current market -> "target_market"
+   - primary/base/main market -> "primary_market"
+   - expansion/new/secondary market -> "expansion_market"
+   - goal -> "goal"
+   - revenue -> "revenue"
+   - product name -> "product_name"
+   - product type -> "product_type"
 
 3. Never skip facts unless input is completely meaningless.
 
 4. Confidence:
-   - clear explicit fact → 90-100
-   - inferred → 60-80
+   - clear explicit fact -> 90-100
+   - inferred -> 60-80
 
-5. If multiple facts exist → extract ALL of them.
+5. If multiple facts exist -> extract ALL of them.
 
 6. NEVER return empty unless truly no facts.
 
 Example:
 Input:
-"we want to launch in Iraq within 3 months"
+"our main market is Iraq and we plan to expand to Saudi Arabia and UAE within 3 months"
 
 Output:
 {
   "facts": [
-    {"fact_type": "goal", "fact_key": "goal", "fact_value": "launch product", "confidence": 90},
-    {"fact_type": "goal", "fact_key": "launch_timeline", "fact_value": "3 months", "confidence": 95},
-    {"fact_type": "other", "fact_key": "target_market", "fact_value": "Iraq", "confidence": 95}
+    {"fact_type": "other", "fact_key": "primary_market", "fact_value": "Iraq", "confidence": 95},
+    {"fact_type": "other", "fact_key": "expansion_market", "fact_value": "Saudi Arabia", "confidence": 95},
+    {"fact_type": "other", "fact_key": "expansion_market", "fact_value": "UAE", "confidence": 95},
+    {"fact_type": "goal", "fact_key": "launch_timeline", "fact_value": "3 months", "confidence": 95}
   ]
 }
 """
@@ -116,14 +122,24 @@ FACT_KEY_NORMALIZATION = {
     "initial_goal": "goal",
     "project_goal": "goal",
 
-    # target market
+    # target / current market
     "target_market": "target_market",
     "market": "target_market",
     "market_focus": "target_market",
     "mvp_target_market": "target_market",
     "initial_target_market": "target_market",
-    "primary_market": "target_market",
-    "main_market": "target_market",
+
+    # primary market
+    "primary_market": "primary_market",
+    "main_market": "primary_market",
+    "base_market": "primary_market",
+
+    # expansion markets
+    "expansion_market": "expansion_market",
+    "expansion_markets": "expansion_market",
+    "new_market": "expansion_market",
+    "target_expansion": "expansion_market",
+    "secondary_market": "expansion_market",
 
     # product/platform name
     "product_name": "product_name",
@@ -132,6 +148,11 @@ FACT_KEY_NORMALIZATION = {
     "project_name": "product_name",
     "company_name": "product_name",
     "solution_name": "product_name",
+
+    # product type
+    "product_type": "product_type",
+    "platform_type": "product_type",
+    "system_type": "product_type",
 
     # timeline
     "launch_timeline": "launch_timeline",
@@ -184,8 +205,15 @@ def _build_company_profile_block(profile: Dict[str, Any]) -> str:
         return "COMPANY PROFILE: none"
 
     lines = ["COMPANY PROFILE:"]
+
     for key, value in profile.items():
-        if value:
+        if not value:
+            continue
+
+        if isinstance(value, list):
+            if value:
+                lines.append(f"- {key}: {', '.join(value)}")
+        else:
             lines.append(f"- {key}: {value}")
 
     if len(lines) == 1:
