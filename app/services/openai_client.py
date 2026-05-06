@@ -14,154 +14,63 @@ from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
 
 
-# -----------------------------
-# Memory Intelligence Prompts
-# -----------------------------
 FACT_EXTRACTOR_SYSTEM = """
 You are a STRICT institutional memory extraction engine.
-
-Your job is to extract ALL durable company facts from the input.
-
-You MUST extract facts whenever possible. Do NOT skip obvious facts.
-
+Extract durable company facts from input.
 Return ONLY valid JSON.
 
 Schema:
-{
-  "facts": [
-    {
-      "fact_type": "company|product|process|goal|constraint|metric|risk|decision|other",
-      "fact_key": "normalized_key",
-      "fact_value": "plain text",
-      "confidence": 0
-    }
-  ]
-}
+{"facts":[{"fact_type":"company|product|process|goal|constraint|metric|risk|decision|other","fact_key":"normalized_key","fact_value":"plain text","confidence":0}]}
 
-STRICT RULES:
-
-1. ALWAYS extract:
-   - timelines (e.g., "3 months" -> launch_timeline)
-   - markets (e.g., "Iraq" -> target_market)
-   - primary/base market (e.g., "main market" -> primary_market)
-   - expansion markets (e.g., "expand to Saudi" -> expansion_market)
-   - goals (e.g., "we want to launch" -> goal)
-
-2. Normalize keys EXACTLY as:
-   - launch timeline -> "launch_timeline"
-   - target/current market -> "target_market"
-   - primary/base/main market -> "primary_market"
-   - expansion/new/secondary market -> "expansion_market"
-   - goal -> "goal"
-   - revenue -> "revenue"
-   - product name -> "product_name"
-   - product type -> "product_type"
-
-3. Never skip facts unless input is completely meaningless.
-
-4. Confidence:
-   - clear explicit fact -> 90-100
-   - inferred -> 60-80
-
-5. If multiple facts exist -> extract ALL of them.
-
-6. NEVER return empty unless truly no facts.
-
-Example:
-Input:
-"our main market is Iraq and we plan to expand to Saudi Arabia and UAE within 3 months"
-
-Output:
-{
-  "facts": [
-    {"fact_type": "other", "fact_key": "primary_market", "fact_value": "Iraq", "confidence": 95},
-    {"fact_type": "other", "fact_key": "expansion_market", "fact_value": "Saudi Arabia", "confidence": 95},
-    {"fact_type": "other", "fact_key": "expansion_market", "fact_value": "UAE", "confidence": 95},
-    {"fact_type": "goal", "fact_key": "launch_timeline", "fact_value": "3 months", "confidence": 95}
-  ]
-}
+Rules:
+- Extract timelines, markets, primary_market, expansion_market, goals, revenue, product_name, product_type.
+- Normalize keys exactly:
+launch_timeline, target_market, primary_market, expansion_market, goal, revenue, product_name, product_type.
+- If no durable facts, return {"facts":[]}.
 """
 
-# -----------------------------
-# Fact Key Normalization
-# -----------------------------
+
 FACT_KEY_NORMALIZATION = {
-    # revenue
     "revenue": "revenue",
     "monthly_revenue": "revenue",
     "target_revenue": "revenue",
     "sales_target": "revenue",
-    "current_revenue": "revenue",
-    "initial_revenue": "revenue",
-    "mvp_revenue": "revenue",
-    "projected_revenue": "revenue",
-
-    # team size
     "team_size": "team_size",
     "employees": "team_size",
     "employee_count": "team_size",
-    "team": "team_size",
-    "staff_count": "team_size",
-    "current_team_size": "team_size",
-
-    # stage
     "company_stage": "stage",
     "business_stage": "stage",
     "mvp_stage": "stage",
     "current_stage": "stage",
     "stage": "stage",
-    "mvp_current_stage": "stage",
-    "startup_stage": "stage",
-
-    # goal
     "goal": "goal",
     "objective": "goal",
     "business_goal": "goal",
     "mvp_goal": "goal",
-    "mvp_objective": "goal",
-    "initial_goal": "goal",
-    "project_goal": "goal",
-
-    # target / current market
     "target_market": "target_market",
     "market": "target_market",
     "market_focus": "target_market",
-    "mvp_target_market": "target_market",
-    "initial_target_market": "target_market",
-
-    # primary market
     "primary_market": "primary_market",
     "main_market": "primary_market",
     "base_market": "primary_market",
-
-    # expansion markets
     "expansion_market": "expansion_market",
     "expansion_markets": "expansion_market",
     "new_market": "expansion_market",
     "target_expansion": "expansion_market",
     "secondary_market": "expansion_market",
-
-    # product/platform name
     "product_name": "product_name",
     "system_name": "product_name",
     "platform_name": "product_name",
     "project_name": "product_name",
     "company_name": "product_name",
     "solution_name": "product_name",
-
-    # product type
     "product_type": "product_type",
     "platform_type": "product_type",
     "system_type": "product_type",
-
-    # timeline
     "launch_timeline": "launch_timeline",
     "launch_timeframe": "launch_timeline",
     "timeline": "launch_timeline",
     "mvp_timeline": "launch_timeline",
-    "mvp_launch_timeline": "launch_timeline",
-    "mvp_launch_timeline_months": "launch_timeline",
-    "initial_timeline": "launch_timeline",
 }
 
 
@@ -196,7 +105,7 @@ def _build_facts_block(facts: List[Dict[str, Any]]) -> str:
         else:
             lines.append(f"- [{ft}] {fv} (conf:{conf})")
 
-    lines.append("RULES: These are the company's current truths. Use them for continuity. Do NOT repeat them in your output.")
+    lines.append("RULES: Use these facts for continuity. Do NOT repeat them in output.")
     return "\n".join(lines)
 
 
@@ -205,7 +114,6 @@ def _build_company_profile_block(profile: Dict[str, Any]) -> str:
         return "COMPANY PROFILE: none"
 
     lines = ["COMPANY PROFILE:"]
-
     for key, value in profile.items():
         if not value:
             continue
@@ -219,8 +127,161 @@ def _build_company_profile_block(profile: Dict[str, Any]) -> str:
     if len(lines) == 1:
         return "COMPANY PROFILE: none"
 
-    lines.append("RULES: This is the stable company profile. Use it as the main reference when answering.")
+    lines.append("RULES: This is the stable company profile. Use it as main reference.")
     return "\n".join(lines)
+
+
+def _contains_any(text: str, keywords: List[str]) -> bool:
+    text_lower = (text or "").lower()
+    return any(k.lower() in text_lower for k in keywords)
+
+
+def _has_number(text: str) -> bool:
+    return any(ch.isdigit() for ch in (text or ""))
+
+
+def _validate_execution_structure(parsed: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(parsed, dict):
+        return False
+
+    raw_decision = parsed.get("raw_decision") or {}
+    if not isinstance(raw_decision, dict):
+        return False
+
+    solution_generator = raw_decision.get("solution_generator") or {}
+    execution_engine = raw_decision.get("execution_engine") or {}
+
+    if not isinstance(solution_generator, dict) or not isinstance(execution_engine, dict):
+        return False
+
+    items_to_check: List[str] = []
+
+    for key in ["urgent_30_days", "mid_term_90_days", "long_term_6_12_months"]:
+        value = solution_generator.get(key, [])
+        if isinstance(value, list):
+            items_to_check.extend([str(x) for x in value if x])
+
+    for key in ["priority_order", "quick_wins", "high_impact_moves"]:
+        value = execution_engine.get(key, [])
+        if isinstance(value, list):
+            items_to_check.extend([str(x) for x in value if x])
+
+    if not items_to_check:
+        return False
+
+    platform_keywords = [
+        "linkedin", "facebook", "instagram", "tiktok", "youtube", "snapchat",
+        "email", "whatsapp", "call", "calls", "meeting", "meetings",
+        "event", "events", "outreach", "zoom", "google meet", "website",
+        "landing page",
+
+        "لينكدإن", "لينكدان", "فيسبوك", "انستغرام", "انستكرام",
+        "تيك توك", "يوتيوب", "سناب", "واتساب", "ايميل", "بريد إلكتروني",
+        "اتصال", "مكالمة", "اجتماع", "فعالية", "تواصل مباشر", "زوم",
+        "موقع", "صفحة هبوط"
+    ]
+
+    method_keywords = [
+        "video", "videos", "ad", "ads", "message", "messages", "email",
+        "call", "calls", "meeting", "meetings", "webinar", "demo",
+        "landing page", "post", "posts", "reel", "reels", "outreach",
+        "script", "campaign", "cold email", "cold call", "survey",
+        "form", "trial", "pilot",
+
+        "فيديو", "فيديوهات", "إعلان", "إعلانات", "رسالة", "رسائل",
+        "مكالمة", "مكالمات", "اجتماع", "اجتماعات", "ندوة", "عرض",
+        "صفحة هبوط", "منشور", "منشورات", "ريلز", "سكربت", "تواصل",
+        "استبيان", "نموذج", "تجربة", "نسخة تجريبية"
+    ]
+
+    audience_keywords = [
+        "founder", "founders", "ceo", "ceos", "sme", "smes",
+        "business owners", "decision makers", "youth", "b2b",
+        "customers", "users", "iraqi founders", "iraqi smes",
+        "iraqi businesses", "retail", "logistics", "restaurants",
+        "companies", "clients", "prospects",
+
+        "رواد الأعمال", "المؤسسين", "المدراء", "الشركات الصغيرة",
+        "الشركات الصغيرة والمتوسطة", "أصحاب الأعمال", "صناع القرار",
+        "الشباب", "العملاء", "المستخدمين", "الشركات العراقية",
+        "رواد الأعمال العراقيين", "الشركات الصغيرة العراقية",
+        "المطاعم", "شركات التجزئة", "شركات اللوجستك", "شركات",
+        "عملاء محتملين", "أصحاب الشركات"
+    ]
+
+    execution_verbs = [
+        "send", "publish", "run", "contact", "book", "launch",
+        "deploy", "record", "post", "schedule", "close", "call",
+        "email", "invite", "test", "collect", "measure", "create",
+        "build", "host", "interview", "validate",
+
+        "أرسل", "ارسل", "انشر", "شغل", "تواصل", "احجز", "اطلق",
+        "سجل", "جدول", "اتصل", "ادع", "اختبر", "اجمع", "قس",
+        "أنشئ", "أنشأ", "سوّي", "سوي", "استضف", "قابل", "تحقق"
+    ]
+
+    kpi_words = [
+        "conversion", "ctr", "reply rate", "meetings", "qualified leads",
+        "demos", "views", "clicks", "leads", "signups", "demo bookings",
+        "response rate", "trial users", "conversion rate", "bookings",
+        "open rate", "watch time", "retention", "activation", "interviews",
+
+        "معدل", "تحويل", "عملاء محتملين", "اجتماعات", "مشاهدات",
+        "نقرات", "حجوزات", "ردود", "تسجيلات", "تجارب", "ديمو",
+        "نسبة رد", "نسبة تحويل", "مقابلات", "تفعيل", "احتفاظ"
+    ]
+
+    generic_phrases = [
+        "develop strategy", "launch campaign", "create content",
+        "develop plan", "marketing plan", "product development",
+        "expand aimx", "launch aimx", "build mvp", "prepare expansion",
+        "evaluate performance", "collect feedback", "develop prototype",
+        "create account", "create accounts", "internal resources",
+        "internal review", "online platform", "marketing strategies",
+        "send email", "make calls", "run posts", "promotional posts",
+        "marketing", "expansion", "product",
+
+        "إنشاء حساب", "إنشاء حسابات", "تطوير خطة", "خطة تسويقية",
+        "إطلاق حملة", "إنشاء محتوى", "تطوير استراتيجية", "التسويق",
+        "التوسع", "تطوير المنتج", "إطلاق aimx", "تطوير النسخة الأولية",
+        "إطلاق المنتج", "جمع ملاحظات", "تقييم الأداء", "بدء التخطيط",
+        "تطوير ميزات", "تحديد شركاء", "إرسال البريد الإلكتروني",
+        "إجراء المكالمات", "تنفيذ المنشورات", "تنفيذ المنشورات الترويجية",
+        "تنظيم حدث ترويجي", "إجراء مكالمات", "إرسال البريد",
+        "الموارد الداخلية", "مراجعة داخلية", "منصة إلكترونية",
+        "تطوير 1 نسخة أولية", "تطوير نسخة أولية",
+        "تنفيذ 3 استراتيجيات", "استراتيجيات تسويقية", "تخطيط التوسع"
+    ]
+
+    for item in items_to_check:
+        item = (item or "").strip()
+        item_lower = item.lower()
+
+        if len(item.split()) < 12:
+            return False
+
+        for phrase in generic_phrases:
+            if phrase.lower() in item_lower:
+                return False
+
+        has_platform = _contains_any(item, platform_keywords)
+        has_number = _has_number(item)
+        has_method = _contains_any(item, method_keywords)
+        has_audience = _contains_any(item, audience_keywords)
+        has_execution_verb = _contains_any(item, execution_verbs)
+        has_kpi = _contains_any(item, kpi_words)
+
+        if not (
+            has_platform
+            and has_number
+            and has_method
+            and has_audience
+            and has_execution_verb
+            and has_kpi
+        ):
+            return False
+
+    return True
 
 
 class AIService:
@@ -228,11 +289,9 @@ class AIService:
         print("DB_URL=", getattr(settings, "DATABASE_URL", "MISSING"))
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-        # In-memory short-term memory
         self.sessions: Dict[str, List[Dict[str, str]]] = {}
         self.max_history: int = 10
 
-        # DB memory
         self.db_pool = None
         self.repo: Optional[MemoryRepository] = None
         self.db_enabled: bool = bool(getattr(settings, "DATABASE_URL", ""))
@@ -243,6 +302,7 @@ class AIService:
     async def _ensure_db(self) -> None:
         if not self.db_enabled:
             return
+
         if self.repo is not None:
             return
 
@@ -292,6 +352,7 @@ class AIService:
 
         try:
             model_name = getattr(settings, "FACT_MODEL", getattr(settings, "MODEL", "gpt-4o-mini"))
+
             resp = await self.client.chat.completions.create(
                 model=model_name,
                 messages=messages,
@@ -308,6 +369,33 @@ class AIService:
             if not isinstance(facts, list) or not facts:
                 print("[FACTS] no facts extracted")
                 return
+
+            merged_expansion_markets: List[str] = []
+            cleaned_facts: List[Dict[str, Any]] = []
+
+            for f in facts:
+                if not isinstance(f, dict):
+                    continue
+
+                raw_key = (f.get("fact_key") or "").strip()
+                fact_key = normalize_fact_key(raw_key)
+                fact_value = (f.get("fact_value") or "").strip()
+
+                if fact_key == "expansion_market" and fact_value:
+                    if fact_value not in merged_expansion_markets:
+                        merged_expansion_markets.append(fact_value)
+                else:
+                    cleaned_facts.append(f)
+
+            if merged_expansion_markets:
+                cleaned_facts.append({
+                    "fact_type": "other",
+                    "fact_key": "expansion_market",
+                    "fact_value": ", ".join(merged_expansion_markets),
+                    "confidence": 95,
+                })
+
+            facts = cleaned_facts
 
             normalized_count = 0
 
@@ -327,21 +415,21 @@ class AIService:
                 if not fact_key:
                     fact_key = "general_fact"
 
-                if confidence < 0:
-                    confidence = 0
-                if confidence > 100:
-                    confidence = 100
+                confidence = max(0, min(100, confidence))
 
-                await self.repo.upsert_fact(
-                    company_id=company_id,
-                    session_id=session_id,
-                    fact_type=fact_type,
-                    fact_key=fact_key,
-                    fact_value=fact_value,
-                    confidence=confidence,
-                    source_event_id=None,
-                )
-                normalized_count += 1
+                try:
+                    await self.repo.upsert_fact(
+                        company_id=company_id,
+                        session_id=session_id,
+                        fact_type=fact_type,
+                        fact_key=fact_key,
+                        fact_value=fact_value,
+                        confidence=confidence,
+                        source_event_id=None,
+                    )
+                    normalized_count += 1
+                except Exception as e:
+                    print(f"[FACT UPSERT WARNING] key={fact_key} value={fact_value} error={e}")
 
             print(f"[FACTS] upserted = {normalized_count}")
 
@@ -385,6 +473,7 @@ class AIService:
                         session_id=session_id,
                         limit=8,
                     )
+
                     if not recent_events:
                         recent_events = await self.repo.fetch_recent_events(
                             company_id=company_id,
@@ -424,11 +513,11 @@ class AIService:
                 messages.append({"role": "system", "content": memory_events_block})
 
             messages.append({"role": "system", "content": context_block})
-
             messages.extend(self.sessions[key])
             messages.append({"role": "user", "content": message})
 
             model_name = getattr(settings, "MODEL", "gpt-4o-mini")
+
             resp = await self.client.chat.completions.create(
                 model=model_name,
                 messages=messages,
@@ -438,6 +527,45 @@ class AIService:
 
             answer_text = resp.choices[0].message.content or "لم يتم توليد رد."
             parsed: Optional[Dict[str, Any]] = _safe_json_loads(answer_text)
+
+            max_retries = 2
+            retry_count = 0
+
+            while not _validate_execution_structure(parsed) and retry_count < max_retries:
+                print(f"❌ INVALID EXECUTION RESPONSE - RETRYING... ({retry_count + 1})")
+
+                retry_messages = messages + [
+                    {"role": "assistant", "content": answer_text},
+                    {
+                        "role": "system",
+                        "content": (
+                            "Your previous response was INVALID. Rewrite the FULL JSON. "
+                            "EVERY item inside urgent_30_days, mid_term_90_days, long_term_6_12_months, "
+                            "priority_order, quick_wins, and high_impact_moves must include: "
+                            "1. exact platform, 2. exact audience, 3. exact KPI, 4. exact quantity, "
+                            "5. exact execution method, 6. exact timeframe, 7. real execution verb. "
+                            "Do NOT write category labels like email, calls, marketing, product, expansion. "
+                            "Do NOT write generic items like develop prototype, launch campaign, evaluate performance, create content. "
+                            "Do not place generic product-building or planning items inside solution_generator. "
+                            "Every solution_generator item must also be a market execution action with platform, audience, KPI, quantity, and timeframe. "
+                            "Valid example: Send 150 LinkedIn outreach messages to Iraqi retail business owners within 21 days targeting a 12% reply rate."
+                        ),
+                    },
+                ]
+
+                retry_resp = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=retry_messages,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                )
+
+                answer_text = retry_resp.choices[0].message.content or answer_text
+                parsed = _safe_json_loads(answer_text)
+                retry_count += 1
+
+            if not _validate_execution_structure(parsed):
+                print("❌ RETRY RESPONSE STILL INVALID")
 
             try:
                 log_decision_event(
@@ -482,7 +610,7 @@ class AIService:
             self.sessions[key].append({"role": "assistant", "content": answer_text})
 
             if len(self.sessions[key]) > self.max_history * 2:
-                self.sessions[key] = self.sessions[key][-self.max_history * 2 :]
+                self.sessions[key] = self.sessions[key][-self.max_history * 2:]
 
             return format_ai_response(
                 answer_text=answer_text,
