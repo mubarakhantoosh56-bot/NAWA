@@ -1,6 +1,8 @@
-from typing import Any, Dict, List, Optional
 import json
+import logging
+from typing import Any, Dict, List, Optional
 
+logger = logging.getLogger(__name__)
 
 class MemoryRepository:
     def __init__(self, db):
@@ -177,7 +179,14 @@ class MemoryRepository:
                         source_event_id,
                     )
 
-                print(f"[FACTS] confidence increased for expansion market '{fact_value}' -> {new_conf}")
+                logger.info(
+                    "Expansion market confidence increased",
+                    extra={
+                        "company_id": company_id,
+                        "fact_key": fact_key,
+                        "confidence": new_conf,
+                    },
+                )
                 return
 
             # إذا جديد → ضيفه كسطر مستقل
@@ -199,7 +208,10 @@ class MemoryRepository:
                     source_event_id,
                 )
 
-            print(f"[FACTS] inserted new expansion market '{fact_value}'")
+            logger.info(
+                "Inserted expansion market fact",
+                extra={"company_id": company_id, "fact_key": fact_key},
+            )
             return
 
         # -----------------------------------------
@@ -236,13 +248,25 @@ class MemoryRepository:
                         source_event_id,
                     )
 
-                print(f"[FACTS] confidence increased for '{fact_key}' -> {new_conf}")
+                logger.info(
+                    "Fact confidence increased",
+                    extra={
+                        "company_id": company_id,
+                        "fact_key": fact_key,
+                        "confidence": new_conf,
+                    },
+                )
                 return
 
             # قيمة مختلفة → conflict
-            print(
-                f"[FACT CONFLICT] company={company_id} key={fact_key} | "
-                f"old='{existing_value}' ({existing_conf}) vs new='{fact_value}' ({conf})"
+            logger.warning(
+                "Fact conflict detected",
+                extra={
+                    "company_id": company_id,
+                    "fact_key": fact_key,
+                    "existing_confidence": existing_conf,
+                    "new_confidence": conf,
+                },
             )
 
             # إذا الجديد أقوى أو يساوي القديم → نحدث
@@ -270,11 +294,17 @@ class MemoryRepository:
                         source_event_id,
                     )
 
-                print(f"[FACTS] conflict resolved by replacing '{fact_key}' with higher-confidence value")
+                logger.info(
+                    "Fact conflict resolved with replacement",
+                    extra={"company_id": company_id, "fact_key": fact_key},
+                )
                 return
 
             # إذا القديم أقوى → نبقي القديم
-            print(f"[FACTS] kept existing value for '{fact_key}' because existing confidence is higher")
+            logger.info(
+                "Fact conflict kept existing value",
+                extra={"company_id": company_id, "fact_key": fact_key},
+            )
             return
 
         # إذا ماكو existing fact → insert جديد

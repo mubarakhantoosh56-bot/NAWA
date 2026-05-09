@@ -1,11 +1,12 @@
-from typing import Dict, Any, Optional, List
 from datetime import datetime
-import json
-import os
 import hashlib
-import traceback
+import json
+import logging
+import os
+from typing import Dict, Any, Optional, List
 
-print("[event_log.py loaded from]", __file__)
+logger = logging.getLogger(__name__)
+logger.debug("Event log module loaded", extra={"module_path": __file__})
 
 def _safe_json(obj: Any) -> Any:
     try:
@@ -39,7 +40,11 @@ def log_decision_event(company_id: str, session_id: str, payload: Dict[str, Any]
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     except Exception as e:
-        print(f"[FILE LOG ERROR] {e}")
+        logger.warning(
+            "File decision log write failed",
+            extra={"company_id": company_id, "session_id": session_id},
+            exc_info=True,
+        )
 
 
 # ✅ الجديد: DB log (Institutional Memory)
@@ -70,11 +75,20 @@ async def log_decision_event_db(
                 executive_summary=executive_summary,
             ),
         }
-        print("[DB LOG] inserting event for", company_id, session_id)
+        logger.info(
+            "Inserting decision event",
+            extra={"company_id": company_id, "session_id": session_id},
+        )
         await repo.insert_event(event)
-        print("[DB LOG] inserted (or skipped by idempotency)")
+        logger.info(
+            "Decision event inserted or skipped by idempotency",
+            extra={"company_id": company_id, "session_id": session_id},
+        )
 
 
     except Exception as e:
-        print(f"[DB LOG ERROR] {e}")
-        traceback.print_exc()
+        logger.error(
+            "Database decision log failed",
+            extra={"company_id": company_id, "session_id": session_id},
+            exc_info=True,
+        )

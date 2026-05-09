@@ -1,5 +1,6 @@
-from typing import Dict, Any, Optional, List
 import json
+import logging
+from typing import Dict, Any, Optional, List
 
 from openai import AsyncOpenAI
 from fastapi import HTTPException
@@ -12,6 +13,8 @@ from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
+
+logger = logging.getLogger(__name__)
 
 
 FACT_EXTRACTOR_SYSTEM = """
@@ -320,10 +323,10 @@ class AIService:
                 max_size=5,
             )
             self.repo = MemoryRepository(db=self.db_pool)
-            print("[DB] Institutional Memory Enabled ✅")
+            logger.info("Institutional memory enabled")
 
         except Exception as e:
-            print(f"[DB INIT FAILED] {e}")
+            logger.warning("Database initialization failed", exc_info=True)
             self.db_pool = None
             self.repo = None
             self.db_enabled = False
@@ -364,10 +367,16 @@ class AIService:
             data = _safe_json_loads(txt) or {}
             facts = data.get("facts", [])
 
-            print("🔥 EXTRACTED FACTS:", facts)
+            logger.info(
+                "Extracted facts",
+                extra={"company_id": company_id, "session_id": session_id},
+            )
 
             if not isinstance(facts, list) or not facts:
-                print("[FACTS] no facts extracted")
+                logger.info(
+                    "No facts extracted",
+                    extra={"company_id": company_id, "session_id": session_id},
+                )
                 return
 
             merged_expansion_markets: List[str] = []
@@ -429,12 +438,31 @@ class AIService:
                     )
                     normalized_count += 1
                 except Exception as e:
-                    print(f"[FACT UPSERT WARNING] key={fact_key} value={fact_value} error={e}")
+                    logger.warning(
+                        "Fact upsert failed",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "fact_key": fact_key,
+                        },
+                        exc_info=True,
+                    )
 
-            print(f"[FACTS] upserted = {normalized_count}")
+            logger.info(
+                "Facts upserted",
+                extra={
+                    "company_id": company_id,
+                    "session_id": session_id,
+                    "count": normalized_count,
+                },
+            )
 
         except Exception as e:
-            print(f"[FACT EXTRACT WARNING] {e}")
+            logger.warning(
+                "Fact extraction failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
 
     async def chat(
         self,
@@ -463,6 +491,8 @@ class AIService:
             memory_events_block = ""
             memory_facts_block = ""
             company_profile_block = ""
+            memory_injected = False
+            events_count = 0
 
             await self._ensure_db()
 
@@ -481,6 +511,7 @@ class AIService:
                             limit=10,
                         )
 
+                    events_count = len(recent_events)
                     memory_events_block = build_memory_block(recent_events) or ""
 
                     facts = await self.repo.fetch_facts(company_id=company_id, limit=25)
@@ -489,14 +520,30 @@ class AIService:
                     profile = await self.repo.build_company_profile(company_id=company_id)
                     company_profile_block = _build_company_profile_block(profile) or ""
 
-                    print("[MEMORY] events_fetched =", len(recent_events))
-                    print("[MEMORY] facts_fetched  =", len(facts))
+                    profile_has_values = any(bool(value) for value in profile.values())
+                    memory_injected = bool(recent_events or facts or profile_has_values)
+
+                    logger.info(
+                        "Memory context loaded",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "events_count": events_count,
+                            "facts_count": len(facts),
+                        },
+                    )
 
                 except Exception as e:
-                    print(f"[MEMORY BLOCK WARNING] {e}")
+                    logger.warning(
+                        "Memory block loading failed",
+                        extra={"company_id": company_id, "session_id": session_id},
+                        exc_info=True,
+                    )
                     memory_events_block = ""
                     memory_facts_block = ""
                     company_profile_block = ""
+                    memory_injected = False
+                    events_count = 0
 
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
@@ -532,7 +579,14 @@ class AIService:
             retry_count = 0
 
             while not _validate_execution_structure(parsed) and retry_count < max_retries:
-                print(f"❌ INVALID EXECUTION RESPONSE - RETRYING... ({retry_count + 1})")
+                logger.warning(
+                    "Invalid execution response, retrying",
+                    extra={
+                        "company_id": company_id,
+                        "session_id": session_id,
+                        "retry_count": retry_count + 1,
+                    },
+                )
 
                 retry_messages = messages + [
                     {"role": "assistant", "content": answer_text},
@@ -565,7 +619,10 @@ class AIService:
                 retry_count += 1
 
             if not _validate_execution_structure(parsed):
-                print("❌ RETRY RESPONSE STILL INVALID")
+                logger.warning(
+                    "Retry response still invalid",
+                    extra={"company_id": company_id, "session_id": session_id},
+                )
 
             try:
                 log_decision_event(
@@ -574,7 +631,11 @@ class AIService:
                     payload={"answer": answer_text, "parsed": parsed, "context": context},
                 )
             except Exception as e:
-                print(f"[FILE LOG WARNING] {e}")
+                logger.warning(
+                    "File decision log failed",
+                    extra={"company_id": company_id, "session_id": session_id},
+                    exc_info=True,
+                )
 
             executive_summary = ""
             raw_decision: Dict[str, Any] = {}
@@ -596,7 +657,11 @@ class AIService:
                         tags=[context.get("industry", "unknown")],
                     )
                 except Exception as e:
-                    print(f"[DB EVENT LOG WARNING] {e}")
+                    logger.warning(
+                        "Database event log failed",
+                        extra={"company_id": company_id, "session_id": session_id},
+                        exc_info=True,
+                    )
 
                 await self._extract_and_upsert_facts(
                     company_id=company_id,
@@ -619,11 +684,17 @@ class AIService:
                 company_id=company_id,
                 followup_question=None,
                 parsed=parsed,
+                memory_injected=memory_injected,
+                events_count=events_count,
             )
 
         except Exception as e:
-            print(f"[CRITICAL AI ERROR] {str(e)}")
-            raise HTTPException(status_code=500, detail=f"AIMX engine failed: {str(e)}")
+            logger.error(
+                "AIMX engine failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500, detail="AIMX engine failed") from e
 
 
 ai_engine = AIService()

@@ -1,22 +1,21 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends, status
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
 
 from app.services.openai_client import ai_engine
 from app.core.dependencies import get_auth_context, AuthContext
+from app.models.request import ChatRequest
+from app.models.response import ChatResponse
 
 router = APIRouter(tags=["AI"])
+logger = logging.getLogger(__name__)
 
 
-class ChatRequest(BaseModel):
-    company_id: str
-    session_id: str
-    message: str
-    context: Optional[Dict[str, Any]] = None
-
-
-@router.post("/chat")
-async def chat_endpoint(request: ChatRequest, auth_context: AuthContext = Depends(get_auth_context)):
+@router.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(
+    request: ChatRequest,
+    auth_context: AuthContext = Depends(get_auth_context),
+) -> ChatResponse:
     try:
         # Verify company_id matches authenticated token
         if request.company_id != auth_context.company_id:
@@ -31,8 +30,26 @@ async def chat_endpoint(request: ChatRequest, auth_context: AuthContext = Depend
             context=request.context,
             company_id=auth_context.company_id,
         )
-        return result
-    except HTTPException:
+        return ChatResponse.model_validate(result)
+    except HTTPException as e:
+        if e.status_code >= 500:
+            logger.error(
+                "Chat endpoint failed with service error",
+                extra={"company_id": auth_context.company_id, "session_id": request.session_id},
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(
+            "Chat endpoint failed",
+            extra={"company_id": auth_context.company_id, "session_id": request.session_id},
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

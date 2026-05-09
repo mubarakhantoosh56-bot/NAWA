@@ -8,19 +8,35 @@ from app.core.security import create_token
 client = TestClient(app)
 
 
+def _chat_response(company_id: str, session_id: str) -> dict:
+    return {
+        "ceo_text": "ok",
+        "logic_json": {},
+        "followup_question": None,
+        "meta": {
+            "company_id": company_id,
+            "session_id": session_id,
+            "context": {},
+            "parse_ok": True,
+            "memory_injected": False,
+            "events_count": 0,
+        },
+    }
+
+
 @patch("app.api.chat.ai_engine.chat")
 def test_valid_jwt_matching_company_id_succeeds(mock_chat):
     """Test 1: Valid JWT + matching company_id reaches service, returns 200."""
-    mock_chat.return_value = {"ok": True}
-
     company_id = "company_123"
+    session_id = "session_789"
     user_id = "user_456"
+    mock_chat.return_value = _chat_response(company_id=company_id, session_id=session_id)
     token = create_token(company_id=company_id, user_id=user_id)
 
     headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "company_id": company_id,
-        "session_id": "session_789",
+        "session_id": session_id,
         "message": "Hello",
     }
 
@@ -66,3 +82,11 @@ def test_no_authorization_header_returns_401():
 
     # Auth required
     assert response.status_code == 401, f"Expected 401, got {response.status_code}"
+
+
+def test_health_returns_ok():
+    """Health endpoint is public and lightweight."""
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
