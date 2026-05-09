@@ -3,6 +3,8 @@ from datetime import datetime
 import json
 import os
 import hashlib
+import traceback
+
 print("[event_log.py loaded from]", __file__)
 
 def _safe_json(obj: Any) -> Any:
@@ -72,7 +74,6 @@ async def log_decision_event_db(
         await repo.insert_event(event)
         print("[DB LOG] inserted (or skipped by idempotency)")
 
-        import traceback
 
     except Exception as e:
         print(f"[DB LOG ERROR] {e}")

@@ -286,7 +286,7 @@ def _validate_execution_structure(parsed: Optional[Dict[str, Any]]) -> bool:
 
 class AIService:
     def __init__(self) -> None:
-        print("DB_URL=", getattr(settings, "DATABASE_URL", "MISSING"))
+
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
         self.sessions: Dict[str, List[Dict[str, str]]] = {}
