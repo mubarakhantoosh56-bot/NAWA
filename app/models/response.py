@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -21,3 +22,45 @@ class ChatResponse(BaseModel):
     logic_json: dict[str, Any]
     followup_question: str | None = None
     meta: ChatMeta
+
+
+class AuthCompanyResponse(BaseModel):
+    """Safe company fields returned by auth endpoints."""
+
+    id: UUID
+    slug: str
+    name: str
+    status: str
+    plan: str
+
+
+class AuthUserResponse(BaseModel):
+    """Safe user fields returned by auth endpoints."""
+
+    id: UUID
+    email: str
+    full_name: str
+    status: str
+    auth_provider: str
+
+
+class AuthMembershipResponse(BaseModel):
+    """Safe membership fields returned by auth endpoints."""
+
+    id: UUID
+    company_id: UUID
+    user_id: UUID
+    role_id: UUID
+    department_id: UUID | None = None
+    status: str
+
+
+class AuthResponse(BaseModel):
+    """Structured token response returned by register and login."""
+
+    access_token: str
+    refresh_token: str
+    token_type: str
+    company: AuthCompanyResponse
+    user: AuthUserResponse
+    membership: AuthMembershipResponse
