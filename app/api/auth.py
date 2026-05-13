@@ -6,8 +6,9 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.config import settings
+from app.core.dependencies import AuthContext, get_auth_context
 from app.models.request import AuthLoginRequest, AuthRegisterRequest
-from app.models.response import AuthResponse
+from app.models.response import AuthMeResponse, AuthResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -83,6 +84,32 @@ async def login(
         ) from exc
     except Exception as exc:
         logger.error("Login endpoint failed", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Auth service unavailable",
+        ) from exc
+
+
+@router.get("/me", response_model=AuthMeResponse)
+async def me(
+    auth_context: AuthContext = Depends(get_auth_context),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> AuthMeResponse:
+    """Return the current authenticated user context."""
+    try:
+        result = await auth_service.get_current_context(
+            company_id=auth_context.company_id,
+            user_id=auth_context.user_id,
+        )
+        return AuthMeResponse.model_validate(result)
+    except ValueError as exc:
+        logger.info("Current auth context failed validation")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="invalid authenticated context",
+        ) from exc
+    except Exception as exc:
+        logger.error("Current auth context endpoint failed", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Auth service unavailable",

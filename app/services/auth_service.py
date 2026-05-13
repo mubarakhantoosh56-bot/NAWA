@@ -16,6 +16,7 @@ from app.core.security import create_token
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.membership_repository import MembershipRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
+from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.services.company_bootstrap_service import CompanyBootstrapService
 
@@ -132,6 +133,49 @@ class AuthService:
             "company": company,
             "user": self._without_password_hash(user),
             "membership": membership,
+        }
+
+    async def get_current_context(self, company_id: str, user_id: str) -> RowDict:
+        """Return the authenticated user's active company context."""
+        try:
+            company_uuid = UUID(company_id)
+            user_uuid = UUID(user_id)
+        except ValueError as exc:
+            raise ValueError("invalid authenticated context") from exc
+
+        async with self._connection() as conn:
+            company_repo = CompanyRepository(conn)
+            user_repo = UserRepository(conn)
+            membership_repo = MembershipRepository(conn)
+            role_repo = RoleRepository(conn)
+
+            company = await company_repo.get_by_id(company_uuid)
+            if company is None:
+                raise ValueError("invalid authenticated context")
+
+            user = await user_repo.get_by_id(user_uuid)
+            if user is None:
+                raise ValueError("invalid authenticated context")
+
+            membership = await membership_repo.get_active_membership(
+                company_id=company_uuid,
+                user_id=user_uuid,
+            )
+            if membership is None:
+                raise ValueError("invalid authenticated context")
+
+            role = await role_repo.get_accessible_role_by_id(
+                company_id=company_uuid,
+                role_id=membership["role_id"],
+            )
+            if role is None:
+                raise ValueError("invalid authenticated context")
+
+        return {
+            "company": company,
+            "user": self._without_password_hash(user),
+            "membership": membership,
+            "role": role,
         }
 
     async def _validate_existing_user_for_register(self, email: str, password: str) -> None:

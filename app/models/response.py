@@ -64,3 +64,22 @@ class AuthResponse(BaseModel):
     company: AuthCompanyResponse
     user: AuthUserResponse
     membership: AuthMembershipResponse
+
+
+class AuthRoleResponse(BaseModel):
+    """Safe role fields returned for the current auth context."""
+
+    id: UUID
+    slug: str
+    name: str
+    permissions: list[str]
+    is_system_role: bool
+
+
+class AuthMeResponse(BaseModel):
+    """Current authenticated user context for dashboard clients."""
+
+    company: AuthCompanyResponse
+    user: AuthUserResponse
+    membership: AuthMembershipResponse
+    role: AuthRoleResponse

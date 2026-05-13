@@ -99,6 +99,32 @@ class RoleRepository:
         )
         return self._optional_row_to_dict(row)
 
+    async def get_accessible_role_by_id(
+        self,
+        company_id: UUID,
+        role_id: UUID,
+    ) -> RowDict | None:
+        """Return a role allowed for one tenant or a system role template."""
+        row = await self.db.fetchrow(
+            """
+            SELECT *
+            FROM roles
+            WHERE id = $2
+              AND deleted_at IS NULL
+              AND (
+                  company_id = $1
+                  OR (
+                      company_id IS NULL
+                      AND is_system_role = TRUE
+                  )
+              )
+            LIMIT 1
+            """,
+            company_id,
+            role_id,
+        )
+        return self._optional_row_to_dict(row)
+
     async def get_company_role_by_slug(
         self,
         company_id: UUID,
