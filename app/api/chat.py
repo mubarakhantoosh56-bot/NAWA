@@ -3,7 +3,8 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends, status
 
 from app.services.openai_client import ai_engine
-from app.core.dependencies import get_auth_context, AuthContext
+from app.core.dependencies import AuthContext
+from app.core.permissions import require_permission
 from app.models.request import ChatRequest
 from app.models.response import ChatResponse
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(
     request: ChatRequest,
-    auth_context: AuthContext = Depends(get_auth_context),
+    auth_context: AuthContext = Depends(require_permission("ai.chat")),
 ) -> ChatResponse:
     try:
         # Verify company_id matches authenticated token

@@ -10,9 +10,19 @@ bearer_scheme = HTTPBearer(auto_error=False)
 class AuthContext:
     """Authenticated user context extracted from JWT token."""
 
-    def __init__(self, company_id: str, user_id: str):
+    def __init__(
+        self,
+        company_id: str,
+        user_id: str,
+        permissions: list[str] | None = None,
+        role_id: str | None = None,
+        role_slug: str | None = None,
+    ) -> None:
         self.company_id = company_id
         self.user_id = user_id
+        self.permissions = permissions or []
+        self.role_id = role_id
+        self.role_slug = role_slug
 
 
 async def get_auth_context(
