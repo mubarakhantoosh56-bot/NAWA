@@ -104,6 +104,46 @@ class FileIngestionService:
                 "error": self._safe_error(exc),
             }
 
+    async def list_files(
+        self,
+        company_id: UUID,
+        department_id: UUID | None = None,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[RowDict]:
+        """Return files for one tenant, optionally filtered by department/status."""
+        await self._validate_department(company_id, department_id)
+        return await self.file_repo.list_files(
+            company_id=company_id,
+            department_id=department_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def get_file(
+        self,
+        company_id: UUID,
+        file_id: UUID,
+    ) -> RowDict | None:
+        """Return one tenant file with active chunk count."""
+        file_record = await self.file_repo.get_file_by_id(
+            company_id=company_id,
+            file_id=file_id,
+        )
+        if file_record is None:
+            return None
+
+        chunk_count = await self.file_chunk_repo.count_chunks_by_file(
+            company_id=company_id,
+            file_id=file_id,
+        )
+        return {
+            **file_record,
+            "chunk_count": chunk_count,
+        }
+
     async def _validate_department(
         self,
         company_id: UUID,

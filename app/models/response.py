@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -102,3 +103,31 @@ class DepartmentListResponse(BaseModel):
     """List response for tenant departments."""
 
     departments: list[DepartmentResponse]
+
+
+class FileResponse(BaseModel):
+    """Safe file metadata returned by file endpoints."""
+
+    id: UUID
+    company_id: UUID
+    department_id: UUID | None = None
+    uploaded_by_user_id: UUID
+    filename: str
+    content_type: str
+    file_size_bytes: int
+    status: str
+    metadata: dict[str, object]
+    created_at: datetime
+    updated_at: datetime
+
+
+class FileDetailResponse(FileResponse):
+    """Safe file detail returned by file detail endpoint."""
+
+    chunk_count: int = 0
+
+
+class FileListResponse(BaseModel):
+    """List response for tenant files."""
+
+    files: list[FileResponse]
