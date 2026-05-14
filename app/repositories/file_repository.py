@@ -27,11 +27,13 @@ class FileRepository:
         status: str = "uploaded",
         metadata: dict[str, object] | None = None,
         created_by_user_id: UUID | None = None,
+        file_id: UUID | None = None,
     ) -> RowDict:
         """Create a tenant-scoped file record and return the inserted row."""
         row = await self.db.fetchrow(
             """
             INSERT INTO files (
+                id,
                 company_id,
                 department_id,
                 uploaded_by_user_id,
@@ -43,7 +45,19 @@ class FileRepository:
                 metadata,
                 created_by_user_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
+            VALUES (
+                COALESCE($11::uuid, gen_random_uuid()),
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9::jsonb,
+                $10
+            )
             RETURNING *
             """,
             company_id,
@@ -56,6 +70,7 @@ class FileRepository:
             status,
             json.dumps(metadata or {}),
             created_by_user_id,
+            file_id,
         )
         return self._row_to_dict(row)
 
