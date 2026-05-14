@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     context: dict[str, Any] | None = None
+    department_id: str | None = None
 
 
 class AuthRegisterRequest(BaseModel):
