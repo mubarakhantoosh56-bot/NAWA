@@ -28,3 +28,23 @@ class AuthLoginRequest(BaseModel):
     email: str
     password: str
     company_slug: str
+
+
+class DepartmentCreateRequest(BaseModel):
+    """Request body for creating a department."""
+
+    name: str
+    department_type: str
+    description: str | None = None
+    ai_agent_enabled: bool = False
+    ai_agent_config: dict[str, object] | None = None
+
+
+class DepartmentUpdateRequest(BaseModel):
+    """Request body for updating a department."""
+
+    name: str | None = None
+    department_type: str | None = None
+    description: str | None = None
+    ai_agent_enabled: bool | None = None
+    ai_agent_config: dict[str, object] | None = None

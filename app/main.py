@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
+from app.api.departments import router as departments_router
 from app.api.health import router as health_router
 from app.core.config import settings
 
@@ -18,6 +19,7 @@ app.add_middleware(
 # هنا الـ prefix الوحيد
 app.include_router(auth_router)
 app.include_router(chat_router, prefix="/ai")
+app.include_router(departments_router)
 app.include_router(health_router)
 
 

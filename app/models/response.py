@@ -83,3 +83,22 @@ class AuthMeResponse(BaseModel):
     user: AuthUserResponse
     membership: AuthMembershipResponse
     role: AuthRoleResponse
+
+
+class DepartmentResponse(BaseModel):
+    """Safe department fields returned by department endpoints."""
+
+    id: UUID
+    company_id: UUID
+    name: str
+    slug: str
+    description: str | None = None
+    department_type: str
+    ai_agent_enabled: bool
+    ai_agent_config: dict[str, object]
+
+
+class DepartmentListResponse(BaseModel):
+    """List response for tenant departments."""
+
+    departments: list[DepartmentResponse]
