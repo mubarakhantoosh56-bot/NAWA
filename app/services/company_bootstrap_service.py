@@ -10,6 +10,7 @@ from app.repositories.company_repository import CompanyRepository
 from app.repositories.membership_repository import MembershipRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
+from app.services.department_service import DepartmentService
 
 RowDict = dict[str, object]
 
@@ -84,11 +85,21 @@ class CompanyBootstrapService:
                 created_by_user_id=user["id"],
             )
 
+            try:
+                department_service = DepartmentService(conn)
+                departments = await department_service.create_default_departments(
+                    company_id=company["id"],
+                    created_by_user_id=user["id"],
+                )
+            except ValueError as exc:
+                raise ValueError("department bootstrap failed") from exc
+
             return {
                 "company": company,
                 "user": self._without_password_hash(user),
                 "role": owner_role,
                 "membership": membership,
+                "departments": departments,
             }
 
     @asynccontextmanager
