@@ -61,3 +61,27 @@ export type Department = {
 export type DepartmentListResponse = {
   departments: Department[];
 };
+
+export type ChatRequest = {
+  company_id: string;
+  session_id: string;
+  message: string;
+  context?: Record<string, unknown>;
+  department_id?: string;
+};
+
+export type ChatMeta = {
+  company_id: string | null;
+  session_id: string | null;
+  context: Record<string, unknown>;
+  parse_ok: boolean;
+  memory_injected: boolean;
+  events_count: number;
+};
+
+export type ChatResponse = {
+  ceo_text: string;
+  logic_json: Record<string, unknown>;
+  followup_question: string | null;
+  meta: ChatMeta;
+};

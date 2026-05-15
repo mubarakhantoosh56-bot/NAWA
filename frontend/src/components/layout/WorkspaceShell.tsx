@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ApiError } from "@/lib/api/client";
 import { listDepartments } from "@/lib/api/departments";
 import type { Department } from "@/lib/types";
@@ -85,7 +86,8 @@ export function WorkspaceShell() {
   const activeScope = activeDepartment ? "Department-scoped" : "Company-wide";
   const activeDescription = activeDepartment
     ? activeDepartment.description || `${activeDepartment.name} workspace is ready for chat integration.`
-    : "Company-wide AI workspace shell is ready. Chat, departments, and files will plug into this operational dashboard in the next frontend phases.";
+    : "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready AIMX decisions.";
+  const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
 
   return (
     <main className="min-h-screen bg-surface text-ink">
@@ -196,13 +198,15 @@ export function WorkspaceShell() {
             />
           </div>
 
-          <div className="panel p-4">
-            <div className="text-xs font-semibold uppercase text-muted">Phase 2 status</div>
-            <div className="mt-2 grid gap-2 text-sm text-muted md:grid-cols-2">
-              <div>Active state is local to this workspace shell.</div>
-              <div>Chat and files UI are intentionally pending for later phases.</div>
-            </div>
-          </div>
+          {token && me ? (
+            <ChatPanel
+              token={token}
+              companyId={me.company.id}
+              workspaceKey={activeWorkspaceKey}
+              title={activeTitle}
+              department={activeDepartment}
+            />
+          ) : null}
         </section>
       </div>
     </main>
