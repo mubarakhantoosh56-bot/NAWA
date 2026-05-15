@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f7f8fa;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-md border border-line bg-white shadow-panel;
+  }
+
+  .field-label {
+    @apply mb-1 block text-sm font-medium text-ink;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-blue-100;
+  }
+
+  .button-primary {
+    @apply rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300;
+  }
+
+  .button-secondary {
+    @apply rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface;
+  }
+}

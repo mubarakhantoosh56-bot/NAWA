@@ -5,3 +5,6 @@ __pycache__/
 .vscode/
 app/services/memory/logs/
 logs/
+frontend/.next/
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
