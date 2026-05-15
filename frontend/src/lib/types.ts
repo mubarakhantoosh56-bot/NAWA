@@ -85,3 +85,21 @@ export type ChatResponse = {
   followup_question: string | null;
   meta: ChatMeta;
 };
+
+export type CompanyFile = {
+  id: string;
+  company_id: string;
+  department_id: string | null;
+  uploaded_by_user_id: string;
+  filename: string;
+  content_type: string;
+  file_size_bytes: number;
+  status: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FileListResponse = {
+  files: CompanyFile[];
+};

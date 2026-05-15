@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { FilesPanel } from "@/components/files/FilesPanel";
 import { ApiError } from "@/lib/api/client";
 import { listDepartments } from "@/lib/api/departments";
 import type { Department } from "@/lib/types";
@@ -39,6 +40,8 @@ export function WorkspaceShell() {
   const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "ceo" });
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
+  const canReadFiles = hasPermission(permissions, "files.read");
+  const canUploadFiles = hasPermission(permissions, "files.upload");
 
   useEffect(() => {
     if (!token || !canReadDepartments) {
@@ -199,13 +202,18 @@ export function WorkspaceShell() {
           </div>
 
           {token && me ? (
-            <ChatPanel
-              token={token}
-              companyId={me.company.id}
-              workspaceKey={activeWorkspaceKey}
-              title={activeTitle}
-              department={activeDepartment}
-            />
+            <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]" : ""}>
+              <ChatPanel
+                token={token}
+                companyId={me.company.id}
+                workspaceKey={activeWorkspaceKey}
+                title={activeTitle}
+                department={activeDepartment}
+              />
+              {canReadFiles ? (
+                <FilesPanel token={token} departments={departments} canUpload={canUploadFiles} />
+              ) : null}
+            </div>
           ) : null}
         </section>
       </div>
