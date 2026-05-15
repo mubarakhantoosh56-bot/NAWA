@@ -57,7 +57,7 @@ def test_ceo_default_selection():
 
 
 def test_department_persona_selection():
-    context = {"aimx_department": {"department_type": "sales"}}
+    context = {"aimx_department": {"department_type": "sales_ai"}}
     persona = resolve_persona(context)
     prompt = build_persona_prompt(context)
 

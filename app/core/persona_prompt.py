@@ -69,6 +69,18 @@ DEPARTMENT_PERSONAS: dict[str, Persona] = {
     ),
 }
 
+DEPARTMENT_PERSONAS.update(
+    {
+        "sales_ai": DEPARTMENT_PERSONAS["sales"],
+        "finance_ai": DEPARTMENT_PERSONAS["finance"],
+        "marketing_ai": DEPARTMENT_PERSONAS["marketing"],
+        "hr_ai": DEPARTMENT_PERSONAS["hr"],
+        "operations_ai": DEPARTMENT_PERSONAS["operations"],
+        "warehouse_ai": DEPARTMENT_PERSONAS["warehouse"],
+        "production_ai": DEPARTMENT_PERSONAS["production"],
+    }
+)
+
 
 GENERIC_DEPARTMENT_PERSONA = Persona(
     key="department",
