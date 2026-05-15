@@ -11,6 +11,7 @@ from app.services.output_formatter import format_ai_response
 from app.core.config import settings
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
+from app.core.persona_prompt import build_persona_prompt
 
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
@@ -768,6 +769,7 @@ class AIService:
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
                 {"role": "system", "content": AIMX_DECISION_PROMPT},
+                {"role": "system", "content": build_persona_prompt(context)},
             ]
 
             if company_profile_block:
