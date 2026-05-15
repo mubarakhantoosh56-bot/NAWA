@@ -118,7 +118,7 @@ export function WorkspaceShell() {
           <nav className="space-y-1">
             <SidebarItem
               label="CEO AI"
-              description="Company-wide"
+              description="Executive command"
               active={activeWorkspace.kind === "ceo"}
               onClick={() => setActiveWorkspace({ kind: "ceo" })}
             />
@@ -138,6 +138,15 @@ export function WorkspaceShell() {
             {departmentStatus === "error" ? (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {departmentError}
+              </div>
+            ) : null}
+
+            {departmentStatus === "ready" && departments.length === 0 ? (
+              <div className="rounded-md border border-dashed border-line bg-surface px-3 py-2">
+                <div className="text-sm font-medium text-ink">No departments yet</div>
+                <div className="mt-1 text-xs leading-5 text-muted">
+                  Run the demo seed to unlock Sales, Finance, Marketing, and Operations workspaces.
+                </div>
               </div>
             ) : null}
 
@@ -175,7 +184,7 @@ export function WorkspaceShell() {
           <div className="panel p-4">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
               <div>
-                <div className="text-xs font-semibold uppercase text-muted">Active agent</div>
+                <div className="text-xs font-semibold uppercase text-muted">Live AI workforce</div>
                 <h1 className="mt-1 text-xl font-semibold text-ink">{activeTitle}</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
                   {activeDescription}
@@ -187,17 +196,23 @@ export function WorkspaceShell() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <StatusPanel title="Auth" value="Connected" detail="/auth/login + /auth/me" />
+          <QuickStartPanel
+            activeTitle={activeTitle}
+            canReadFiles={canReadFiles}
+            canUploadFiles={canUploadFiles}
+          />
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <StatusPanel title="Identity" value="Verified" detail="Auth and role loaded" />
             <StatusPanel
               title="Departments"
               value={canReadDepartments ? String(departments.length) : "Locked"}
-              detail={canReadDepartments ? "Loaded from /departments" : "Missing departments.read"}
+              detail={canReadDepartments ? "AI workspaces available" : "Missing departments.read"}
             />
             <StatusPanel
-              title="Workspace"
+              title="Tenant"
               value={me?.company.slug ?? "Ready"}
-              detail="Tenant scoped"
+              detail="Company-isolated context"
             />
           </div>
 
@@ -218,6 +233,48 @@ export function WorkspaceShell() {
         </section>
       </div>
     </main>
+  );
+}
+
+function QuickStartPanel({
+  activeTitle,
+  canReadFiles,
+  canUploadFiles,
+}: {
+  activeTitle: string;
+  canReadFiles: boolean;
+  canUploadFiles: boolean;
+}) {
+  return (
+    <section className="panel p-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase text-muted">Demo quick start</div>
+          <div className="mt-1 text-sm font-medium text-ink">
+            Select an AI worker, review knowledge files, then ask a decision question.
+          </div>
+        </div>
+        <div className="grid gap-2 text-xs text-muted sm:grid-cols-3 lg:min-w-[520px]">
+          <QuickStartStep value="1" label={activeTitle} />
+          <QuickStartStep
+            value="2"
+            label={canReadFiles ? (canUploadFiles ? "Upload or review files" : "Review files") : "Files locked"}
+          />
+          <QuickStartStep value="3" label="Use a suggested prompt" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuickStartStep({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-2">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-line bg-white text-[11px] font-semibold text-ink">
+        {value}
+      </span>
+      <span className="truncate">{label}</span>
+    </div>
   );
 }
 

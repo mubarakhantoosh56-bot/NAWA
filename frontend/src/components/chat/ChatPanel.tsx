@@ -34,6 +34,7 @@ export function ChatPanel({
 
   const turns = turnsByWorkspace[workspaceKey] ?? [];
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
+  const suggestedPrompts = useMemo(() => getSuggestedPrompts(department), [department]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,9 +90,13 @@ export function ChatPanel({
 
       <div className="flex-1 space-y-4 overflow-y-auto bg-white p-4">
         {turns.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-surface p-4 text-sm text-muted">
-            Start with a focused business question. AIMX will answer through the active
-            workspace while keeping prompts and auth details internal.
+          <div className="rounded-md border border-dashed border-line bg-surface p-4">
+            <div className="text-sm font-medium text-ink">Start the demo conversation</div>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Use a prepared boardroom-style prompt or ask a focused business question.
+              AIMX keeps internal prompts, auth details, and tenant context out of the UI.
+            </p>
+            <PromptChips prompts={suggestedPrompts} onSelect={setDraft} />
           </div>
         ) : null}
 
@@ -118,7 +123,10 @@ export function ChatPanel({
 
         {isSending ? (
           <div className="rounded-md border border-line bg-surface p-3 text-sm text-muted">
-            AIMX is working...
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+              AIMX is preparing a tenant-scoped answer...
+            </span>
           </div>
         ) : null}
       </div>
@@ -146,6 +154,29 @@ export function ChatPanel({
   );
 }
 
+function PromptChips({
+  prompts,
+  onSelect,
+}: {
+  prompts: string[];
+  onSelect: (prompt: string) => void;
+}) {
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {prompts.map((prompt) => (
+        <button
+          key={prompt}
+          className="rounded-md border border-line bg-white px-3 py-2 text-left text-xs leading-5 text-ink transition hover:border-accent hover:bg-blue-50"
+          type="button"
+          onClick={() => onSelect(prompt)}
+        >
+          {prompt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function MetaIndicators({ response }: { response: ChatResponse }) {
   return (
     <div className="flex shrink-0 flex-wrap gap-1.5 text-xs">
@@ -161,12 +192,14 @@ function MetaIndicators({ response }: { response: ChatResponse }) {
 }
 
 function LogicPanel({ logic }: { logic: Record<string, unknown> }) {
+  const keys = Object.keys(logic);
+
   return (
     <details className="mt-3 rounded-md border border-line bg-surface">
-      <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-ink">
-        Decision logic
+      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase text-muted">
+        Decision logic {keys.length ? `- ${keys.length} fields` : ""}
       </summary>
-      <pre className="max-h-72 overflow-auto border-t border-line p-3 text-xs leading-5 text-ink">
+      <pre className="max-h-56 overflow-auto border-t border-line bg-white p-3 text-xs leading-5 text-ink">
         {JSON.stringify(logic, null, 2)}
       </pre>
     </details>
@@ -203,4 +236,45 @@ function buildChatContext(department: Department | null): Record<string, unknown
           active_workspace: "ceo",
         }),
   };
+}
+
+function getSuggestedPrompts(department: Department | null): string[] {
+  if (!department) {
+    return [
+      "Give me the CEO briefing for this week: risks, priorities, and recommended actions.",
+      "What should Atlas Home Supplies focus on before an investor demo?",
+      "Summarize the top cross-department decisions we should make today.",
+      "Review company knowledge and suggest a 30-day operating plan.",
+    ];
+  }
+
+  const promptGroups: Record<string, string[]> = {
+    sales_ai: [
+      "Summarize the sales pipeline and highlight the best next actions.",
+      "Which customer segments should Sales prioritize this month?",
+      "Draft a practical plan to improve close rate using company knowledge.",
+      "What should Sales report to the CEO before the demo?",
+    ],
+    finance_ai: [
+      "Give me a finance briefing with cash, margin, and spending risks.",
+      "Which costs should Finance review before the next planning meeting?",
+      "Summarize financial priorities for the next 30 days.",
+      "What finance questions should the CEO ask today?",
+    ],
+    marketing_ai: [
+      "Summarize current marketing priorities and campaign opportunities.",
+      "Which messages should Marketing emphasize for growth this month?",
+      "Draft a compact campaign plan using company knowledge.",
+      "What marketing proof points should we show in an investor demo?",
+    ],
+  };
+
+  return (
+    promptGroups[department.department_type] ?? [
+      `Summarize ${department.name} priorities and recommended next actions.`,
+      `What should ${department.name} report to the CEO this week?`,
+      `Identify risks and blockers for ${department.name}.`,
+      `Create a 30-day execution plan for ${department.name}.`,
+    ]
+  );
 }

@@ -178,7 +178,10 @@ export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
       <div className="max-h-[520px] space-y-3 overflow-y-auto bg-white p-4">
         {status === "loading" ? (
           <div className="rounded-md border border-line bg-surface p-3 text-sm text-muted">
-            Loading files...
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+              Loading company knowledge...
+            </span>
           </div>
         ) : null}
 
@@ -189,8 +192,12 @@ export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
         ) : null}
 
         {status === "ready" && files.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-surface p-3 text-sm text-muted">
-            No company knowledge files yet.
+          <div className="rounded-md border border-dashed border-line bg-surface p-3">
+            <div className="text-sm font-medium text-ink">No knowledge files yet</div>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Upload a demo brief, finance summary, sales notes, or campaign plan to make
+              AIMX answers more grounded.
+            </p>
           </div>
         ) : null}
 
