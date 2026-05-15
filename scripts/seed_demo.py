@@ -174,6 +174,15 @@ async def seed_demo() -> dict[str, object]:
 
         company = result["company"]
         user = result["user"]
+        await conn.execute(
+            """
+            UPDATE users
+            SET password_hash = $1, updated_at = NOW()
+            WHERE id = $2
+            """,
+            hash_password(password),
+            user["id"],
+        )
         departments = await _configure_demo_departments(
             conn=conn,
             company_id=company["id"],
