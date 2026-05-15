@@ -46,3 +46,18 @@ export type MeResponse = {
   membership: Membership;
   role: Role;
 };
+
+export type Department = {
+  id: string;
+  company_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  department_type: string;
+  ai_agent_enabled: boolean;
+  ai_agent_config: Record<string, unknown>;
+};
+
+export type DepartmentListResponse = {
+  departments: Department[];
+};

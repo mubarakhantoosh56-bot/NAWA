@@ -1,12 +1,91 @@
 "use client";
 
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useEffect, useMemo, useState } from "react";
 
-const workforceItems = ["CEO AI", "Sales AI", "Finance AI", "Marketing AI", "Operations AI"];
+import { useAuth } from "@/components/auth/AuthProvider";
+import { ApiError } from "@/lib/api/client";
+import { listDepartments } from "@/lib/api/departments";
+import type { Department } from "@/lib/types";
+
+type ActiveWorkspace =
+  | {
+      kind: "ceo";
+    }
+  | {
+      kind: "department";
+      departmentId: string;
+    };
+
+const departmentTypeLabels: Record<string, string> = {
+  sales_ai: "Sales AI",
+  finance_ai: "Finance AI",
+  marketing_ai: "Marketing AI",
+  hr_ai: "HR AI",
+  operations_ai: "Operations AI",
+  warehouse_ai: "Warehouse AI",
+  production_ai: "Production AI",
+  custom: "Department AI",
+};
 
 export function WorkspaceShell() {
-  const { me, logout } = useAuth();
+  const { me, token, logout } = useAuth();
   const permissions = me?.role.permissions ?? [];
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentStatus, setDepartmentStatus] = useState<"idle" | "loading" | "ready" | "blocked" | "error">(
+    "idle",
+  );
+  const [departmentError, setDepartmentError] = useState<string | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "ceo" });
+
+  const canReadDepartments = hasPermission(permissions, "departments.read");
+
+  useEffect(() => {
+    if (!token || !canReadDepartments) {
+      setDepartments([]);
+      setDepartmentStatus(canReadDepartments ? "idle" : "blocked");
+      return;
+    }
+
+    let isMounted = true;
+    setDepartmentStatus("loading");
+    setDepartmentError(null);
+
+    listDepartments(token)
+      .then((response) => {
+        if (!isMounted) {
+          return;
+        }
+        setDepartments(response.departments);
+        setDepartmentStatus("ready");
+      })
+      .catch((caught) => {
+        if (!isMounted) {
+          return;
+        }
+        setDepartments([]);
+        setDepartmentStatus("error");
+        setDepartmentError(caught instanceof ApiError ? caught.detail : "Unable to load departments.");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canReadDepartments, token]);
+
+  const activeDepartment = useMemo(() => {
+    if (activeWorkspace.kind !== "department") {
+      return null;
+    }
+    return departments.find((department) => department.id === activeWorkspace.departmentId) ?? null;
+  }, [activeWorkspace, departments]);
+
+  const activeTitle = activeDepartment
+    ? getDepartmentAgentLabel(activeDepartment)
+    : "CEO AI Workspace";
+  const activeScope = activeDepartment ? "Department-scoped" : "Company-wide";
+  const activeDescription = activeDepartment
+    ? activeDepartment.description || `${activeDepartment.name} workspace is ready for chat integration.`
+    : "Company-wide AI workspace shell is ready. Chat, departments, and files will plug into this operational dashboard in the next frontend phases.";
 
   return (
     <main className="min-h-screen bg-surface text-ink">
@@ -32,19 +111,53 @@ export function WorkspaceShell() {
         <aside className="panel h-fit p-3">
           <div className="px-2 pb-2 text-xs font-semibold uppercase text-muted">Workspace</div>
           <nav className="space-y-1">
-            {workforceItems.map((item, index) => (
-              <button
-                key={item}
-                className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                  index === 0
-                    ? "bg-blue-50 font-medium text-accent"
-                    : "text-ink hover:bg-surface"
-                }`}
-                type="button"
-              >
-                {item}
-              </button>
-            ))}
+            <SidebarItem
+              label="CEO AI"
+              description="Company-wide"
+              active={activeWorkspace.kind === "ceo"}
+              onClick={() => setActiveWorkspace({ kind: "ceo" })}
+            />
+
+            <div className="px-2 pt-3 text-xs font-semibold uppercase text-muted">Departments</div>
+
+            {departmentStatus === "loading" ? (
+              <div className="px-3 py-2 text-sm text-muted">Loading departments...</div>
+            ) : null}
+
+            {departmentStatus === "blocked" ? (
+              <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
+                Department list unavailable for this role.
+              </div>
+            ) : null}
+
+            {departmentStatus === "error" ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {departmentError}
+              </div>
+            ) : null}
+
+            {departments.map((department) => {
+              const canUseDepartment = canUseAgent(permissions, department.department_type);
+              return (
+                <SidebarItem
+                  key={department.id}
+                  label={getDepartmentAgentLabel(department)}
+                  description={department.name}
+                  active={
+                    activeWorkspace.kind === "department" &&
+                    activeWorkspace.departmentId === department.id
+                  }
+                  disabled={!canUseDepartment || !department.ai_agent_enabled}
+                  lockLabel={!canUseDepartment ? "Locked" : "Off"}
+                  onClick={() =>
+                    setActiveWorkspace({
+                      kind: "department",
+                      departmentId: department.id,
+                    })
+                  }
+                />
+              );
+            })}
           </nav>
           <div className="mt-4 border-t border-line px-2 pt-3">
             <div className="text-xs font-semibold uppercase text-muted">Role</div>
@@ -58,26 +171,83 @@ export function WorkspaceShell() {
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
               <div>
                 <div className="text-xs font-semibold uppercase text-muted">Active agent</div>
-                <h1 className="mt-1 text-xl font-semibold text-ink">CEO AI Workspace</h1>
+                <h1 className="mt-1 text-xl font-semibold text-ink">{activeTitle}</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                  Company-wide AI workspace shell is ready. Chat, departments, and files will
-                  plug into this operational dashboard in the next frontend phases.
+                  {activeDescription}
                 </p>
               </div>
               <div className="rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">
-                Backend: {process.env.NEXT_PUBLIC_AIMX_API_URL || "http://localhost:8000"}
+                Scope: {activeScope}
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <StatusPanel title="Auth" value="Connected" detail="/auth/login + /auth/me" />
-            <StatusPanel title="Workspace" value={me?.company.slug ?? "Ready"} detail="Tenant scoped" />
-            <StatusPanel title="Next" value="Chat MVP" detail="/ai/chat integration pending" />
+            <StatusPanel
+              title="Departments"
+              value={canReadDepartments ? String(departments.length) : "Locked"}
+              detail={canReadDepartments ? "Loaded from /departments" : "Missing departments.read"}
+            />
+            <StatusPanel
+              title="Workspace"
+              value={me?.company.slug ?? "Ready"}
+              detail="Tenant scoped"
+            />
+          </div>
+
+          <div className="panel p-4">
+            <div className="text-xs font-semibold uppercase text-muted">Phase 2 status</div>
+            <div className="mt-2 grid gap-2 text-sm text-muted md:grid-cols-2">
+              <div>Active state is local to this workspace shell.</div>
+              <div>Chat and files UI are intentionally pending for later phases.</div>
+            </div>
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function SidebarItem({
+  label,
+  description,
+  active,
+  disabled = false,
+  lockLabel,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  active: boolean;
+  disabled?: boolean;
+  lockLabel?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`w-full rounded-md px-3 py-2 text-left text-sm transition ${
+        active
+          ? "bg-blue-50 font-medium text-accent"
+          : disabled
+            ? "cursor-not-allowed bg-white text-muted opacity-70"
+            : "text-ink hover:bg-surface"
+      }`}
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={disabled ? "This workspace is not available for your current role." : undefined}
+    >
+      <span className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        {disabled ? (
+          <span className="rounded border border-line px-1.5 py-0.5 text-[10px] uppercase text-muted">
+            {lockLabel || "Locked"}
+          </span>
+        ) : null}
+      </span>
+      <span className="mt-0.5 block truncate text-xs text-muted">{description}</span>
+    </button>
   );
 }
 
@@ -97,4 +267,16 @@ function StatusPanel({
       <div className="mt-1 text-sm text-muted">{detail}</div>
     </div>
   );
+}
+
+function getDepartmentAgentLabel(department: Department): string {
+  return departmentTypeLabels[department.department_type] || `${department.name} AI`;
+}
+
+function canUseAgent(permissions: string[], departmentType: string): boolean {
+  return hasPermission(permissions, `agents.${departmentType}.use`);
+}
+
+function hasPermission(permissions: string[], permission: string): boolean {
+  return permissions.includes("*") || permissions.includes(permission);
 }
