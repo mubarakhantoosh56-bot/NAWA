@@ -95,7 +95,7 @@ def test_retrieval_injects_uploaded_text_file_chunks(monkeypatch):
     department_id = uuid4()
     captured = {}
 
-    async def fake_search(self, **kwargs):
+    async def fake_search_best(self, **kwargs):
         captured.update(kwargs)
         return [
             {
@@ -107,10 +107,10 @@ def test_retrieval_injects_uploaded_text_file_chunks(monkeypatch):
             {"content": "Pricing policy: discount approvals require finance review."},
             {"content": "Support process: escalate severity-one issues within 30 minutes."},
             {"content": "This fourth chunk should not be injected."},
-        ]
+        ], "semantic_pgvector", False
 
     monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
-    monkeypatch.setattr("app.services.openai_client.RetrievalService.search_chunks", fake_search)
+    monkeypatch.setattr("app.services.openai_client.RetrievalService.search_best_chunks", fake_search_best)
 
     asyncio.run(
         service.chat(
@@ -165,6 +165,43 @@ def test_retrieval_service_keeps_company_and_department_filters():
     assert captured["args"][2] == department_id
 
 
+def test_semantic_retrieval_keeps_company_and_department_filters():
+    company_id = uuid4()
+    department_id = uuid4()
+    captured = {}
+
+    class FakeDb:
+        async def fetch(self, sql, *args):
+            captured["sql"] = sql
+            captured["args"] = args
+            return []
+
+    class FakeEmbeddingService:
+        model = "test-embedding"
+        dimensions = 3
+
+        async def embed_text(self, text):
+            return [0.1, 0.2, 0.3]
+
+    service = RetrievalService(FakeDb())
+
+    asyncio.run(
+        service.search_semantic_chunks(
+            company_id=company_id,
+            query="policy",
+            department_id=department_id,
+            limit=3,
+            embedding_service=FakeEmbeddingService(),
+        )
+    )
+
+    assert "WHERE e.company_id = $1" in captured["sql"]
+    assert "AND ($5::uuid IS NULL OR e.department_id = $5)" in captured["sql"]
+    assert "ORDER BY e.embedding <=> $2::vector" in captured["sql"]
+    assert captured["args"][0] == company_id
+    assert captured["args"][4] == department_id
+
+
 def test_retrieval_failure_does_not_fail_chat(monkeypatch):
     service, fake_client = _service_with_fake_client()
     service.db_enabled = True
@@ -172,10 +209,10 @@ def test_retrieval_failure_does_not_fail_chat(monkeypatch):
     service.repo = _FakeRepo()
     monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
 
-    async def failing_search(self, **kwargs):
+    async def failing_search_best(self, **kwargs):
         raise RuntimeError("database unavailable")
 
-    monkeypatch.setattr("app.services.openai_client.RetrievalService.search_chunks", failing_search)
+    monkeypatch.setattr("app.services.openai_client.RetrievalService.search_best_chunks", failing_search_best)
 
     result = asyncio.run(
         service.chat(

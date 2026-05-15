@@ -16,5 +16,8 @@ class Settings:
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
     APP_TITLE: str = "AIMX API"
     MODEL: str = "gpt-4o-mini"
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
+    RAG_RETRIEVAL_MODE: str = os.getenv("RAG_RETRIEVAL_MODE", "semantic")
 
 settings = Settings()

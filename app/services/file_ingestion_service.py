@@ -1,5 +1,6 @@
 """Synchronous RAG file ingestion service for MVP text files."""
 
+import logging
 import shutil
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -9,12 +10,14 @@ import asyncpg
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.file_chunk_repository import FileChunkRepository
 from app.repositories.file_repository import FileRepository
+from app.services.rag.embeddings import store_chunk_embeddings
 from app.services.rag.chunking import chunk_text
 from app.services.rag.extractors import SUPPORTED_EXTENSIONS, extract_text
 
 RowDict = dict[str, object]
 
 STORAGE_ROOT = Path("storage") / "files"
+logger = logging.getLogger(__name__)
 
 
 class FileIngestionService:
@@ -76,6 +79,48 @@ class FileIngestionService:
                 department_id=department_id,
                 chunks=chunks,
             )
+
+            embedding_status = "skipped"
+            embedding_count = 0
+            try:
+                embedding_count = await store_chunk_embeddings(
+                    db=self.db,
+                    company_id=company_id,
+                    file_id=file_record["id"],
+                    department_id=department_id,
+                    chunks=created_chunks,
+                )
+                if embedding_count == len(created_chunks):
+                    embedding_status = "ready"
+                elif embedding_count > 0:
+                    embedding_status = "partial"
+                else:
+                    embedding_status = "failed"
+                logger.info(
+                    "rag_embeddings_generated",
+                    extra={
+                        "company_id": str(company_id),
+                        "file_id": str(file_record["id"]),
+                        "department_id": str(department_id) if department_id else None,
+                        "chunks_total": len(created_chunks),
+                        "embeddings_stored": embedding_count,
+                        "embedding_status": embedding_status,
+                    },
+                )
+            except Exception as exc:
+                embedding_status = "failed"
+                logger.warning(
+                    "rag_embeddings_failed",
+                    extra={
+                        "company_id": str(company_id),
+                        "file_id": str(file_record["id"]),
+                        "department_id": str(department_id) if department_id else None,
+                        "chunks_total": len(created_chunks),
+                        "embeddings_stored": embedding_count,
+                        "error_type": type(exc).__name__,
+                    },
+                )
+
             ready_file = await self.file_repo.update_file_status(
                 company_id=company_id,
                 file_id=file_record["id"],
@@ -83,6 +128,8 @@ class FileIngestionService:
                 metadata={
                     "extraction": extracted.get("metadata") or {},
                     "chunk_count": len(created_chunks),
+                    "embedding_status": embedding_status,
+                    "embedding_count": embedding_count,
                 },
                 updated_by_user_id=uploaded_by_user_id,
             )

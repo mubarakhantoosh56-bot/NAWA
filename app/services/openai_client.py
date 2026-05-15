@@ -607,14 +607,14 @@ class AIService:
                 "retrieval_attempted": True,
                 "chunks_requested": RAG_CHUNKS_REQUESTED,
                 "query_length_chars": len(query),
-                "strategy": "keyword_ilike",
+                "strategy": settings.RAG_RETRIEVAL_MODE.strip().lower(),
                 "scope": scope,
             },
         )
 
         try:
             retrieval = RetrievalService(self.db_pool)
-            chunks = await retrieval.search_chunks(
+            chunks, strategy, fallback_used = await retrieval.search_best_chunks(
                 company_id=company_uuid,
                 query=query,
                 department_id=department_id,
@@ -643,7 +643,8 @@ class AIService:
                 "rag_budget_chars_max": RAG_MAX_BLOCK_CHARS,
                 "rag_block_chars": len(rag_block),
                 "latency_ms": latency_ms,
-                "strategy": "keyword_ilike",
+                "strategy": strategy,
+                "fallback_used": fallback_used,
                 "scope": scope,
             }
             logger.info(
@@ -669,7 +670,7 @@ class AIService:
                     "chunks_returned": 0,
                     "chunks_injected": 0,
                     "latency_ms": latency_ms,
-                    "strategy": "keyword_ilike",
+                    "strategy": settings.RAG_RETRIEVAL_MODE.strip().lower(),
                     "scope": scope,
                 },
             )
