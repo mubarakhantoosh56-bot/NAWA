@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
@@ -29,12 +29,36 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const [turnsByWorkspace, setTurnsByWorkspace] = useState<Record<string, ChatTurn[]>>({});
+  const [hasLoadedSession, setHasLoadedSession] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const turns = turnsByWorkspace[workspaceKey] ?? [];
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
+  const storageKey = useMemo(() => `aimx.chat.${companyId}`, [companyId]);
   const suggestedPrompts = useMemo(() => getSuggestedPrompts(department), [department]);
+  const workspaceLabel = department ? department.name : "CEO";
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        setTurnsByWorkspace(JSON.parse(saved) as Record<string, ChatTurn[]>);
+      }
+    } catch {
+      setTurnsByWorkspace({});
+    } finally {
+      setHasLoadedSession(true);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hasLoadedSession) {
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(turnsByWorkspace));
+  }, [hasLoadedSession, storageKey, turnsByWorkspace]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,42 +99,44 @@ export function ChatPanel({
   }
 
   return (
-    <section className="panel flex min-h-[520px] flex-col overflow-hidden">
+    <section className="panel flex min-h-[640px] flex-col overflow-hidden">
       <div className="border-b border-line px-4 py-3">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-          <div>
+          <div className="min-w-0">
             <div className="text-xs font-semibold uppercase text-muted">AI chat</div>
-            <h2 className="mt-1 text-base font-semibold text-ink">{title}</h2>
+            <h2 className="mt-1 truncate text-base font-semibold text-ink">{title}</h2>
           </div>
-          <div className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">
-            Session: {sessionId}
+          <div className="flex flex-wrap gap-2 text-xs text-muted">
+            <span className="rounded-md border border-line bg-surface px-2.5 py-1.5">
+              {workspaceLabel} session
+            </span>
+            <span className="rounded-md border border-line bg-surface px-2.5 py-1.5">
+              Saved locally
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto bg-white p-4">
+      <div className="flex-1 space-y-5 overflow-y-auto bg-white p-4">
         {turns.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-surface p-4">
-            <div className="text-sm font-medium text-ink">Start the demo conversation</div>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Use a prepared boardroom-style prompt or ask a focused business question.
-              AIMX keeps internal prompts, auth details, and tenant context out of the UI.
-            </p>
-            <PromptChips prompts={suggestedPrompts} onSelect={setDraft} />
-          </div>
+          <WelcomeState
+            department={department}
+            prompts={suggestedPrompts}
+            onSelectPrompt={setDraft}
+          />
         ) : null}
 
         {turns.map((turn) => (
-          <article key={turn.id} className="space-y-3">
-            <div className="rounded-md border border-line bg-surface p-3">
-              <div className="text-xs font-semibold uppercase text-muted">You</div>
+          <article key={turn.id} className="space-y-3.5">
+            <div className="ml-auto max-w-[88%] rounded-md border border-blue-100 bg-blue-50 p-3">
+              <div className="text-xs font-semibold uppercase text-accent">You</div>
               <p className="mt-1 text-sm leading-6 text-ink">{turn.userMessage}</p>
             </div>
-            <div className="rounded-md border border-line bg-white p-3 shadow-panel">
+            <div className="max-w-[94%] rounded-md border border-line bg-white p-4 shadow-panel">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs font-semibold uppercase text-muted">AIMX</div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">
+                  <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-ink">
                     {turn.response.ceo_text || "AIMX returned an empty summary."}
                   </p>
                 </div>
@@ -122,11 +148,15 @@ export function ChatPanel({
         ))}
 
         {isSending ? (
-          <div className="rounded-md border border-line bg-surface p-3 text-sm text-muted">
+          <div className="max-w-[94%] rounded-md border border-line bg-surface p-4 text-sm text-muted">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-              AIMX is preparing a tenant-scoped answer...
+              AIMX is reading context and preparing a tenant-scoped answer...
             </span>
+            <div className="mt-3 space-y-2">
+              <div className="h-2 w-4/5 rounded bg-slate-200" />
+              <div className="h-2 w-3/5 rounded bg-slate-200" />
+            </div>
           </div>
         ) : null}
       </div>
@@ -139,7 +169,7 @@ export function ChatPanel({
         ) : null}
         <div className="flex flex-col gap-3 md:flex-row">
           <textarea
-            className="input min-h-24 resize-none md:min-h-14"
+            className="input min-h-24 resize-none leading-6 md:min-h-16"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Ask AIMX for a decision, plan, or department-specific recommendation..."
@@ -149,30 +179,61 @@ export function ChatPanel({
             {isSending ? "Sending" : "Send"}
           </button>
         </div>
+        <div className="mt-2 text-xs text-muted">
+          Demo hint: prompt cards fill the composer so you can review before sending.
+        </div>
       </form>
     </section>
   );
 }
 
-function PromptChips({
+function WelcomeState({
+  department,
   prompts,
-  onSelect,
+  onSelectPrompt,
 }: {
+  department: Department | null;
   prompts: string[];
-  onSelect: (prompt: string) => void;
+  onSelectPrompt: (prompt: string) => void;
 }) {
+  const isCeo = department === null;
+
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-      {prompts.map((prompt) => (
-        <button
-          key={prompt}
-          className="rounded-md border border-line bg-white px-3 py-2 text-left text-xs leading-5 text-ink transition hover:border-accent hover:bg-blue-50"
-          type="button"
-          onClick={() => onSelect(prompt)}
-        >
-          {prompt}
-        </button>
-      ))}
+    <div className="rounded-md border border-dashed border-line bg-surface p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
+        <div>
+          <div className="inline-flex rounded-md border border-line bg-white px-2.5 py-1 text-xs font-semibold uppercase text-muted">
+            {isCeo ? "CEO command center" : `${department.name} workspace`}
+          </div>
+          <h3 className="mt-3 text-lg font-semibold text-ink">
+            {isCeo ? "Welcome to the AIMX executive briefing room" : "Start a department-specific briefing"}
+          </h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            {isCeo
+              ? "Ask for priorities, risks, and cross-department decisions. AIMX will keep retrieved company knowledge internal and return the current response contract."
+              : "Ask this AI worker for focused recommendations using the active department context and company knowledge."}
+          </p>
+        </div>
+        <div className="rounded-md border border-line bg-white p-3 text-xs leading-5 text-muted">
+          Demo helper: choose a prompt, send it, then expand decision logic to show structured reasoning without exposing prompts or tokens.
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {prompts.map((prompt, index) => (
+          <button
+            key={prompt}
+            className="rounded-md border border-line bg-white p-3 text-left transition hover:border-accent hover:bg-blue-50"
+            type="button"
+            onClick={() => onSelectPrompt(prompt)}
+          >
+            <span className="text-[11px] font-semibold uppercase text-muted">
+              Prompt {index + 1}
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-ink">{prompt}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -195,9 +256,12 @@ function LogicPanel({ logic }: { logic: Record<string, unknown> }) {
   const keys = Object.keys(logic);
 
   return (
-    <details className="mt-3 rounded-md border border-line bg-surface">
-      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase text-muted">
-        Decision logic {keys.length ? `- ${keys.length} fields` : ""}
+    <details className="mt-4 rounded-md border border-line bg-surface">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-semibold uppercase text-muted">
+        <span>Decision logic</span>
+        <span className="rounded border border-line bg-white px-2 py-0.5 text-[11px] normal-case">
+          {keys.length ? `${keys.length} fields` : "empty"}
+        </span>
       </summary>
       <pre className="max-h-56 overflow-auto border-t border-line bg-white p-3 text-xs leading-5 text-ink">
         {JSON.stringify(logic, null, 2)}

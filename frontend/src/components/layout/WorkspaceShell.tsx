@@ -29,6 +29,17 @@ const departmentTypeLabels: Record<string, string> = {
   custom: "Department AI",
 };
 
+const departmentTypeBadges: Record<string, string> = {
+  sales_ai: "SA",
+  finance_ai: "FA",
+  marketing_ai: "MA",
+  hr_ai: "HR",
+  operations_ai: "OP",
+  warehouse_ai: "WH",
+  production_ai: "PR",
+  custom: "AI",
+};
+
 export function WorkspaceShell() {
   const { me, token, logout } = useAuth();
   const permissions = me?.role.permissions ?? [];
@@ -95,9 +106,14 @@ export function WorkspaceShell() {
     <main className="min-h-screen bg-surface text-ink">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div>
-            <div className="text-sm font-semibold tracking-wide text-ink">AIMX</div>
-            <div className="text-xs text-muted">AI Workforce Platform</div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-ink text-sm font-semibold text-white">
+              AX
+            </div>
+            <div>
+              <div className="text-sm font-semibold tracking-wide text-ink">AIMX</div>
+              <div className="text-xs text-muted">AI Workforce Platform</div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
@@ -112,12 +128,13 @@ export function WorkspaceShell() {
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[240px_1fr]">
-        <aside className="panel h-fit p-3">
+        <aside className="panel h-fit p-3 lg:sticky lg:top-4">
           <div className="px-2 pb-2 text-xs font-semibold uppercase text-muted">Workspace</div>
           <nav className="space-y-1">
             <SidebarItem
               label="CEO AI"
               description="Executive command"
+              badge="CEO"
               active={activeWorkspace.kind === "ceo"}
               onClick={() => setActiveWorkspace({ kind: "ceo" })}
             />
@@ -156,6 +173,7 @@ export function WorkspaceShell() {
                   key={department.id}
                   label={getDepartmentAgentLabel(department)}
                   description={department.name}
+                  badge={getDepartmentBadge(department)}
                   active={
                     activeWorkspace.kind === "department" &&
                     activeWorkspace.departmentId === department.id
@@ -184,7 +202,12 @@ export function WorkspaceShell() {
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
               <div>
                 <div className="text-xs font-semibold uppercase text-muted">Live AI workforce</div>
-                <h1 className="mt-1 text-xl font-semibold text-ink">{activeTitle}</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold text-ink">{activeTitle}</h1>
+                  <span className="rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">
+                    {activeDepartment ? activeDepartment.name : "Executive"}
+                  </span>
+                </div>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
                   {activeDescription}
                 </p>
@@ -277,6 +300,7 @@ function QuickStartStep({ value, label }: { value: string; label: string }) {
 function SidebarItem({
   label,
   description,
+  badge,
   active,
   disabled = false,
   lockLabel,
@@ -284,6 +308,7 @@ function SidebarItem({
 }: {
   label: string;
   description: string;
+  badge: string;
   active: boolean;
   disabled?: boolean;
   lockLabel?: string;
@@ -303,15 +328,28 @@ function SidebarItem({
       disabled={disabled}
       title={disabled ? "This workspace is not available for your current role." : undefined}
     >
-      <span className="flex items-center justify-between gap-2">
-        <span>{label}</span>
-        {disabled ? (
-          <span className="rounded border border-line px-1.5 py-0.5 text-[10px] uppercase text-muted">
-            {lockLabel || "Locked"}
+      <span className="flex items-start gap-2">
+        <span
+          className={`mt-0.5 flex h-7 w-8 shrink-0 items-center justify-center rounded-md border text-[11px] font-semibold ${
+            active
+              ? "border-blue-200 bg-white text-accent"
+              : "border-line bg-surface text-muted"
+          }`}
+        >
+          {badge}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate">{label}</span>
+            {disabled ? (
+              <span className="rounded border border-line px-1.5 py-0.5 text-[10px] uppercase text-muted">
+                {lockLabel || "Locked"}
+              </span>
+            ) : null}
           </span>
-        ) : null}
+          <span className="mt-0.5 block truncate text-xs text-muted">{description}</span>
+        </span>
       </span>
-      <span className="mt-0.5 block truncate text-xs text-muted">{description}</span>
     </button>
   );
 }
@@ -336,6 +374,10 @@ function StatusPanel({
 
 function getDepartmentAgentLabel(department: Department): string {
   return departmentTypeLabels[department.department_type] || `${department.name} AI`;
+}
+
+function getDepartmentBadge(department: Department): string {
+  return departmentTypeBadges[department.department_type] || department.name.slice(0, 2).toUpperCase();
 }
 
 function canUseAgent(permissions: string[], departmentType: string): boolean {

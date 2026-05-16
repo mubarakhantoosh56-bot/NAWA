@@ -71,7 +71,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase text-muted">Company knowledge</div>
-            <h2 className="mt-1 text-base font-semibold text-ink">Files</h2>
+            <h2 className="mt-1 text-base font-semibold text-ink">Knowledge files</h2>
           </div>
           <button
             className="button-secondary px-2.5 py-1.5 text-xs"
@@ -91,6 +91,10 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
               <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
               Loading company knowledge...
             </span>
+            <div className="mt-3 space-y-2">
+              <div className="h-2 w-4/5 rounded bg-slate-200" />
+              <div className="h-2 w-2/3 rounded bg-slate-200" />
+            </div>
           </div>
         ) : null}
 
@@ -107,6 +111,9 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
               Seed demo files or ingest company knowledge through the backend to make
               AIMX answers more grounded.
             </p>
+            <div className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs text-muted">
+              Demo hint: seeded Atlas files will appear here after the demo bootstrap script runs.
+            </div>
           </div>
         ) : null}
 
@@ -130,14 +137,19 @@ function FileRow({
   departmentName: string | null;
 }) {
   return (
-    <article className="rounded-md border border-line bg-white p-3 shadow-panel">
+    <article className="rounded-md border border-line bg-white p-3 shadow-panel transition hover:border-slate-300">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-[11px] font-semibold text-muted">
+            DOC
+          </span>
+          <div className="min-w-0">
           <div className="truncate text-sm font-medium text-ink" title={file.filename}>
             {file.filename}
           </div>
           <div className="mt-1 text-xs text-muted">
             {departmentName || "Company-wide"} - {formatBytes(file.file_size_bytes)}
+          </div>
           </div>
         </div>
         <StatusBadge status={file.status} />
