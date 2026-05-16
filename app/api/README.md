@@ -1,54 +1,61 @@
-# AIMX 🚀
-AI-powered Virtual Employee Platform
+# NAWA
+AI Workforce Platform
 
 ## Overview
-AIMX is a modular AI SaaS platform designed to act as a *virtual employee* inside companies.
-It provides intelligent chat, long-term memory, document generation, and scalable AI services
-built with a clean and production-ready architecture.
 
-This repository contains the *core backend system* of AIMX.
+NAWA (نواة) is an Arabic-first enterprise AI workforce platform designed to operate inside companies.
+It provides intelligent chat, long-term memory, document-aware retrieval, and scalable AI services built with a clean backend architecture.
 
----
+This repository contains the core backend system for NAWA.
 
 ## Tech Stack
-- *Backend:* FastAPI (Python)
-- *AI Engine:* OpenAI API
-- *Server:* Uvicorn
-- *Architecture:* Modular / Service-Oriented
-- *Memory:* Session-based conversational memory
-- *Docs:* Swagger (OpenAPI)
 
----
+- Backend: FastAPI (Python)
+- AI Engine: OpenAI API
+- Server: Uvicorn
+- Architecture: Modular / Service-Oriented
+- Memory: Session and institutional memory
+- Docs: Swagger (OpenAPI)
 
 ## Project Status
-✅ Core architecture implemented  
-✅ AI Chat endpoint working  
-✅ Memory system active  
-✅ Billing & API key connected  
-✅ Swagger UI operational  
 
-This project is currently in *active development*.
-Setup & Run (Windows)
+- Core architecture implemented
+- AI chat endpoint working
+- Memory system active
+- RAG file ingestion active
+- Swagger UI operational
 
-1) Create & activate virtual environment
+This project is currently in active development.
 
-python -m venv .venv
-..venv\Scripts\activate
+## Setup & Run (Windows)
 
-2) Install dependencies
+1. Create and activate a virtual environment.
 
-pip install -r requirements.txt
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   ```
 
-3) Create .env file
+2. Install dependencies.
 
-Create a file named .env in the project root and add the following line:
+   ```powershell
+   pip install -r requirements.txt
+   ```
 
-OPENAI_API_KEY=your_openai_api_key_here
+3. Create `.env` in the project root and add local-only settings.
 
-4) Run the server
+   ```env
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-uvicorn app.main:app –reload
+4. Run the server.
 
-5) Open Swagger UI
+   ```powershell
+   uvicorn app.main:app --reload
+   ```
 
-http://127.0.0.1:8000/docs
+5. Open Swagger UI.
+
+   ```text
+   http://127.0.0.1:8000/docs
+   ```

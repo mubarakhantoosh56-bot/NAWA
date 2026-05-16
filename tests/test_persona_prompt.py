@@ -92,7 +92,7 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
     messages = fake_client.chat_completions.messages[0]
     assert messages[0]["content"] == AIMX_SYSTEM_PROMPT
     assert messages[1]["content"] == AIMX_DECISION_PROMPT
-    assert messages[2]["content"].startswith("AIMX PERSONA:")
+    assert messages[2]["content"].startswith("NAWA PERSONA:")
     assert "Name: Finance AI" in messages[2]["content"]
     assert "COMPANY CONTEXT:" in messages[3]["content"]
 
@@ -105,4 +105,4 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
         "memory_injected",
         "events_count",
     }
-    assert "AIMX PERSONA" not in result["ceo_text"]
+    assert "NAWA PERSONA" not in result["ceo_text"]

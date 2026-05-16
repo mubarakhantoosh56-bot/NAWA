@@ -99,7 +99,7 @@ export function WorkspaceShell() {
   const activeScope = activeDepartment ? "Department-scoped" : "Company-wide";
   const activeDescription = activeDepartment
     ? activeDepartment.description || `${activeDepartment.name} workspace is ready for chat integration.`
-    : "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready AIMX decisions.";
+    : "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready NAWA decisions.";
   const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
 
   return (
@@ -108,10 +108,10 @@ export function WorkspaceShell() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-ink text-sm font-semibold text-white">
-              AX
+              ن
             </div>
             <div>
-              <div className="text-sm font-semibold tracking-wide text-ink">AIMX</div>
+              <div className="text-sm font-semibold tracking-wide text-ink">NAWA · نواة</div>
               <div className="text-xs text-muted">AI Workforce Platform</div>
             </div>
           </div>

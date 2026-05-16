@@ -43,11 +43,11 @@ def _pdf_bytes(text: str) -> bytes:
 
 def test_valid_pdf_extraction(tmp_path: Path):
     path = tmp_path / "sample.pdf"
-    path.write_bytes(_pdf_bytes("AIMX PDF knowledge policy"))
+    path.write_bytes(_pdf_bytes("NAWA PDF knowledge policy"))
 
     result = extract_text(path, filename="sample.pdf", content_type="application/pdf")
 
-    assert "AIMX PDF knowledge policy" in result["text"]
+    assert "NAWA PDF knowledge policy" in result["text"]
     assert result["metadata"]["extension"] == ".pdf"
 
 
@@ -56,7 +56,7 @@ def test_valid_docx_extraction(tmp_path: Path):
 
     path = tmp_path / "sample.docx"
     document = Document()
-    document.add_paragraph("AIMX DOCX onboarding policy")
+    document.add_paragraph("NAWA DOCX onboarding policy")
     document.save(path)
 
     result = extract_text(
@@ -65,7 +65,7 @@ def test_valid_docx_extraction(tmp_path: Path):
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
-    assert "AIMX DOCX onboarding policy" in result["text"]
+    assert "NAWA DOCX onboarding policy" in result["text"]
     assert result["metadata"]["extension"] == ".docx"
 
 

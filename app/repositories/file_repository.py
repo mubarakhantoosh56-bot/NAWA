@@ -1,4 +1,4 @@
-"""File repository for AIMX RAG foundation data access."""
+"""File repository for NAWA RAG foundation data access."""
 
 import json
 from uuid import UUID

@@ -1,4 +1,4 @@
-# AIMX Demo Prompts: Atlas Home Supplies
+﻿# NAWA Demo Prompts: Atlas Home Supplies
 
 Use these prompts after running the demo seed script.
 

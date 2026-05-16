@@ -1,4 +1,4 @@
-# AIMX Architecture Rules
+﻿# NAWA Architecture Rules
 
 These are non-negotiable architectural constraints. Violations undermine security, performance, or maintainability.
 
@@ -7,32 +7,32 @@ These are non-negotiable architectural constraints. Violations undermine securit
 ### Mandatory Structure
 ```
 app/
-├── __init__.py
-├── main.py                 # FastAPI app initialization only
-├── core/
-│   ├── config.py          # Settings from .env
-│   ├── security.py        # JWT token operations
-│   ├── dependencies.py    # FastAPI dependency injection
-│   └── errors.py          # Custom exceptions
-├── api/
-│   ├── __init__.py
-│   ├── chat.py            # POST /ai/chat endpoint
-│   ├── health.py          # GET /health endpoint
-│   └── v2/                # Future versioned endpoints
-├── services/
-│   ├── __init__.py
-│   ├── openai_client.py   # AIService class (orchestration)
-│   ├── memory/
-│   │   ├── __init__.py
-│   │   └── event_log.py   # Event persistence
-│   └── repository/
-│       ├── __init__.py
-│       ├── event_repository.py
-│       └── connection.py
-└── models/
-    ├── __init__.py
-    ├── request.py         # Pydantic request models
-    └── response.py        # Pydantic response models
+â”œâ”€â”€ __init__.py
+â”œâ”€â”€ main.py                 # FastAPI app initialization only
+â”œâ”€â”€ core/
+â”‚   â”œâ”€â”€ config.py          # Settings from .env
+â”‚   â”œâ”€â”€ security.py        # JWT token operations
+â”‚   â”œâ”€â”€ dependencies.py    # FastAPI dependency injection
+â”‚   â””â”€â”€ errors.py          # Custom exceptions
+â”œâ”€â”€ api/
+â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”œâ”€â”€ chat.py            # POST /ai/chat endpoint
+â”‚   â”œâ”€â”€ health.py          # GET /health endpoint
+â”‚   â””â”€â”€ v2/                # Future versioned endpoints
+â”œâ”€â”€ services/
+â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”œâ”€â”€ openai_client.py   # AIService class (orchestration)
+â”‚   â”œâ”€â”€ memory/
+â”‚   â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”‚   â””â”€â”€ event_log.py   # Event persistence
+â”‚   â””â”€â”€ repository/
+â”‚       â”œâ”€â”€ __init__.py
+â”‚       â”œâ”€â”€ event_repository.py
+â”‚       â””â”€â”€ connection.py
+â””â”€â”€ models/
+    â”œâ”€â”€ __init__.py
+    â”œâ”€â”€ request.py         # Pydantic request models
+    â””â”€â”€ response.py        # Pydantic response models
 ```
 
 ### Rules
@@ -46,24 +46,24 @@ app/
 
 ### Rule: No Business Logic in Routes
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 @router.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    # ❌ SQL query in endpoint
+    # âŒ SQL query in endpoint
     result = await db.query(f"SELECT * FROM events WHERE company_id='{request.company_id}'")
     
-    # ❌ OpenAI call in endpoint
+    # âŒ OpenAI call in endpoint
     response = await openai.chat.completions.create(...)
     
-    # ❌ Business logic in endpoint
+    # âŒ Business logic in endpoint
     if request.message.startswith("DELETE"):
         ...
     
     return result
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 @router.post("/chat")
 async def chat_endpoint(
@@ -161,7 +161,7 @@ class AIService:
 
 ### Rule: All Database Access Through Repositories
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 # Direct queries in services
 async def get_events(company_id: str):
@@ -169,7 +169,7 @@ async def get_events(company_id: str):
     return await db.fetch(query, company_id)
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 class EventRepository:
     def __init__(self, connection_pool):
@@ -208,10 +208,10 @@ events = await self.event_repo.get_recent(company_id)
 
 **Every single database query** must include company_id:
 ```python
-# ❌ FORBIDDEN: Query without company_id
+# âŒ FORBIDDEN: Query without company_id
 SELECT * FROM events ORDER BY created_at DESC
 
-# ✅ REQUIRED: Query includes company_id filter
+# âœ… REQUIRED: Query includes company_id filter
 SELECT * FROM events WHERE company_id = $1 ORDER BY created_at DESC
 ```
 
@@ -222,7 +222,7 @@ async def chat_endpoint(
     request: ChatRequest,
     auth_context: AuthContext = Depends(get_auth_context)
 ):
-    # ✅ REQUIRED: Validate company_id matches
+    # âœ… REQUIRED: Validate company_id matches
     if request.company_id != auth_context.company_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -240,8 +240,8 @@ Always trust the JWT's company_id, validate request data against it.
 
 ### Isolation Testing
 Before merging any code:
-- [ ] Create request with company_id != token.company_id → returns 403
-- [ ] Create request with another company's session_id → returns 403 or empty
+- [ ] Create request with company_id != token.company_id â†’ returns 403
+- [ ] Create request with another company's session_id â†’ returns 403 or empty
 - [ ] Verify database filters by company_id in all queries
 
 ## Authentication & Authorization
@@ -258,13 +258,13 @@ async def chat_endpoint(
     request: ChatRequest,
     auth_context: AuthContext = Depends(get_auth_context)
 ):
-    # ✅ auth_context contains validated claims
-    # ✅ Endpoint cannot be called without valid JWT
+    # âœ… auth_context contains validated claims
+    # âœ… Endpoint cannot be called without valid JWT
     pass
 
 @router.get("/health")
 async def health():
-    # ✅ No auth required for health checks
+    # âœ… No auth required for health checks
     return {"status": "ok"}
 ```
 
@@ -292,20 +292,20 @@ token = create_token(
 - Tokens expire after 24 hours (configurable)
 - Signature verified with JWT_SECRET_KEY
 - Claims required: company_id, user_id
-- Invalid tokens → 401 Unauthorized
-- Missing Authorization header → 401 Unauthorized
+- Invalid tokens â†’ 401 Unauthorized
+- Missing Authorization header â†’ 401 Unauthorized
 
 ## Secrets & Configuration
 
 ### Rule: No Hardcoded Secrets
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 API_KEY = "sk-proj-..."  # Hardcoded
 PASSWORD = "admin123"     # Hardcoded
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 # In .env
 OPENAI_API_KEY=sk-proj-...
@@ -350,7 +350,7 @@ class Settings:
 
 ### Rule: All I/O is Async
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 # Blocking database call
 result = db.query("SELECT * FROM events")
@@ -362,7 +362,7 @@ response = requests.post("https://api.openai.com/...")
 time.sleep(5)
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 # Non-blocking database call
 result = await db.fetch("SELECT * FROM events")
@@ -380,7 +380,7 @@ await asyncio.sleep(5)
 ```python
 @router.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
-    # ✅ Always async
+    # âœ… Always async
     return await ai_engine.chat(...)
 ```
 
@@ -388,7 +388,7 @@ async def chat_endpoint(request: ChatRequest):
 ```python
 class AIService:
     async def chat(self, ...):
-        # ✅ Always async for I/O
+        # âœ… Always async for I/O
         events = await self.event_repo.get_recent(...)
         response = await self.client.chat.completions.create(...)
 ```
@@ -397,14 +397,14 @@ class AIService:
 ```python
 class EventRepository:
     async def insert_event(self, ...):
-        # ✅ Always async for DB
+        # âœ… Always async for DB
         return await self.pool.execute(query, *params)
 ```
 
 **Dependency:**
 ```python
 async def get_auth_context(request: Request) -> AuthContext:
-    # ✅ Can be async if needing I/O
+    # âœ… Can be async if needing I/O
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     return validate_token(token)  # sync, no I/O
 ```
@@ -419,7 +419,7 @@ async def get_auth_context(request: Request) -> AuthContext:
 
 ### Rule: Specific Exceptions, Never Generic Exception
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 try:
     result = await db.fetch(...)
@@ -427,7 +427,7 @@ except Exception as e:
     raise HTTPException(status_code=500, detail="Error")
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 class InvalidCompanyID(Exception):
     """Company ID does not match authenticated context."""
@@ -457,13 +457,13 @@ except Exception as e:
 
 ### Rule: Explicit Imports, Never Wildcards
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 from app.services import *
 from datetime import *
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 from app.services.openai_client import AIService
 from datetime import datetime, timedelta

@@ -1,6 +1,6 @@
-# AIMX Demo Runbook
+﻿# NAWA Demo Runbook
 
-This runbook prepares a local backend-only AIMX demo for investor or client presentations. It assumes the Atlas Home Supplies demo tenant and local keyword retrieval mode.
+This runbook prepares a local backend-only NAWA demo for investor or client presentations. It assumes the Atlas Home Supplies demo tenant and local keyword retrieval mode.
 
 ## 1. Local Setup Steps
 
@@ -33,7 +33,7 @@ Required:
 
 - Python environment with `requirements.txt` installed.
 - Local PostgreSQL reachable through `DATABASE_URL`.
-- Existing AIMX migrations `001` through `004` applied.
+- Existing NAWA migrations `001` through `004` applied.
 - `RAG_RETRIEVAL_MODE=keyword` for local demo reliability.
 - `DEMO_OWNER_PASSWORD` set only in the current shell before seeding.
 

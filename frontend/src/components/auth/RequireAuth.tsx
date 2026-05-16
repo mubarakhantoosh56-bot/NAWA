@@ -18,7 +18,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (status === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-surface px-4">
-        <div className="panel px-5 py-4 text-sm text-muted">Loading AIMX workspace...</div>
+        <div className="panel px-5 py-4 text-sm text-muted">Loading NAWA workspace...</div>
       </main>
     );
   }

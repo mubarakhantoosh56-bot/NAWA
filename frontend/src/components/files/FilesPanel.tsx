@@ -109,7 +109,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
             <div className="text-sm font-medium text-ink">No knowledge files yet</div>
             <p className="mt-1 text-sm leading-6 text-muted">
               Seed demo files or ingest company knowledge through the backend to make
-              AIMX answers more grounded.
+              NAWA answers more grounded.
             </p>
             <div className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs text-muted">
               Demo hint: seeded Atlas files will appear here after the demo bootstrap script runs.

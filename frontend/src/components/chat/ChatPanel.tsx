@@ -35,7 +35,7 @@ export function ChatPanel({
 
   const turns = turnsByWorkspace[workspaceKey] ?? [];
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
-  const storageKey = useMemo(() => `aimx.chat.${companyId}`, [companyId]);
+  const storageKey = useMemo(() => `nawa.chat.${companyId}`, [companyId]);
   const suggestedPrompts = useMemo(() => getSuggestedPrompts(department), [department]);
   const workspaceLabel = department ? department.name : "CEO";
 
@@ -135,9 +135,9 @@ export function ChatPanel({
             <div className="max-w-[94%] rounded-md border border-line bg-white p-4 shadow-panel">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold uppercase text-muted">AIMX</div>
+                  <div className="text-xs font-semibold uppercase text-muted">NAWA</div>
                   <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-ink">
-                    {turn.response.ceo_text || "AIMX returned an empty summary."}
+                    {turn.response.ceo_text || "NAWA returned an empty summary."}
                   </p>
                 </div>
                 <MetaIndicators response={turn.response} />
@@ -151,7 +151,7 @@ export function ChatPanel({
           <div className="max-w-[94%] rounded-md border border-line bg-surface p-4 text-sm text-muted">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-              AIMX is reading context and preparing a tenant-scoped answer...
+              NAWA is reading context and preparing a tenant-scoped answer...
             </span>
             <div className="mt-3 space-y-2">
               <div className="h-2 w-4/5 rounded bg-slate-200" />
@@ -172,7 +172,7 @@ export function ChatPanel({
             className="input min-h-24 resize-none leading-6 md:min-h-16"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Ask AIMX for a decision, plan, or department-specific recommendation..."
+            placeholder="Ask NAWA for a decision, plan, or department-specific recommendation..."
             disabled={isSending}
           />
           <button className="button-primary md:w-28" type="submit" disabled={isSending || !draft.trim()}>
@@ -206,11 +206,11 @@ function WelcomeState({
             {isCeo ? "CEO command center" : `${department.name} workspace`}
           </div>
           <h3 className="mt-3 text-lg font-semibold text-ink">
-            {isCeo ? "Welcome to the AIMX executive briefing room" : "Start a department-specific briefing"}
+            {isCeo ? "Welcome to the NAWA executive briefing room" : "Start a department-specific briefing"}
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
             {isCeo
-              ? "Ask for priorities, risks, and cross-department decisions. AIMX will keep retrieved company knowledge internal and return the current response contract."
+              ? "Ask for priorities, risks, and cross-department decisions. NAWA will keep retrieved company knowledge internal and return the current response contract."
               : "Ask this AI worker for focused recommendations using the active department context and company knowledge."}
           </p>
         </div>
@@ -291,7 +291,7 @@ function buildChatContext(department: Department | null): Record<string, unknown
   return {
     stage: "Growing SME",
     industry: "Retail and light distribution",
-    resources: "Tenant-scoped AIMX workspace",
+    resources: "Tenant-scoped NAWA workspace",
     ...(department
       ? {
           active_workspace: department.slug,
@@ -306,7 +306,7 @@ function getSuggestedPrompts(department: Department | null): string[] {
   if (!department) {
     return [
       "Give me the CEO briefing for this week: risks, priorities, and recommended actions.",
-      "What should Atlas Home Supplies focus on before an investor demo?",
+      "What should Atlas Home Supplies focus on before a NAWA investor demo?",
       "Summarize the top cross-department decisions we should make today.",
       "Review company knowledge and suggest a 30-day operating plan.",
     ];

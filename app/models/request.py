@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
-    """Request body for the AIMX chat endpoint."""
+    """Request body for the NAWA chat endpoint."""
 
     company_id: str
     session_id: str

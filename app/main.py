@@ -36,4 +36,4 @@ async def close_auth_pool() -> None:
 
 @app.get("/")
 def root():
-    return {"status": "AIMX is alive"}
+    return {"status": "NAWA is alive"}

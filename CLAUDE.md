@@ -1,13 +1,13 @@
-# CLAUDE.md: AIMX Operating Instructions
+﻿# CLAUDE.md: NAWA Operating Instructions
 
-This file instructs Claude Code on how to safely modify the AIMX codebase.
+This file instructs Claude Code on how to safely modify the NAWA codebase.
 
 ## Before Any Code Change: Read These Files
 
-1. **AIMX_AI_CONTEXT.md** — Understand the vision, multi-tenancy, memory system
-2. **ARCHITECTURE_RULES.md** — Know the non-negotiable structural rules
-3. **CODING_STANDARDS.md** — Follow typing, naming, style guidelines
-4. **AI_AGENT_WORKFLOW.md** — Learn the safe modification workflow
+1. **NAWA_AI_CONTEXT.md** â€” Understand the vision, multi-tenancy, memory system
+2. **ARCHITECTURE_RULES.md** â€” Know the non-negotiable structural rules
+3. **CODING_STANDARDS.md** â€” Follow typing, naming, style guidelines
+4. **AI_AGENT_WORKFLOW.md** â€” Learn the safe modification workflow
 
 These files contain the complete operating system design. Skipping them risks introducing security bugs, violating tenant isolation, or breaking production.
 
@@ -23,8 +23,8 @@ These files contain the complete operating system design. Skipping them risks in
 
 ### 2. Layered Architecture Prevents Bugs
 ```
-Request → Route Handler → Service Layer → Repository → Database
-  ↑           ↓              ↓              ↓
+Request â†’ Route Handler â†’ Service Layer â†’ Repository â†’ Database
+  â†‘           â†“              â†“              â†“
 validate   delegate      orchestrate     query
  auth      only          logic           data
 ```
@@ -81,7 +81,7 @@ Before committing **any** change, verify ALL of these:
 
 ### Step 2: Design Before Coding
 - Identify which files need modification
-- Plan the order (dependency-first: models → repos → services → routes)
+- Plan the order (dependency-first: models â†’ repos â†’ services â†’ routes)
 - Don't start coding until design is clear
 
 ### Step 3: Implement Incrementally
@@ -103,7 +103,7 @@ Before committing **any** change, verify ALL of these:
 
 ## Common Mistakes to Avoid
 
-### ❌ Mistake: Business Logic in Routes
+### âŒ Mistake: Business Logic in Routes
 ```python
 # FORBIDDEN
 @router.post("/ai/chat")
@@ -123,7 +123,7 @@ async def chat_endpoint(request: ChatRequest, auth_context: AuthContext = Depend
     return await ai_service.chat(request)
 ```
 
-### ❌ Mistake: Queries Without company_id Filter
+### âŒ Mistake: Queries Without company_id Filter
 ```python
 # FORBIDDEN
 SELECT * FROM events ORDER BY created_at DESC
@@ -132,7 +132,7 @@ SELECT * FROM events ORDER BY created_at DESC
 SELECT * FROM events WHERE company_id = $1 ORDER BY created_at DESC
 ```
 
-### ❌ Mistake: Missing Type Hints
+### âŒ Mistake: Missing Type Hints
 ```python
 # FORBIDDEN
 def validate_token(token):
@@ -144,7 +144,7 @@ def validate_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.JWT_SECRET_KEY)
 ```
 
-### ❌ Mistake: Hardcoded Secrets
+### âŒ Mistake: Hardcoded Secrets
 ```python
 # FORBIDDEN
 API_KEY = "sk-proj-12345..."
@@ -154,7 +154,7 @@ from app.core.config import settings
 api_key = settings.OPENAI_API_KEY
 ```
 
-### ❌ Mistake: Blocking I/O
+### âŒ Mistake: Blocking I/O
 ```python
 # FORBIDDEN
 import requests
@@ -164,7 +164,7 @@ response = requests.post("https://api.openai.com/...")
 response = await client.chat.completions.create(...)
 ```
 
-### ❌ Mistake: Refactoring Beyond Scope
+### âŒ Mistake: Refactoring Beyond Scope
 ```
 User: "Fix the JWT auth bug"
 AI: "I'll also refactor the entire service layer and add caching..."
@@ -205,31 +205,31 @@ Endpoint now supports: ?event_type=decision&limit=100
 
 ```
 app/
-├── __init__.py
-├── main.py                      # FastAPI app initialization only
-├── core/
-│   ├── config.py               # Settings from .env
-│   ├── security.py             # JWT token operations
-│   ├── dependencies.py         # FastAPI dependency injection
-│   └── errors.py               # Custom exceptions
-├── api/
-│   ├── __init__.py
-│   ├── chat.py                 # POST /ai/chat endpoint
-│   └── health.py               # GET /health endpoint
-├── services/
-│   ├── __init__.py
-│   ├── openai_client.py        # AIService class (orchestration)
-│   ├── memory/
-│   │   ├── __init__.py
-│   │   └── event_log.py        # Event persistence
-│   └── repository/
-│       ├── __init__.py
-│       ├── event_repository.py
-│       └── connection.py
-└── models/
-    ├── __init__.py
-    ├── request.py              # Pydantic request models
-    └── response.py             # Pydantic response models
+â”œâ”€â”€ __init__.py
+â”œâ”€â”€ main.py                      # FastAPI app initialization only
+â”œâ”€â”€ core/
+â”‚   â”œâ”€â”€ config.py               # Settings from .env
+â”‚   â”œâ”€â”€ security.py             # JWT token operations
+â”‚   â”œâ”€â”€ dependencies.py         # FastAPI dependency injection
+â”‚   â””â”€â”€ errors.py               # Custom exceptions
+â”œâ”€â”€ api/
+â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”œâ”€â”€ chat.py                 # POST /ai/chat endpoint
+â”‚   â””â”€â”€ health.py               # GET /health endpoint
+â”œâ”€â”€ services/
+â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”œâ”€â”€ openai_client.py        # AIService class (orchestration)
+â”‚   â”œâ”€â”€ memory/
+â”‚   â”‚   â”œâ”€â”€ __init__.py
+â”‚   â”‚   â””â”€â”€ event_log.py        # Event persistence
+â”‚   â””â”€â”€ repository/
+â”‚       â”œâ”€â”€ __init__.py
+â”‚       â”œâ”€â”€ event_repository.py
+â”‚       â””â”€â”€ connection.py
+â””â”€â”€ models/
+    â”œâ”€â”€ __init__.py
+    â”œâ”€â”€ request.py              # Pydantic request models
+    â””â”€â”€ response.py             # Pydantic response models
 ```
 
 ## Tenant Isolation Checklist
@@ -280,10 +280,10 @@ If a commit breaks production:
 
 **Safe modifications follow this formula:**
 
-1. **Read** AIMX_AI_CONTEXT.md, ARCHITECTURE_RULES.md, CODING_STANDARDS.md, AI_AGENT_WORKFLOW.md
+1. **Read** NAWA_AI_CONTEXT.md, ARCHITECTURE_RULES.md, CODING_STANDARDS.md, AI_AGENT_WORKFLOW.md
 2. **Understand** the request thoroughly
 3. **Design** before coding (identify files, plan order)
-4. **Implement** in layers (models → repos → services → routes)
+4. **Implement** in layers (models â†’ repos â†’ services â†’ routes)
 5. **Review** against production safety checklist
 6. **Test** manually (curl or simple script)
 7. **Commit** with clear message, only necessary files
@@ -294,4 +294,4 @@ When in doubt, **ask the user** before modifying production code.
 
 **Updated**: 2026-05-08  
 **Branch**: claude-safe-review  
-**Audience**: Claude AI agents modifying AIMX codebase
+**Audience**: Claude AI agents modifying NAWA codebase

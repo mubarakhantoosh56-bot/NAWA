@@ -37,7 +37,7 @@ class _FakeChunkRepo:
                 "company_id": kwargs["company_id"],
                 "department_id": kwargs.get("department_id"),
                 "chunk_index": 0,
-                "content": "AIMX semantic ingestion policy",
+                "content": "NAWA semantic ingestion policy",
                 "metadata": {},
             }
         ]
@@ -98,7 +98,7 @@ def test_file_ingestion_generates_embeddings_metadata(monkeypatch, tmp_path: Pat
     company_id = uuid4()
     user_id = uuid4()
     source = tmp_path / "source.txt"
-    source.write_text("AIMX semantic ingestion policy", encoding="utf-8")
+    source.write_text("NAWA semantic ingestion policy", encoding="utf-8")
 
     service = FileIngestionService(db=object(), storage_root=tmp_path / "storage")
     fake_file_repo = _FakeFileRepo()
@@ -138,7 +138,7 @@ def test_file_ingestion_embedding_failure_does_not_fail_file(monkeypatch, tmp_pa
     company_id = uuid4()
     user_id = uuid4()
     source = tmp_path / "source.txt"
-    source.write_text("AIMX semantic ingestion policy", encoding="utf-8")
+    source.write_text("NAWA semantic ingestion policy", encoding="utf-8")
 
     service = FileIngestionService(db=object(), storage_root=tmp_path / "storage")
     fake_file_repo = _FakeFileRepo()

@@ -1,4 +1,4 @@
-"""Auth API routes for AIMX register and login."""
+"""Auth API routes for NAWA register and login."""
 
 import logging
 

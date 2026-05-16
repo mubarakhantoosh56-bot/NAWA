@@ -1,4 +1,4 @@
-"""PostgreSQL retrieval service for AIMX RAG."""
+"""PostgreSQL retrieval service for NAWA RAG."""
 
 import json
 from uuid import UUID

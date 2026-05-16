@@ -1,10 +1,10 @@
-# AIMX AI Context System
+﻿# NAWA AI Context System
 
 ## Project Vision
 
-AIMX is a **multi-tenant AI employee operating system** that enables companies to deploy autonomous AI agents capable of understanding institutional context, making informed decisions, and executing workflows with institutional memory.
+NAWA is a **multi-tenant AI employee operating system** that enables companies to deploy autonomous AI agents capable of understanding institutional context, making informed decisions, and executing workflows with institutional memory.
 
-Unlike generic chatbots, AIMX acts as a digital employee with:
+Unlike generic chatbots, NAWA acts as a digital employee with:
 - **Institutional Memory**: Persistent, queryable memory of company decisions, conflicts, and outcomes
 - **Tenant Isolation**: Cryptographically enforced company boundaries
 - **Reasoning Engine**: Multi-layer decision logic with root cause analysis
@@ -12,12 +12,12 @@ Unlike generic chatbots, AIMX acts as a digital employee with:
 
 ## Core Identity
 
-AIMX is **not**:
+NAWA is **not**:
 - A conversational UI layer
 - A document storage system
 - A generic LLM wrapper
 
-AIMX **is**:
+NAWA **is**:
 - An operating system for AI agents to work autonomously within company boundaries
 - A decision engine that reasons about institutional context
 - A multi-tenant SaaS platform where each company has isolated institutional memory
@@ -45,7 +45,7 @@ Validation is **enforced at every endpoint**. There is no "global view" of data.
 
 ## Memory Engine Philosophy
 
-AIMX's memory system is the core differentiator. It captures and stores:
+NAWA's memory system is the core differentiator. It captures and stores:
 
 ### Event Log Structure
 ```

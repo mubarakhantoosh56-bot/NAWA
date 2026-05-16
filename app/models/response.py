@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class ChatMeta(BaseModel):
-    """Metadata returned with every AIMX chat response."""
+    """Metadata returned with every NAWA chat response."""
 
     company_id: str | None = None
     session_id: str | None = None
@@ -17,7 +17,7 @@ class ChatMeta(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """Stable top-level response contract for AIMX chat."""
+    """Stable top-level response contract for NAWA chat."""
 
     ceo_text: str
     logic_json: dict[str, Any]

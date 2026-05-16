@@ -1,6 +1,6 @@
-# Atlas Home Supplies Demo
+﻿# Atlas Home Supplies Demo
 
-This backend-only demo seed creates a realistic AIMX tenant for investor and client demos.
+This backend-only demo seed creates a realistic NAWA tenant for investor and client demos.
 
 ## Local Setup
 

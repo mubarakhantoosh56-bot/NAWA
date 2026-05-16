@@ -1,4 +1,4 @@
-"""Repository classes for AIMX database access."""
+"""Repository classes for NAWA database access."""
 
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.membership_repository import MembershipRepository

@@ -1,5 +1,5 @@
 AIMX_DECISION_PROMPT = """
-You must operate using the AIMX Decision Framework (6 steps).
+You must operate using the NAWA Decision Framework (6 steps).
 
 YOU WILL RECEIVE:
 - COMPANY PROFILE (STABLE IDENTITY)

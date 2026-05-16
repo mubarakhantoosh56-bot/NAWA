@@ -1,4 +1,4 @@
-# AIMX Coding Standards
+﻿# NAWA Coding Standards
 
 All code must conform to these standards. Violations block merge.
 
@@ -6,7 +6,7 @@ All code must conform to these standards. Violations block merge.
 
 ### Rule: Every Function Has Type Hints
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 def create_token(company_id, user_id, expires_in_hours=24):
     # Missing type hints
@@ -18,7 +18,7 @@ async def get_events(repo, company_id):
     return result
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 def create_token(
     company_id: str,
@@ -75,7 +75,7 @@ async def process_event(
 
 ### Rule: Every Public Function/Class Has a Docstring
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 async def chat(self, message: str) -> dict:
     pass
@@ -84,7 +84,7 @@ class AIService:
     pass
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 async def chat(self, message: str, company_id: str) -> dict[str, Any]:
     """
@@ -131,19 +131,19 @@ class AIService:
 - No need to repeat parameter names
 
 ### When to Write Docstrings
-- ✅ All public functions
-- ✅ All public classes
-- ✅ All async functions
-- ✅ All service methods
-- ❌ Private functions (prefixed with _) unless complex
-- ❌ Simple getters/setters (self-explanatory names)
-- ❌ Override methods that match parent signature
+- âœ… All public functions
+- âœ… All public classes
+- âœ… All async functions
+- âœ… All service methods
+- âŒ Private functions (prefixed with _) unless complex
+- âŒ Simple getters/setters (self-explanatory names)
+- âŒ Override methods that match parent signature
 
 ## Exception Handling
 
 ### Rule: Catch Specific Exceptions, Never Bare except
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 try:
     result = await api.call()
@@ -156,7 +156,7 @@ except Exception:
     raise HTTPException(status_code=500)
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 try:
     result = await api.call()
@@ -268,7 +268,7 @@ class Handler:  # Too generic, doesn't describe purpose
 
 ### Rule: Pydantic Models for All Responses
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 @router.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -281,7 +281,7 @@ async def list_events(company_id: str):
     return events  # List of dicts, no validation
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 # app/models/response.py
 
@@ -311,7 +311,7 @@ class ChatResponse(BaseModel):
 @router.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
     result = await ai_engine.chat(...)
-    # ✅ Returns ChatResponse (validated, serializable)
+    # âœ… Returns ChatResponse (validated, serializable)
     return result
 ```
 
@@ -399,10 +399,10 @@ app.include_router(v2_router, prefix="/v2", tags=["chat"])
 
 ### Long Lines
 ```python
-# ❌ TOO LONG
+# âŒ TOO LONG
 response = await ai_engine.chat(session_id=request.session_id, message=request.message, context=request.context, company_id=auth_context.company_id)
 
-# ✅ CORRECT: Break at sensible points
+# âœ… CORRECT: Break at sensible points
 response = await ai_engine.chat(
     session_id=request.session_id,
     message=request.message,
@@ -420,20 +420,20 @@ response = await ai_engine.chat(
 ## Comments
 
 ### When to Write Comments
-- ✅ Non-obvious business logic
-- ✅ Workarounds for specific bugs or framework quirks
-- ✅ Performance trade-offs or limitations
-- ❌ Repeating what the code obviously does
-- ❌ Commenting out code (delete instead)
+- âœ… Non-obvious business logic
+- âœ… Workarounds for specific bugs or framework quirks
+- âœ… Performance trade-offs or limitations
+- âŒ Repeating what the code obviously does
+- âŒ Commenting out code (delete instead)
 
 ### Comment Style
 ```python
-# ✅ Explains WHY, not WHAT
+# âœ… Explains WHY, not WHAT
 # Company_id from JWT is trusted; validate request against it
 if request.company_id != auth_context.company_id:
     raise HTTPException(403)
 
-# ❌ Stating the obvious
+# âŒ Stating the obvious
 # Check if company_id matches
 if request.company_id != auth_context.company_id:
     pass
@@ -452,7 +452,7 @@ if request.company_id != auth_context.company_id:
 
 ### Import Style
 ```python
-# ✅ Correct
+# âœ… Correct
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
@@ -460,7 +460,7 @@ from pydantic import BaseModel
 from app.core.config import settings
 from app.core.dependencies import get_auth_context
 
-# ❌ Incorrect
+# âŒ Incorrect
 from datetime import *
 from fastapi import *
 import app.core.config
@@ -472,7 +472,7 @@ from app.core.dependencies import *
 
 ### Rule: Prefer Immutability
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```python
 # Mutable default argument
 def process(config: dict = {}):
@@ -487,7 +487,7 @@ async def fetch(company_id: str):
     return cache[company_id]
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```python
 # Immutable default
 def process(config: dict | None = None) -> dict:
@@ -512,7 +512,7 @@ class AIService:
 ### Rule: Mark All Async Functions with async def
 
 ```python
-# ✅ Correct
+# âœ… Correct
 async def fetch_events(company_id: str) -> list[Event]:
     events = await repo.get(company_id)
     return events
@@ -520,7 +520,7 @@ async def fetch_events(company_id: str) -> list[Event]:
 # Usage
 result = await fetch_events("acme-corp")
 
-# ❌ Wrong: Function is async but not marked
+# âŒ Wrong: Function is async but not marked
 def fetch_events(company_id: str):  # Missing async
     events = await repo.get(company_id)  # SyntaxError
     return events
@@ -528,12 +528,12 @@ def fetch_events(company_id: str):  # Missing async
 
 ### Async Context Managers
 ```python
-# ✅ Correct: Use async with
+# âœ… Correct: Use async with
 async with db.transaction() as tx:
     await tx.execute(query)
     await tx.commit()
 
-# ❌ Wrong: Regular context manager on async operation
+# âŒ Wrong: Regular context manager on async operation
 with db.transaction() as tx:  # Won't block properly
     await tx.execute(query)
 ```

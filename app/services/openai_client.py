@@ -307,7 +307,7 @@ def _validate_execution_structure(parsed: Optional[Dict[str, Any]]) -> bool:
     generic_phrases = [
         "develop strategy", "launch campaign", "create content",
         "develop plan", "marketing plan", "product development",
-        "expand aimx", "launch aimx", "build mvp", "prepare expansion",
+        "expand nawa", "launch nawa", "build mvp", "prepare expansion",
         "evaluate performance", "collect feedback", "develop prototype",
         "create account", "create accounts", "internal resources",
         "internal review", "online platform", "marketing strategies",
@@ -316,7 +316,7 @@ def _validate_execution_structure(parsed: Optional[Dict[str, Any]]) -> bool:
 
         "إنشاء حساب", "إنشاء حسابات", "تطوير خطة", "خطة تسويقية",
         "إطلاق حملة", "إنشاء محتوى", "تطوير استراتيجية", "التسويق",
-        "التوسع", "تطوير المنتج", "إطلاق aimx", "تطوير النسخة الأولية",
+        "التوسع", "تطوير المنتج", "إطلاق nawa", "تطوير النسخة الأولية",
         "إطلاق المنتج", "جمع ملاحظات", "تقييم الأداء", "بدء التخطيط",
         "تطوير ميزات", "تحديد شركاء", "إرسال البريد الإلكتروني",
         "إجراء المكالمات", "تنفيذ المنشورات", "تنفيذ المنشورات الترويجية",
@@ -915,11 +915,11 @@ class AIService:
 
         except Exception as e:
             logger.error(
-                "AIMX engine failed",
+                "NAWA engine failed",
                 extra={"company_id": company_id, "session_id": session_id},
                 exc_info=True,
             )
-            raise HTTPException(status_code=500, detail="AIMX engine failed") from e
+            raise HTTPException(status_code=500, detail="NAWA engine failed") from e
 
 
 ai_engine = AIService()

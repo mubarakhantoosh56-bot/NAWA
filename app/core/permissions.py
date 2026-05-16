@@ -1,4 +1,4 @@
-"""RBAC permission dependencies for protected AIMX endpoints."""
+"""RBAC permission dependencies for protected NAWA endpoints."""
 
 from collections.abc import Callable
 

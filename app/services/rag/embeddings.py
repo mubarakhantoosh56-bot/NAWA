@@ -1,4 +1,4 @@
-"""Embedding helpers for AIMX semantic RAG retrieval."""
+"""Embedding helpers for NAWA semantic RAG retrieval."""
 
 import logging
 from uuid import UUID

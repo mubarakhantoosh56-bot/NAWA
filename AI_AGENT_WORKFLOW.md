@@ -1,14 +1,14 @@
-# AIMX AI Agent Workflow
+﻿# NAWA AI Agent Workflow
 
-This document guides how AI agents (Claude) should modify the AIMX codebase safely, efficiently, and in alignment with architecture.
+This document guides how AI agents (Claude) should modify the NAWA codebase safely, efficiently, and in alignment with architecture.
 
 ## Before You Start
 
 ### Read These First
-1. **AIMX_AI_CONTEXT.md** — Understand the vision, multi-tenancy model, and memory system
-2. **ARCHITECTURE_RULES.md** — Know the non-negotiable structural rules
-3. **CODING_STANDARDS.md** — Follow the typing, naming, and style guidelines
-4. **This file** — How to apply these rules when modifying code
+1. **NAWA_AI_CONTEXT.md** â€” Understand the vision, multi-tenancy model, and memory system
+2. **ARCHITECTURE_RULES.md** â€” Know the non-negotiable structural rules
+3. **CODING_STANDARDS.md** â€” Follow the typing, naming, and style guidelines
+4. **This file** â€” How to apply these rules when modifying code
 
 ### Principles
 - **Safety First**: Never compromise tenant isolation or auth
@@ -22,9 +22,9 @@ This document guides how AI agents (Claude) should modify the AIMX codebase safe
 ### Step 1: Understand the Request
 
 The user describes what needs to be built:
-- ✅ "Add a new endpoint to fetch company events"
-- ✅ "Implement memory pruning to remove old events"
-- ❌ "Refactor everything to use dependency injection" (too broad)
+- âœ… "Add a new endpoint to fetch company events"
+- âœ… "Implement memory pruning to remove old events"
+- âŒ "Refactor everything to use dependency injection" (too broad)
 
 ### Step 2: Design Before Implementation
 
@@ -56,7 +56,7 @@ Architecture Notes:
 Before starting code changes:
 - [ ] Read the existing module containing related code
 - [ ] Identify all files that need modification
-- [ ] Plan the order (dependency-first: models → repositories → services → routes)
+- [ ] Plan the order (dependency-first: models â†’ repositories â†’ services â†’ routes)
 - [ ] Verify no production files are modified unnecessarily
 
 ### Step 4: Implement Incrementally
@@ -102,14 +102,14 @@ async def list_events(
 
 ### Rule: Refactor Only What's Required
 
-❌ **FORBIDDEN**:
+âŒ **FORBIDDEN**:
 ```
 User: "Fix the JWT auth bug"
 AI: "I'll also refactor the entire service layer to use dependency injection
     and implement a new logging system and add caching..."
 ```
 
-✅ **REQUIRED**:
+âœ… **REQUIRED**:
 ```
 User: "Fix the JWT auth bug"
 AI: "The JWT signature verification is failing because the token was
@@ -118,7 +118,7 @@ AI: "The JWT signature verification is failing because the token was
     2. Generate a fresh token using current settings
     3. Test with the fresh token
     
-    No refactoring — just fixing the bug."
+    No refactoring â€” just fixing the bug."
 ```
 
 ### When Refactoring is Acceptable
@@ -180,7 +180,7 @@ def validate_token(token: str) -> Dict[str, Any]:
 
 #### 3. Move Unused Code to Dead Branch (NOT SAFE)
 ```python
-# ❌ DON'T DO THIS
+# âŒ DON'T DO THIS
 # Dead code marker (reduces searchability, confuses future readers)
 if False:  # Old implementation (removed)
     async def get_events_old(company_id):
@@ -191,7 +191,7 @@ if False:  # Old implementation (removed)
 
 ### Example: Add Event Filtering by Event Type
 
-**1. Design (user input → AI understanding)**
+**1. Design (user input â†’ AI understanding)**
 ```
 User: "Let users filter events by type (decision, conflict, etc)"
 
@@ -283,7 +283,7 @@ User: "JWT auth is failing with 'Signature verification failed'"
 
 Steps:
 1. Read error message carefully: "Signature verification failed"
-   → Token was signed with different key than verification key
+   â†’ Token was signed with different key than verification key
 
 2. Check token source:
    - Where was token generated?
@@ -466,7 +466,7 @@ CREATE INDEX idx_events_company_session ON events(company_id, session_id);
 **2. Test Migration Locally**
 ```bash
 # Connect to local database
-psql postgresql://user:pass@localhost:5432/aimx
+psql postgresql://user:pass@localhost:5432/NAWA
 
 # Run migration
 \i migrations/001_add_company_events_table.sql
@@ -600,7 +600,7 @@ When reviewing your own code before commit:
 
 1. **Understand** the request thoroughly
 2. **Design** the solution before coding
-3. **Implement** in dependency order (models → repos → services → routes)
+3. **Implement** in dependency order (models â†’ repos â†’ services â†’ routes)
 4. **Test** the change (manually or with minimal test code)
 5. **Review** against checklists
 6. **Commit** with clear message and only necessary files

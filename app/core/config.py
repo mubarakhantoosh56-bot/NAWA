@@ -14,7 +14,7 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
-    APP_TITLE: str = "AIMX API"
+    APP_TITLE: str = "NAWA API"
     MODEL: str = "gpt-4o-mini"
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))

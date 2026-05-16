@@ -1,4 +1,4 @@
-"""Refresh token repository for AIMX auth runtime."""
+"""Refresh token repository for NAWA auth runtime."""
 
 from datetime import datetime
 from uuid import UUID

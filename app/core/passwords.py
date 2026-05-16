@@ -1,4 +1,4 @@
-"""Password hashing helpers for AIMX auth flows."""
+"""Password hashing helpers for NAWA auth flows."""
 
 import base64
 import hashlib
