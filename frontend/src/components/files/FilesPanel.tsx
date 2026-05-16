@@ -1,27 +1,20 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
-import { listFiles, uploadFile } from "@/lib/api/files";
+import { listFiles } from "@/lib/api/files";
 import type { CompanyFile, Department } from "@/lib/types";
 
 type FilesPanelProps = {
   token: string;
   departments: Department[];
-  canUpload: boolean;
 };
 
-export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
+export function FilesPanel({ token, departments }: FilesPanelProps) {
   const [files, setFiles] = useState<CompanyFile[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
 
   const departmentNames = useMemo(() => {
     return departments.reduce<Record<string, string>>((current, department) => {
@@ -72,35 +65,6 @@ export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
     }
   }
 
-  async function handleUpload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedFile || isUploading) {
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadError(null);
-    setUploadNotice(null);
-
-    try {
-      await uploadFile(token, selectedFile, selectedDepartmentId || null);
-      setSelectedFile(null);
-      setFileInputKey((current) => current + 1);
-      setUploadNotice("File uploaded and queued for company knowledge.");
-      await refreshFiles();
-    } catch (caught) {
-      setUploadError(caught instanceof ApiError ? caught.detail : "Unable to upload file.");
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    setSelectedFile(event.target.files?.[0] ?? null);
-    setUploadError(null);
-    setUploadNotice(null);
-  }
-
   return (
     <aside className="panel overflow-hidden">
       <div className="border-b border-line px-4 py-3">
@@ -113,67 +77,12 @@ export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
             className="button-secondary px-2.5 py-1.5 text-xs"
             type="button"
             onClick={refreshFiles}
-            disabled={status === "loading" || isUploading}
+            disabled={status === "loading"}
           >
             Refresh
           </button>
         </div>
       </div>
-
-      {canUpload ? (
-        <form onSubmit={handleUpload} className="space-y-3 border-b border-line bg-white p-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase text-muted" htmlFor="knowledge-file">
-              Upload
-            </label>
-            <input
-              key={fileInputKey}
-              id="knowledge-file"
-              className="input text-sm"
-              type="file"
-              accept=".txt,.md,.csv,.json,.pdf,.docx"
-              onChange={handleFileChange}
-              disabled={isUploading}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase text-muted" htmlFor="knowledge-scope">
-              Scope
-            </label>
-            <select
-              id="knowledge-scope"
-              className="input"
-              value={selectedDepartmentId}
-              onChange={(event) => setSelectedDepartmentId(event.target.value)}
-              disabled={isUploading}
-            >
-              <option value="">Company-wide</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {uploadError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {uploadError}
-            </div>
-          ) : null}
-
-          {uploadNotice ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {uploadNotice}
-            </div>
-          ) : null}
-
-          <button className="button-primary w-full" type="submit" disabled={!selectedFile || isUploading}>
-            {isUploading ? "Uploading" : "Upload file"}
-          </button>
-        </form>
-      ) : null}
 
       <div className="max-h-[520px] space-y-3 overflow-y-auto bg-white p-4">
         {status === "loading" ? (
@@ -195,7 +104,7 @@ export function FilesPanel({ token, departments, canUpload }: FilesPanelProps) {
           <div className="rounded-md border border-dashed border-line bg-surface p-3">
             <div className="text-sm font-medium text-ink">No knowledge files yet</div>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Upload a demo brief, finance summary, sales notes, or campaign plan to make
+              Seed demo files or ingest company knowledge through the backend to make
               AIMX answers more grounded.
             </p>
           </div>

@@ -41,7 +41,6 @@ export function WorkspaceShell() {
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
   const canReadFiles = hasPermission(permissions, "files.read");
-  const canUploadFiles = hasPermission(permissions, "files.upload");
 
   useEffect(() => {
     if (!token || !canReadDepartments) {
@@ -199,7 +198,6 @@ export function WorkspaceShell() {
           <QuickStartPanel
             activeTitle={activeTitle}
             canReadFiles={canReadFiles}
-            canUploadFiles={canUploadFiles}
           />
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -226,7 +224,7 @@ export function WorkspaceShell() {
                 department={activeDepartment}
               />
               {canReadFiles ? (
-                <FilesPanel token={token} departments={departments} canUpload={canUploadFiles} />
+                <FilesPanel token={token} departments={departments} />
               ) : null}
             </div>
           ) : null}
@@ -239,11 +237,9 @@ export function WorkspaceShell() {
 function QuickStartPanel({
   activeTitle,
   canReadFiles,
-  canUploadFiles,
 }: {
   activeTitle: string;
   canReadFiles: boolean;
-  canUploadFiles: boolean;
 }) {
   return (
     <section className="panel p-3">
@@ -258,7 +254,7 @@ function QuickStartPanel({
           <QuickStartStep value="1" label={activeTitle} />
           <QuickStartStep
             value="2"
-            label={canReadFiles ? (canUploadFiles ? "Upload or review files" : "Review files") : "Files locked"}
+            label={canReadFiles ? "Review knowledge files" : "Files locked"}
           />
           <QuickStartStep value="3" label="Use a suggested prompt" />
         </div>
