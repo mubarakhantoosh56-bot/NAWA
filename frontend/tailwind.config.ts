@@ -9,14 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#111827",
-        muted: "#6b7280",
-        line: "#d9dde5",
-        surface: "#f7f8fa",
-        accent: "#2563eb",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        muted: "rgb(var(--color-muted) / <alpha-value>)",
+        line: "rgb(var(--color-line) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
+        executive: "rgb(var(--color-executive) / <alpha-value>)",
+        command: "rgb(var(--color-command) / <alpha-value>)",
+        gold: "rgb(var(--color-gold) / <alpha-value>)",
       },
       boxShadow: {
-        panel: "0 1px 2px rgba(17, 24, 39, 0.06)",
+        panel: "0 12px 32px rgba(8, 15, 32, 0.08)",
+        command: "0 20px 60px rgba(8, 15, 32, 0.18)",
       },
     },
   },

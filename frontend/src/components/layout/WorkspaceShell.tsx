@@ -103,33 +103,33 @@ export function WorkspaceShell() {
   const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
 
   return (
-    <main className="min-h-screen bg-surface text-ink">
-      <header className="border-b border-line bg-white">
+    <main className="min-h-screen text-ink">
+      <header className="border-b border-white/10 bg-executive text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-ink text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-white/10 text-sm font-semibold text-white">
               ن
             </div>
             <div>
-              <div className="text-sm font-semibold tracking-wide text-ink">NAWA · نواة</div>
-              <div className="text-xs text-muted">AI Workforce Platform</div>
+              <div className="text-sm font-semibold tracking-wide text-white">NAWA · نواة</div>
+              <div className="text-xs text-white/60">AI Workforce Platform</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
               <div className="text-sm font-medium">{me?.company.name}</div>
-              <div className="text-xs text-muted">{me?.user.email}</div>
+              <div className="text-xs text-white/60">{me?.user.email}</div>
             </div>
-            <button className="button-secondary" type="button" onClick={logout}>
+            <button className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15" type="button" onClick={logout}>
               Logout
             </button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[240px_1fr]">
-        <aside className="panel h-fit p-3 lg:sticky lg:top-4">
-          <div className="px-2 pb-2 text-xs font-semibold uppercase text-muted">Workspace</div>
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[260px_1fr]">
+        <aside className="command-panel h-fit p-3 lg:sticky lg:top-4">
+          <div className="px-2 pb-2 text-xs font-semibold uppercase text-white/60">Workspace</div>
           <nav className="space-y-1">
             <SidebarItem
               label="CEO AI"
@@ -139,14 +139,19 @@ export function WorkspaceShell() {
               onClick={() => setActiveWorkspace({ kind: "ceo" })}
             />
 
-            <div className="px-2 pt-3 text-xs font-semibold uppercase text-muted">Departments</div>
+            <div className="px-2 pt-3 text-xs font-semibold uppercase text-white/60">Departments</div>
 
             {departmentStatus === "loading" ? (
-              <div className="px-3 py-2 text-sm text-muted">Loading departments...</div>
+              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-gold" />
+                  Loading departments...
+                </span>
+              </div>
             ) : null}
 
             {departmentStatus === "blocked" ? (
-              <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
+              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
                 Department list unavailable for this role.
               </div>
             ) : null}
@@ -190,29 +195,29 @@ export function WorkspaceShell() {
               );
             })}
           </nav>
-          <div className="mt-4 border-t border-line px-2 pt-3">
-            <div className="text-xs font-semibold uppercase text-muted">Role</div>
-            <div className="mt-1 text-sm font-medium">{me?.role.name}</div>
-            <div className="mt-1 text-xs text-muted">{permissions.length} permissions available</div>
+          <div className="mt-4 border-t border-white/10 px-2 pt-3">
+            <div className="text-xs font-semibold uppercase text-white/60">Role</div>
+            <div className="mt-1 text-sm font-medium text-white">{me?.role.name}</div>
+            <div className="mt-1 text-xs text-white/60">{permissions.length} permissions available</div>
           </div>
         </aside>
 
         <section className="space-y-4">
-          <div className="panel p-4">
+          <div className="command-panel p-4">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
               <div>
-                <div className="text-xs font-semibold uppercase text-muted">Live AI workforce</div>
+                <div className="text-xs font-semibold uppercase text-white/60">Live AI workforce</div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold text-ink">{activeTitle}</h1>
-                  <span className="rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">
+                  <h1 className="text-xl font-semibold text-white">{activeTitle}</h1>
+                  <span className="rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs font-medium text-white/70">
                     {activeDepartment ? activeDepartment.name : "Executive"}
                   </span>
                 </div>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
                   {activeDescription}
                 </p>
               </div>
-              <div className="rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">
+              <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70">
                 Scope: {activeScope}
               </div>
             </div>
@@ -238,7 +243,7 @@ export function WorkspaceShell() {
           </div>
 
           {token && me ? (
-            <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]" : ""}>
+            <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
               <ChatPanel
                 token={token}
                 companyId={me.company.id}
@@ -268,7 +273,7 @@ function QuickStartPanel({
     <section className="panel p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase text-muted">Demo quick start</div>
+          <div className="executive-label">Demo quick start</div>
           <div className="mt-1 text-sm font-medium text-ink">
             Select an AI worker, review knowledge files, then ask a decision question.
           </div>
@@ -289,7 +294,7 @@ function QuickStartPanel({
 function QuickStartStep({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-line bg-white text-[11px] font-semibold text-ink">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-accent/20 bg-white text-[11px] font-semibold text-accent">
         {value}
       </span>
       <span className="truncate">{label}</span>
@@ -318,10 +323,10 @@ function SidebarItem({
     <button
       className={`w-full rounded-md px-3 py-2 text-left text-sm transition ${
         active
-          ? "bg-blue-50 font-medium text-accent"
+          ? "bg-white/10 font-medium text-white"
           : disabled
-            ? "cursor-not-allowed bg-white text-muted opacity-70"
-            : "text-ink hover:bg-surface"
+            ? "cursor-not-allowed bg-white/5 text-white/50 opacity-70"
+            : "text-white/80 hover:bg-white/10"
       }`}
       type="button"
       onClick={onClick}
@@ -332,8 +337,8 @@ function SidebarItem({
         <span
           className={`mt-0.5 flex h-7 w-8 shrink-0 items-center justify-center rounded-md border text-[11px] font-semibold ${
             active
-              ? "border-blue-200 bg-white text-accent"
-              : "border-line bg-surface text-muted"
+              ? "border-gold/50 bg-gold/15 text-gold"
+              : "border-white/10 bg-white/5 text-white/60"
           }`}
         >
           {badge}
@@ -347,7 +352,7 @@ function SidebarItem({
               </span>
             ) : null}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted">{description}</span>
+          <span className="mt-0.5 block truncate text-xs text-white/50">{description}</span>
         </span>
       </span>
     </button>

@@ -100,24 +100,24 @@ export function ChatPanel({
 
   return (
     <section className="panel flex min-h-[640px] flex-col overflow-hidden">
-      <div className="border-b border-line px-4 py-3">
+      <div className="border-b border-line bg-white px-4 py-3">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase text-muted">AI chat</div>
+            <div className="executive-label">AI chat</div>
             <h2 className="mt-1 truncate text-base font-semibold text-ink">{title}</h2>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted">
-            <span className="rounded-md border border-line bg-surface px-2.5 py-1.5">
+            <span className="nawa-badge">
               {workspaceLabel} session
             </span>
-            <span className="rounded-md border border-line bg-surface px-2.5 py-1.5">
+            <span className="nawa-badge">
               Saved locally
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto bg-white p-4">
+      <div className="flex-1 space-y-5 overflow-y-auto bg-surface/70 p-4">
         {turns.length === 0 ? (
           <WelcomeState
             department={department}
@@ -128,7 +128,7 @@ export function ChatPanel({
 
         {turns.map((turn) => (
           <article key={turn.id} className="space-y-3.5">
-            <div className="ml-auto max-w-[88%] rounded-md border border-blue-100 bg-blue-50 p-3">
+            <div className="ml-auto max-w-[88%] rounded-md border border-accent/15 bg-accent/10 p-3">
               <div className="text-xs font-semibold uppercase text-accent">You</div>
               <p className="mt-1 text-sm leading-6 text-ink">{turn.userMessage}</p>
             </div>
@@ -148,7 +148,7 @@ export function ChatPanel({
         ))}
 
         {isSending ? (
-          <div className="max-w-[94%] rounded-md border border-line bg-surface p-4 text-sm text-muted">
+          <div className="max-w-[94%] rounded-md border border-line bg-white p-4 text-sm text-muted shadow-panel">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
               NAWA is reading context and preparing a tenant-scoped answer...
@@ -227,7 +227,7 @@ function WelcomeState({
             type="button"
             onClick={() => onSelectPrompt(prompt)}
           >
-            <span className="text-[11px] font-semibold uppercase text-muted">
+            <span className="executive-label">
               Prompt {index + 1}
             </span>
             <span className="mt-1 block text-sm leading-5 text-ink">{prompt}</span>
@@ -259,7 +259,7 @@ function LogicPanel({ logic }: { logic: Record<string, unknown> }) {
     <details className="mt-4 rounded-md border border-line bg-surface">
       <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-semibold uppercase text-muted">
         <span>Decision logic</span>
-        <span className="rounded border border-line bg-white px-2 py-0.5 text-[11px] normal-case">
+        <span className="rounded border border-line bg-white px-2 py-0.5 text-[11px] normal-case text-accent">
           {keys.length ? `${keys.length} fields` : "empty"}
         </span>
       </summary>
