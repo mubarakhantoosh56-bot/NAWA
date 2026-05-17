@@ -54,6 +54,8 @@ def test_ceo_default_selection():
     assert persona.key == "ceo"
     assert "Name: CEO AI" in prompt
     assert "Scope: company_wide" in prompt
+    assert "priorities, risks, execution" in prompt
+    assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in prompt
 
 
 def test_department_persona_selection():
@@ -63,7 +65,26 @@ def test_department_persona_selection():
 
     assert persona.key == "sales"
     assert "Name: Sales AI" in prompt
-    assert "pipeline" in prompt
+    assert "pipeline quality" in prompt
+    assert "conversion blockers" in prompt
+
+
+def test_finance_persona_is_financially_focused():
+    context = {"aimx_department": {"department_type": "finance_ai"}}
+    prompt = build_persona_prompt(context)
+
+    assert "Name: Finance AI" in prompt
+    assert "margins, cash flow, costs, forecasts, financial risk" in prompt
+    assert "approval guardrails" in prompt
+
+
+def test_marketing_persona_is_campaign_focused():
+    context = {"aimx_department": {"department_type": "marketing_ai"}}
+    prompt = build_persona_prompt(context)
+
+    assert "Name: Marketing AI" in prompt
+    assert "campaigns, CAC, engagement, acquisition, positioning" in prompt
+    assert "campaign quality" in prompt
 
 
 def test_unknown_department_fallback_safety():
@@ -94,6 +115,7 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
     assert messages[1]["content"] == AIMX_DECISION_PROMPT
     assert messages[2]["content"].startswith("NAWA PERSONA:")
     assert "Name: Finance AI" in messages[2]["content"]
+    assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in messages[2]["content"]
     assert "COMPANY CONTEXT:" in messages[3]["content"]
 
     assert set(result.keys()) == {"ceo_text", "logic_json", "followup_question", "meta"}
