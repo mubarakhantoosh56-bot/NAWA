@@ -4,8 +4,8 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NAWA Workspace",
-  description: "NAWA AI Workforce Platform",
+  title: "NAWA · نواة",
+  description: "Arabic-first enterprise AI operating system.",
 };
 
 export default function RootLayout({
