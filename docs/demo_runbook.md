@@ -1,6 +1,6 @@
-﻿# NAWA Demo Runbook
+# NAWA Demo Runbook
 
-This runbook prepares a local backend-only NAWA demo for investor or client presentations. It assumes the Atlas Home Supplies demo tenant and local keyword retrieval mode.
+This runbook prepares a local NAWA demo for investor or client presentations. It assumes the Northstar Commercial Group demo tenant and local keyword retrieval mode.
 
 ## 1. Local Setup Steps
 
@@ -19,13 +19,13 @@ This runbook prepares a local backend-only NAWA demo for investor or client pres
    RAG_RETRIEVAL_MODE=keyword
    ```
 
-6. Set a local-only demo owner password for the seed command:
+6. Set the local demo owner password for the seed command:
 
    ```powershell
-   $env:DEMO_OWNER_PASSWORD="choose-a-local-demo-password"
+   $env:DEMO_OWNER_PASSWORD="password123"
    ```
 
-Do not commit `.env` or real passwords.
+Do not commit `.env` or real production passwords.
 
 ## 2. Environment Requirements
 
@@ -33,20 +33,20 @@ Required:
 
 - Python environment with `requirements.txt` installed.
 - Local PostgreSQL reachable through `DATABASE_URL`.
-- Existing NAWA migrations `001` through `004` applied.
+- Existing NAWA migrations applied.
 - `RAG_RETRIEVAL_MODE=keyword` for local demo reliability.
-- `DEMO_OWNER_PASSWORD` set only in the current shell before seeding.
+- `DEMO_OWNER_PASSWORD=password123` set before seeding the local demo.
 
 Optional:
 
 - `OPENAI_API_KEY` if you want real model responses.
-- Without a stable model key/network, use Swagger to verify API wiring and prepared prompts, or run backend smoke tests with fake clients.
+- Without a stable model key/network, use the frontend and Swagger to verify auth, API wiring, prepared prompts, and seeded company context.
 
 Not required for this demo:
 
+- n8n
 - pgvector
 - Pinecone
-- frontend
 - avatars
 - background workers
 
@@ -72,52 +72,44 @@ http://localhost:8000/docs
 
 ## 4. Run Demo Seed
 
-First seed:
-
-```powershell
-python -m scripts.seed_demo
-```
-
 Safe reseed/reset:
 
 ```powershell
+$env:DEMO_OWNER_PASSWORD="password123"
 python -m scripts.seed_demo --reset
 ```
 
 The seed creates:
 
-- Company: `Atlas Home Supplies`
-- Company slug: `atlas-home-supplies`
-- Owner email: `owner@atlas-demo.local`
+- Company: `Northstar Commercial Group`
+- Company slug: `northstar-commercial`
+- Owner email: `owner@northstar-demo.local`
+- Owner password: `password123`
 - Departments: CEO, Sales, Finance, Marketing, Operations
-- Demo memory facts
+- Demo memory facts and events
 - Curated demo files ingested through RAG
 
-The reset flow is scoped to the demo tenant slug.
+The reset flow is scoped to the Northstar demo tenant slug.
 
-## 5. Swagger Usage Steps
+## 5. Frontend Login Flow
 
-Open:
+Open the frontend login page and use:
 
 ```text
-http://localhost:8000/docs
+Company slug: northstar-commercial
+Email: owner@northstar-demo.local
+Password: password123
 ```
 
-Use this order:
+Expected:
 
-1. `POST /auth/login`
-2. Copy the returned `access_token`.
-3. Click Swagger `Authorize`.
-4. Enter:
+- Login succeeds.
+- User lands in `/workspace`.
+- CEO AI appears as the default workspace.
+- Sales, Finance, Marketing, and Operations are available in the sidebar.
+- KPI cards, demo reports, company files, and chat history are populated.
 
-   ```text
-   Bearer <access_token>
-   ```
-
-5. Use `GET /departments` to copy department IDs.
-6. Use `POST /ai/chat` for CEO and department AI demos.
-
-## 6. Demo Login Flow
+## 6. Swagger Login Flow
 
 Swagger endpoint:
 
@@ -129,9 +121,9 @@ Request body:
 
 ```json
 {
-  "email": "owner@atlas-demo.local",
-  "password": "<your local DEMO_OWNER_PASSWORD>",
-  "company_slug": "atlas-home-supplies"
+  "email": "owner@northstar-demo.local",
+  "password": "password123",
+  "company_slug": "northstar-commercial"
 }
 ```
 
@@ -143,88 +135,54 @@ Expected:
 - `user`
 - `membership`
 
-Do not paste real credentials into documentation, chat, screenshots, or tickets.
+Then call:
 
-## 7. CEO AI Demo Prompts
-
-Use `POST /ai/chat` without `department_id`.
-
-Body shape:
-
-```json
-{
-  "company_id": "<company_id>",
-  "session_id": "demo-ceo-001",
-  "message": "Given our current constraints, what should Atlas Home Supplies prioritize in the next 30 days?",
-  "context": {
-    "stage": "Growing SME",
-    "size": "42 employees",
-    "industry": "Retail and light distribution",
-    "resources": "Limited marketing budget and Amman-focused delivery capacity"
-  }
-}
+```text
+GET /auth/me
 ```
 
-Prompts:
+Expected:
 
-- Given our current constraints, what should Atlas Home Supplies prioritize in the next 30 days?
-- Create a 90-day execution plan to grow B2B revenue by 25 percent.
-- Which department owns each part of the B2B expansion plan?
+- Company slug is `northstar-commercial`.
+- User email is `owner@northstar-demo.local`.
+- Role is the owner role.
 
-## 8. Sales AI Demo Prompts
+## 7. Demo Prompts
 
-Use `POST /ai/chat` with the Sales department ID from `GET /departments`.
+Use `POST /ai/chat` without `department_id` for CEO AI.
 
-Prompts:
+CEO AI prompts:
 
-- Build a weekly outreach plan for hotel and restaurant accounts.
-- Which sales actions should we take this week to support the 25 percent revenue goal?
-- How should Sales handle discount requests above 8 percent?
+- Give me the CEO briefing for this week: risks, priorities, and recommended actions.
+- What should Northstar focus on before a NAWA investor demo?
+- Summarize the top cross-department decisions we should make today.
 
-Expected Sales AI focus:
+Use `POST /ai/chat` with the matching department ID for department AI.
 
-- Pipeline
-- Outreach
-- Discovery calls
-- Sample orders
-- Discount escalation to Finance
+Sales AI prompts:
 
-## 9. Finance AI Demo Prompts
+- Summarize the sales pipeline and highlight the best next actions.
+- Which expansion accounts should Sales prioritize this month?
+- What should Sales report to the CEO before the demo?
 
-Use `POST /ai/chat` with the Finance department ID.
+Finance AI prompts:
 
-Prompts:
+- Give me a finance briefing with cash, margin, and spending risks.
+- Which costs should Finance review before the next planning meeting?
+- What finance questions should the CEO ask today?
 
-- Can we afford the proposed marketing campaign?
-- What budget guardrails should Sales and Marketing follow?
-- What financial risks could block the 90-day growth target?
+Marketing AI prompts:
 
-Expected Finance AI focus:
+- Summarize current marketing priorities and campaign opportunities.
+- Which messages should Marketing emphasize for growth this month?
+- What marketing proof points should we show in an investor demo?
 
-- 4,000 JOD monthly marketing budget
-- 28 percent gross margin target
-- Discount limits
-- Cash flow and payment terms
+Operations AI prompts:
 
-## 10. Marketing AI Demo Prompts
+- What fulfillment risks could block the expansion plan?
+- Which commitments should Operations review before Sales sends proposals?
 
-Use `POST /ai/chat` with the Marketing department ID.
-
-Prompts:
-
-- Create a campaign plan for hotels and restaurants in Amman.
-- Which channels should we use based on the current marketing budget?
-- What KPIs should Marketing track weekly?
-
-Expected Marketing AI focus:
-
-- LinkedIn outreach
-- WhatsApp follow-up
-- Case-study posts
-- Landing page
-- Qualified visits, replies, bookings, and cost per lead
-
-## 11. Expected Behavior Notes
+## 8. Expected Behavior Notes
 
 Expected:
 
@@ -236,26 +194,27 @@ Expected:
   - `followup_question`
   - `meta`
 - RAG snippets are injected internally as untrusted company knowledge.
-- Keyword retrieval should work locally from seeded demo files.
+- Keyword retrieval should work locally from seeded Northstar documents.
 - Department prompts should use department-scoped files when possible.
 
 Not expected:
 
+- n8n workflow execution
 - Avatar behavior
-- Frontend UI behavior
 - Pinecone retrieval
 - pgvector-only semantic search
 - Response schema changes
 
-## 12. Troubleshooting
+## 9. Troubleshooting
 
 ### Login Fails
 
 Check:
 
-- Demo seed was run.
-- Password matches the shell value used for `DEMO_OWNER_PASSWORD`.
-- `company_slug` is exactly `atlas-home-supplies`.
+- Demo seed was run with `DEMO_OWNER_PASSWORD=password123`.
+- `company_slug` is exactly `northstar-commercial`.
+- Email is exactly `owner@northstar-demo.local`.
+- Backend is running and reachable by the frontend.
 
 ### Swagger Returns 401
 
@@ -270,6 +229,7 @@ Check:
 Run:
 
 ```powershell
+$env:DEMO_OWNER_PASSWORD="password123"
 python -m scripts.seed_demo --reset
 ```
 
@@ -281,7 +241,7 @@ Check:
 
 - `RAG_RETRIEVAL_MODE=keyword`
 - Demo seed completed successfully.
-- Your prompt contains a useful keyword such as `discount`, `budget`, `campaign`, `B2B`, or `delivery`.
+- Your prompt contains a useful keyword such as `discount`, `margin`, `campaign`, `pipeline`, `capacity`, or `delivery`.
 
 ### pgvector Error Appears
 
@@ -291,47 +251,24 @@ Local demos should use:
 RAG_RETRIEVAL_MODE=keyword
 ```
 
-Do not run migration `005` locally unless pgvector is installed for the local PostgreSQL server.
+Do not run pgvector-only flows locally unless pgvector is installed for the local PostgreSQL server.
 
-### Model Call Fails
-
-Check:
-
-- `OPENAI_API_KEY` is configured locally.
-- Network access is available.
-- For offline demo rehearsal, validate backend flow with smoke tests and prepared prompts.
-
-## 13. Keyword vs Semantic Retrieval Note
-
-For local demos, use keyword retrieval.
-
-Keyword mode:
-
-- Does not require pgvector.
-- Uses existing PostgreSQL keyword matching.
-- Works with the seeded Atlas documents.
-- Is the recommended local investor/client demo mode.
-
-Semantic mode:
-
-- Requires pgvector migration and extension readiness.
-- Should be enabled only after local PostgreSQL supports `CREATE EXTENSION vector`.
-- Is not required for the Atlas demo runbook.
-
-## 14. Demo Safety Checklist
+## 10. Demo Safety Checklist
 
 Before presenting:
 
 - `.env` is local and not committed.
 - `RAG_RETRIEVAL_MODE=keyword`.
-- `DEMO_OWNER_PASSWORD` is set only in the local shell.
+- `DEMO_OWNER_PASSWORD=password123` is set for local demo seeding.
 - Backend starts cleanly.
 - `python -m scripts.seed_demo --reset` completes.
-- Login works in Swagger.
+- Frontend login works.
+- `POST /auth/login` works.
+- `GET /auth/me` works.
 - `GET /departments` returns CEO, Sales, Finance, Marketing, Operations.
 - CEO AI works without `department_id`.
 - Sales AI works with Sales `department_id`.
 - Finance AI works with Finance `department_id`.
 - Marketing AI works with Marketing `department_id`.
 - Demo prompts are ready.
-- No screenshots expose tokens, passwords, API keys, or `.env` values.
+- No screenshots expose API keys, production credentials, or `.env` values.

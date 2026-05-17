@@ -1,4 +1,4 @@
-"""Seed the Atlas Home Supplies demo tenant."""
+"""Seed the Northstar Commercial Group demo tenant."""
 
 from __future__ import annotations
 
@@ -136,7 +136,7 @@ def configure_logging() -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Seed the NAWA Atlas Home Supplies demo tenant.")
+    parser = argparse.ArgumentParser(description="Seed the NAWA Northstar Commercial Group demo tenant.")
     parser.add_argument(
         "--reset",
         action="store_true",

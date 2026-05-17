@@ -15,7 +15,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="mt-8 max-w-md text-3xl font-semibold leading-tight">
-            Sign in to the Arabic-first AI workforce workspace.
+            Sign in to the NAWA enterprise intelligence workspace.
           </h1>
           <p className="mt-4 max-w-md text-sm leading-6 text-white/70">
             Access CEO and department AI workspaces backed by company knowledge,
@@ -24,7 +24,7 @@ export default function LoginPage() {
           <div className="mt-8 grid gap-3 text-sm">
             <div className="rounded-md border border-white/10 bg-white/5 p-3">Executive command workspace</div>
             <div className="rounded-md border border-white/10 bg-white/5 p-3">Department AI workforce</div>
-            <div className="rounded-md border border-white/10 bg-white/5 p-3">Arabic-first enterprise identity</div>
+            <div className="rounded-md border border-white/10 bg-white/5 p-3">Investor-ready demo tenant</div>
           </div>
         </div>
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
             <div className="text-sm font-semibold text-accent md:hidden">NAWA · نواة</div>
             <h2 className="mt-2 text-xl font-semibold text-ink">Company login</h2>
             <p className="mt-2 text-sm text-muted">
-              Use the Atlas demo tenant or your local NAWA company credentials.
+              Use the Northstar demo tenant or your local NAWA company credentials.
             </p>
           </div>
           <LoginForm />

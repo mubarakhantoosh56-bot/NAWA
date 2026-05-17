@@ -7,9 +7,9 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export function LoginForm() {
   const { loginUser, status } = useAuth();
-  const [companySlug, setCompanySlug] = useState("atlas-home-supplies");
-  const [email, setEmail] = useState("owner@atlas-demo.local");
-  const [password, setPassword] = useState("");
+  const [companySlug, setCompanySlug] = useState("northstar-commercial");
+  const [email, setEmail] = useState("owner@northstar-demo.local");
+  const [password, setPassword] = useState("password123");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
