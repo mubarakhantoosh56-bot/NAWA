@@ -1,9 +1,16 @@
-# Atlas Home Supplies Company Profile
+# Northstar Commercial Group Company Profile
 
-Atlas Home Supplies is a Jordan-based retail and light distribution company serving households, hotels, restaurants, and small offices.
+Northstar Commercial Group is a B2B commercial services and supply operator serving distributed enterprise accounts.
 
-The company operates three retail branches in Amman and a small B2B delivery operation. Atlas has 42 employees and wants to become the preferred supplier for hospitality and restaurant buyers.
+The company supports multi-site offices, facilities teams, hospitality operators, and service-led businesses that need reliable replenishment, predictable fulfillment, and accountable account management.
 
-Current objective: increase monthly B2B revenue by 25 percent within 90 days while protecting gross margin and keeping operational strain manageable.
+Current objective: increase qualified enterprise expansion revenue by 18 percent this quarter while protecting margin and maintaining delivery reliability.
 
-Main constraint: the monthly marketing budget is limited to 4,000 JOD, and delivery capacity is strongest inside Amman.
+Operating model:
+
+- 186 employees across Sales, Finance, Marketing, Operations, and Customer Success.
+- 42 active enterprise accounts with repeat monthly purchasing behavior.
+- Gross margin guardrail is 30 percent.
+- Fulfillment capacity is the primary constraint on new expansion commitments.
+
+Executive priority: turn company knowledge into a governed operating system for decisions, not another reporting dashboard.

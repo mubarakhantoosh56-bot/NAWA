@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
+import { getDemoChatTurns } from "@/lib/demo-data";
 import type { ChatResponse, Department } from "@/lib/types";
 
 type ChatTurn = {
@@ -34,6 +35,8 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
 
   const turns = turnsByWorkspace[workspaceKey] ?? [];
+  const demoTurns = useMemo(() => getDemoChatTurns(department), [department]);
+  const visibleTurns = turns.length > 0 ? turns : demoTurns;
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
   const storageKey = useMemo(() => `nawa.chat.${companyId}`, [companyId]);
   const suggestedPrompts = useMemo(() => getSuggestedPrompts(department), [department]);
@@ -110,15 +113,13 @@ export function ChatPanel({
             <span className="nawa-badge">
               {workspaceLabel} session
             </span>
-            <span className="nawa-badge">
-              Saved locally
-            </span>
+            <span className="nawa-badge">{turns.length > 0 ? "Saved locally" : "Demo history"}</span>
           </div>
         </div>
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto bg-surface/70 p-4">
-        {turns.length === 0 ? (
+        {visibleTurns.length === 0 ? (
           <WelcomeState
             department={department}
             prompts={suggestedPrompts}
@@ -126,7 +127,7 @@ export function ChatPanel({
           />
         ) : null}
 
-        {turns.map((turn) => (
+        {visibleTurns.map((turn) => (
           <article key={turn.id} className="space-y-3.5">
             <div className="ml-auto max-w-[88%] rounded-md border border-accent/15 bg-accent/10 p-3">
               <div className="text-xs font-semibold uppercase text-accent">You</div>
@@ -306,7 +307,7 @@ function getSuggestedPrompts(department: Department | null): string[] {
   if (!department) {
     return [
       "Give me the CEO briefing for this week: risks, priorities, and recommended actions.",
-      "What should Atlas Home Supplies focus on before a NAWA investor demo?",
+      "What should Northstar focus on before a NAWA investor demo?",
       "Summarize the top cross-department decisions we should make today.",
       "Review company knowledge and suggest a 30-day operating plan.",
     ];
@@ -315,7 +316,7 @@ function getSuggestedPrompts(department: Department | null): string[] {
   const promptGroups: Record<string, string[]> = {
     sales_ai: [
       "Summarize the sales pipeline and highlight the best next actions.",
-      "Which customer segments should Sales prioritize this month?",
+      "Which expansion accounts should Sales prioritize this month?",
       "Draft a practical plan to improve close rate using company knowledge.",
       "What should Sales report to the CEO before the demo?",
     ],

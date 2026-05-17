@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { listFiles } from "@/lib/api/files";
+import { DEMO_FILES } from "@/lib/demo-data";
 import type { CompanyFile, Department } from "@/lib/types";
 
 type FilesPanelProps = {
@@ -22,6 +23,8 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
       return current;
     }, {});
   }, [departments]);
+  const displayFiles = status === "ready" && files.length === 0 ? DEMO_FILES : files;
+  const isDemoDataset = status === "ready" && files.length === 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -104,20 +107,16 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
           </div>
         ) : null}
 
-        {status === "ready" && files.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-surface p-3">
-            <div className="text-sm font-medium text-ink">No knowledge files yet</div>
+        {status === "ready" && isDemoDataset ? (
+          <div className="rounded-md border border-line bg-surface p-3">
+            <div className="text-sm font-medium text-ink">Investor demo knowledge base</div>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Seed demo files or ingest company knowledge through the backend to make
-              NAWA answers more grounded.
+              Showing curated demo files for a realistic executive walkthrough.
             </p>
-            <div className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs text-muted">
-              Demo hint: seeded Atlas files will appear here after the demo bootstrap script runs.
-            </div>
           </div>
         ) : null}
 
-        {files.map((file) => (
+        {displayFiles.map((file) => (
           <FileRow
             key={file.id}
             file={file}

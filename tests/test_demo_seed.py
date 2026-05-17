@@ -24,6 +24,8 @@ def test_demo_files_exist_and_support_keyword_retrieval():
     assert filenames == {
         "company_profile.md",
         "growth_goals.md",
+        "executive_operating_brief_q2.md",
+        "board_demo_flow.md",
         "sales_playbook.md",
         "finance_budget.md",
         "marketing_campaign.md",
@@ -37,8 +39,8 @@ def test_demo_files_exist_and_support_keyword_retrieval():
         assert any(
             keyword in text
             for keyword in (
-                "atlas",
-                "b2b",
+                "northstar",
+                "enterprise",
                 "sales",
                 "finance",
                 "marketing",
@@ -49,7 +51,7 @@ def test_demo_files_exist_and_support_keyword_retrieval():
 
 def test_demo_seed_requires_password(monkeypatch):
     monkeypatch.delenv("DEMO_OWNER_PASSWORD", raising=False)
-    assert seed_demo.DEMO_OWNER_EMAIL == "owner@atlas-demo.local"
+    assert seed_demo.DEMO_OWNER_EMAIL == "owner@northstar-demo.local"
 
 
 def test_demo_run_instructions_exist():

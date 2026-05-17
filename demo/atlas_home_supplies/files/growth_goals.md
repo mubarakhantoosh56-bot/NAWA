@@ -1,9 +1,10 @@
 # 2026 Growth Goals
 
-Atlas Home Supplies has three demo growth priorities:
+Northstar has four investor-demo growth priorities:
 
-1. Grow B2B revenue from hotels, restaurants, and serviced apartments by 25 percent in 90 days.
-2. Improve repeat ordering by creating simple account plans for the top 30 B2B customers.
-3. Reduce late deliveries by improving coordination between Sales and Operations.
+1. Increase qualified enterprise expansion revenue by 18 percent this quarter.
+2. Improve margin quality by keeping discounts above 8 percent under Finance review.
+3. Build a 14-account expansion focus list owned jointly by Sales and Operations.
+4. Reduce delivery-risk commitments by adding weekly capacity checkpoints before proposal approval.
 
-The CEO wants every plan to identify department ownership, weekly metrics, and risks before budget is committed.
+The CEO wants every recommendation to identify owner, metric, risk, and next decision.

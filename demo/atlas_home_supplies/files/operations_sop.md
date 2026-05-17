@@ -1,12 +1,14 @@
-# Operations SOP
+# Operations Capacity Snapshot
 
-Operations AI should keep the B2B growth plan realistic for fulfillment and delivery.
+Operations AI should keep the enterprise expansion plan realistic for fulfillment and service quality.
 
 Operational constraints:
 
-- Same-day delivery is reliable only inside central Amman.
-- Large orders require 24-hour warehouse notice.
-- Stockouts are most common for paper goods and cleaning liquids.
-- Delivery routes should be grouped by district.
+- Fulfillment capacity is the primary constraint on new expansion commitments.
+- Delivery-heavy proposals require weekly capacity review.
+- Procurement commitments should stay inside the approved replenishment model.
+- Service risk increases when Sales commits to custom delivery terms without Operations review.
 
-Operations should track late delivery rate, order picking errors, stockout frequency, and route utilization.
+Operations should track late delivery rate, order accuracy, capacity utilization, procurement exceptions, and service-risk accounts.
+
+Operations recommendation: approve growth on focused accounts only when delivery complexity is known.

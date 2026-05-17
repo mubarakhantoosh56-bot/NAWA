@@ -7,6 +7,14 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { FilesPanel } from "@/components/files/FilesPanel";
 import { ApiError } from "@/lib/api/client";
 import { listDepartments } from "@/lib/api/departments";
+import {
+  DEMO_COMPANY,
+  DEMO_DEPARTMENTS,
+  DEMO_EXECUTIVE_SUMMARIES,
+  DEMO_KPIS,
+  DEMO_REPORTS,
+  getDemoWorkspaceKey,
+} from "@/lib/demo-data";
 import type { Department } from "@/lib/types";
 
 type ActiveWorkspace =
@@ -86,12 +94,17 @@ export function WorkspaceShell() {
     };
   }, [canReadDepartments, token]);
 
+  const displayDepartments = departments.length > 0 ? departments : DEMO_DEPARTMENTS;
+  const isDemoDataset = departments.length === 0;
+
   const activeDepartment = useMemo(() => {
     if (activeWorkspace.kind !== "department") {
       return null;
     }
-    return departments.find((department) => department.id === activeWorkspace.departmentId) ?? null;
-  }, [activeWorkspace, departments]);
+    return displayDepartments.find((department) => department.id === activeWorkspace.departmentId) ?? null;
+  }, [activeWorkspace, displayDepartments]);
+
+  const demoWorkspaceKey = getDemoWorkspaceKey(activeDepartment);
 
   const activeTitle = activeDepartment
     ? getDepartmentAgentLabel(activeDepartment)
@@ -117,8 +130,8 @@ export function WorkspaceShell() {
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <div className="text-sm font-medium">{me?.company.name}</div>
-              <div className="text-xs text-white/60">{me?.user.email}</div>
+              <div className="text-sm font-medium">{me?.company.name || DEMO_COMPANY.name}</div>
+              <div className="text-xs text-white/60">{me?.user.email || DEMO_COMPANY.email}</div>
             </div>
             <button className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15" type="button" onClick={logout}>
               Logout
@@ -162,17 +175,17 @@ export function WorkspaceShell() {
               </div>
             ) : null}
 
-            {departmentStatus === "ready" && departments.length === 0 ? (
-              <div className="rounded-md border border-dashed border-line bg-surface px-3 py-2">
-                <div className="text-sm font-medium text-ink">No departments yet</div>
-                <div className="mt-1 text-xs leading-5 text-muted">
-                  Run the demo seed to unlock Sales, Finance, Marketing, and Operations workspaces.
+            {isDemoDataset ? (
+              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
+                <div className="text-sm font-medium text-white">Investor demo dataset</div>
+                <div className="mt-1 text-xs leading-5 text-white/55">
+                  Populated with realistic enterprise workspaces.
                 </div>
               </div>
             ) : null}
 
-            {departments.map((department) => {
-              const canUseDepartment = canUseAgent(permissions, department.department_type);
+            {displayDepartments.map((department) => {
+              const canUseDepartment = isDemoDataset || canUseAgent(permissions, department.department_type);
               return (
                 <SidebarItem
                   key={department.id}
@@ -197,7 +210,7 @@ export function WorkspaceShell() {
           </nav>
           <div className="mt-4 border-t border-white/10 px-2 pt-3">
             <div className="text-xs font-semibold uppercase text-white/60">Role</div>
-            <div className="mt-1 text-sm font-medium text-white">{me?.role.name}</div>
+            <div className="mt-1 text-sm font-medium text-white">{me?.role.name || DEMO_COMPANY.role}</div>
             <div className="mt-1 text-xs text-white/60">{permissions.length} permissions available</div>
           </div>
         </aside>
@@ -229,18 +242,12 @@ export function WorkspaceShell() {
           />
 
           <div className="grid gap-3 md:grid-cols-3">
-            <StatusPanel title="Identity" value="Verified" detail="Auth and role loaded" />
-            <StatusPanel
-              title="Departments"
-              value={canReadDepartments ? String(departments.length) : "Locked"}
-              detail={canReadDepartments ? "AI workspaces available" : "Missing departments.read"}
-            />
-            <StatusPanel
-              title="Tenant"
-              value={me?.company.slug ?? "Ready"}
-              detail="Company-isolated context"
-            />
+            {DEMO_KPIS[demoWorkspaceKey].map((kpi) => (
+              <StatusPanel key={kpi.title} title={kpi.title} value={kpi.value} detail={kpi.detail} />
+            ))}
           </div>
+
+          <DemoBriefingPanel workspaceKey={demoWorkspaceKey} />
 
           {token && me ? (
             <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
@@ -252,13 +259,34 @@ export function WorkspaceShell() {
                 department={activeDepartment}
               />
               {canReadFiles ? (
-                <FilesPanel token={token} departments={departments} />
+                <FilesPanel token={token} departments={displayDepartments} />
               ) : null}
             </div>
           ) : null}
         </section>
       </div>
     </main>
+  );
+}
+
+function DemoBriefingPanel({ workspaceKey }: { workspaceKey: keyof typeof DEMO_REPORTS }) {
+  return (
+    <section className="panel p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="executive-label">Executive summary</div>
+          <p className="mt-2 text-sm leading-6 text-ink">{DEMO_EXECUTIVE_SUMMARIES[workspaceKey]}</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[520px]">
+          {DEMO_REPORTS[workspaceKey].map((report) => (
+            <article key={report.title} className="rounded-md border border-line bg-surface px-3 py-2.5">
+              <div className="text-sm font-semibold text-ink">{report.title}</div>
+              <p className="mt-1 text-xs leading-5 text-muted">{report.detail}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

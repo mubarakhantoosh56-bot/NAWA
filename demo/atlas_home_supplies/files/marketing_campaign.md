@@ -1,19 +1,19 @@
-# Marketing Campaign Brief
+# Marketing Campaign Signal Review
 
-Marketing AI should support Sales by attracting hospitality and restaurant buyers in Amman.
+Marketing AI should support Sales with proof-led executive campaigns for high-fit enterprise accounts.
 
-Campaign concept: "Reliable supplies for busy hospitality teams."
+Core message: operational reliability with measurable execution outcomes.
 
 Recommended channels:
 
-- LinkedIn outreach to hotel managers and procurement leads.
-- WhatsApp follow-up sequences for restaurant owners.
-- Two short case-study posts each week.
-- One landing page focused on monthly replenishment bundles.
+- Executive proof campaigns for account owners and procurement leaders.
+- Account-based follow-up sequences aligned to the Sales focus list.
+- Two short customer proof points each week.
+- Sales enablement briefs for delivery reliability and margin-safe offers.
 
 Primary KPIs:
 
-- 120 qualified landing page visits per week.
-- 40 WhatsApp replies per week.
-- 12 demo or discovery bookings per week.
-- Cost per qualified lead below 12 JOD.
+- 412 qualified demand signals this month.
+- CAC payback improved to 8.6 months.
+- Proof-led campaign engagement outperforms generic productivity language.
+- High-intent account conversion should be reviewed weekly with Sales AI.

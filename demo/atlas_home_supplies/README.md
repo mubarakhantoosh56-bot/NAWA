@@ -1,6 +1,6 @@
-﻿# Atlas Home Supplies Demo
+# Northstar Commercial Group Demo
 
-This backend-only demo seed creates a realistic NAWA tenant for investor and client demos.
+This demo seed creates a realistic NAWA tenant for investor and client demos.
 
 ## Local Setup
 
@@ -30,17 +30,17 @@ python -m scripts.seed_demo --reset
 
 ## Demo Tenant
 
-- Company: Atlas Home Supplies
-- Slug: `atlas-home-supplies`
-- Owner email: `owner@atlas-demo.local`
+- Company: Northstar Commercial Group
+- Slug: `northstar-commercial`
+- Owner email: `owner@northstar-demo.local`
 - Departments: CEO, Sales, Finance, Marketing, Operations
 
-The script uses the existing company bootstrap, department runtime, file ingestion, and RAG chunking paths. It does not require pgvector locally; embedding failures are allowed to degrade safely while keyword retrieval remains available.
+The script uses the existing company bootstrap, department runtime, file ingestion, memory events, and RAG chunking paths. It does not require pgvector locally; embedding failures are allowed to degrade safely while keyword retrieval remains available.
 
 ## Suggested Flow
 
 1. Login as the demo owner.
-2. List departments.
-3. Ask CEO AI a company-wide question without `department_id`.
-4. Ask Sales, Finance, Marketing, or Operations AI with the matching `department_id`.
+2. Start with CEO AI and review the executive summary, KPI cards, reports, and chat history.
+3. Move through Sales AI, Finance AI, and Marketing AI to show department-specific context.
+4. Open Company Knowledge to show seeded operating files and reports.
 5. Ask questions from `sample_prompts.md`.

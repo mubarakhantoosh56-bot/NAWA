@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -25,11 +26,11 @@ from app.services.file_ingestion_service import FileIngestionService
 BASE_DIR = Path(__file__).resolve().parents[1]
 DEMO_DIR = BASE_DIR / "demo" / "atlas_home_supplies"
 DEMO_FILES_DIR = DEMO_DIR / "files"
-DEMO_COMPANY_SLUG = "atlas-home-supplies"
-DEMO_COMPANY_NAME = "Atlas Home Supplies"
-DEMO_OWNER_EMAIL = "owner@atlas-demo.local"
-DEMO_OWNER_NAME = "Atlas Demo Owner"
-DEMO_SESSION_ID = "atlas-demo-seed"
+DEMO_COMPANY_SLUG = "northstar-commercial"
+DEMO_COMPANY_NAME = "Northstar Commercial Group"
+DEMO_OWNER_EMAIL = "owner@northstar-demo.local"
+DEMO_OWNER_NAME = "Northstar Demo Owner"
+DEMO_SESSION_ID = "northstar-demo-seed"
 
 logger = logging.getLogger("aimx.demo_seed")
 
@@ -54,43 +55,79 @@ DEMO_DEPARTMENTS = (
         name="Sales",
         slug="sales",
         department_type="sales_ai",
-        description="Sales AI for pipeline, outreach, account plans, and conversion.",
+        description="Revenue AI for pipeline quality, account focus, and executive next actions.",
         filename="sales_playbook.md",
     ),
     DemoDepartment(
         name="Finance",
         slug="finance",
         department_type="finance_ai",
-        description="Finance AI for budgets, margins, pricing, and financial risk.",
+        description="Finance AI for cash position, margin guardrails, and budget decisions.",
         filename="finance_budget.md",
     ),
     DemoDepartment(
         name="Marketing",
         slug="marketing",
         department_type="marketing_ai",
-        description="Marketing AI for campaigns, positioning, channels, and KPIs.",
+        description="Marketing AI for campaign focus, signal quality, and commercial proof points.",
         filename="marketing_campaign.md",
     ),
     DemoDepartment(
         name="Operations",
         slug="operations",
         department_type="operations_ai",
-        description="Operations AI for SOPs, delivery constraints, and fulfillment risk.",
+        description="Operations AI for fulfillment capacity, service risk, and weekly execution.",
         filename="operations_sop.md",
     ),
 )
 
-COMPANY_FILES = ("company_profile.md", "growth_goals.md")
+COMPANY_FILES = (
+    "company_profile.md",
+    "growth_goals.md",
+    "executive_operating_brief_q2.md",
+    "board_demo_flow.md",
+)
 
 DEMO_FACTS = (
-    ("company", "company_name", "Atlas Home Supplies", 100),
-    ("company", "target_market", "Hotels, restaurants, serviced apartments, and small offices in Jordan", 95),
-    ("company", "primary_market", "Amman hospitality and restaurant buyers", 95),
-    ("goal", "goal", "Increase monthly B2B revenue by 25 percent within 90 days", 95),
-    ("constraint", "marketing_budget", "Monthly marketing budget is capped at 4,000 JOD", 95),
-    ("metric", "gross_margin_target", "Standard gross margin target is 28 percent", 95),
-    ("constraint", "delivery_constraint", "Same-day delivery is reliable only inside central Amman", 90),
-    ("company", "team_size", "42 employees", 90),
+    ("company", "company_name", "Northstar Commercial Group", 100),
+    ("company", "business_model", "B2B commercial services and supply operations for distributed enterprise accounts", 95),
+    ("goal", "goal", "Increase qualified enterprise expansion revenue by 18 percent this quarter", 95),
+    ("metric", "gross_margin_target", "Gross margin guardrail is 30 percent", 95),
+    ("metric", "cash_coverage", "Cash coverage is 5.8 months under the current operating plan", 95),
+    ("risk", "execution_constraint", "Fulfillment capacity is the primary constraint on new expansion commitments", 95),
+    ("metric", "discount_exposure", "Current discount exposure is 86,000 USD across two enterprise opportunities", 90),
+    ("company", "team_size", "186 employees across sales, finance, marketing, and operations", 90),
+)
+
+DEMO_EVENTS = (
+    (
+        "ceo",
+        "Give me the CEO briefing for this week.",
+        "Revenue quality is improving, but execution risk is shifting from demand to fulfillment capacity. Approve focused expansion for 14 high-fit accounts, keep discounts above 8 percent under Finance review, and require a weekly Operations capacity checkpoint.",
+        {"priority": "Govern growth through capacity and margin", "decision": "Approve focused account expansion"},
+        ["ceo", "executive_summary", "investor_demo"],
+    ),
+    (
+        "sales",
+        "Which accounts should Sales prioritize this week?",
+        "Sales should prioritize expansion accounts with active budget, clear procurement ownership, and low delivery complexity. Avoid low-margin one-off bids unless Finance approves the discount structure.",
+        {"segment": "Expansion accounts", "next_action": "Build a 14-account focus list"},
+        ["sales_ai", "pipeline", "investor_demo"],
+    ),
+    (
+        "finance",
+        "Give me the finance briefing for the growth plan.",
+        "The growth plan is financially supportable if discounting remains controlled. Cash coverage is healthy at 5.8 months; the main exposure is 86,000 USD in proposed discounts across two large opportunities.",
+        {"cash_coverage_months": 5.8, "discount_exposure": "86000 USD"},
+        ["finance_ai", "margin", "investor_demo"],
+    ),
+    (
+        "marketing",
+        "What message should Marketing emphasize now?",
+        "Marketing should lead with operational reliability and measurable execution outcomes. Proof-led executive campaigns are outperforming generic productivity language.",
+        {"message": "Operational reliability", "channel_focus": "Executive proof campaigns"},
+        ["marketing_ai", "campaigns", "investor_demo"],
+    ),
 )
 
 
@@ -167,8 +204,8 @@ async def seed_demo() -> dict[str, object]:
             company_plan="demo",
             company_metadata={
                 "demo": True,
-                "industry": "Retail and light distribution",
-                "market": "Jordan",
+                "industry": "Commercial services and supply operations",
+                "demo_flow": "investor_ready",
             },
         )
 
@@ -191,6 +228,7 @@ async def seed_demo() -> dict[str, object]:
 
         await _ensure_demo_memory_tables(conn)
         facts_seeded = await _seed_demo_facts(conn, company_id=company["id"])
+        events_seeded = await _seed_demo_events(conn, company_id=company["id"])
         files_seeded = await _seed_demo_files(
             conn=conn,
             company_id=company["id"],
@@ -199,10 +237,11 @@ async def seed_demo() -> dict[str, object]:
         )
 
         logger.info(
-            "demo_seed_complete company_slug=%s departments=%s facts=%s files=%s",
+            "demo_seed_complete company_slug=%s departments=%s facts=%s events=%s files=%s",
             DEMO_COMPANY_SLUG,
             len(departments),
             facts_seeded,
+            events_seeded,
             files_seeded,
         )
         return {
@@ -210,6 +249,7 @@ async def seed_demo() -> dict[str, object]:
             "user_id": user["id"],
             "departments": departments,
             "facts_seeded": facts_seeded,
+            "events_seeded": events_seeded,
             "files_seeded": files_seeded,
         }
     finally:
@@ -282,6 +322,33 @@ async def _seed_demo_facts(conn: asyncpg.Connection, company_id: UUID) -> int:
             fact_key,
             fact_value,
             confidence,
+        )
+        count += 1
+    return count
+
+
+async def _seed_demo_events(conn: asyncpg.Connection, company_id: UUID) -> int:
+    if not await _table_exists(conn, "memory_events"):
+        logger.info("demo_memory_events_skipped reason=table_missing")
+        return 0
+
+    count = 0
+    for workspace, user_message, executive_summary, logic_json, tags in DEMO_EVENTS:
+        await conn.execute(
+            """
+            INSERT INTO public.memory_events
+                (company_id, session_id, event_type, user_message, executive_summary, logic_json, context, tags, idempotency_key)
+            VALUES ($1, $2, 'decision', $3, $4, $5::jsonb, $6::jsonb, $7::text[], $8)
+            ON CONFLICT (idempotency_key) DO NOTHING
+            """,
+            str(company_id),
+            f"{DEMO_SESSION_ID}-{workspace}",
+            user_message,
+            executive_summary,
+            json.dumps(logic_json),
+            json.dumps({"workspace": workspace, "demo": True}),
+            tags,
+            f"{company_id}:{workspace}:{user_message}",
         )
         count += 1
     return count
