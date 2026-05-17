@@ -8,6 +8,7 @@ import { FilesPanel } from "@/components/files/FilesPanel";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { ApiError } from "@/lib/api/client";
+import { getCompanyIntelligenceProfile, updateCompanyIntelligenceProfile } from "@/lib/api/company-profile";
 import { listDepartments } from "@/lib/api/departments";
 import {
   DEMO_COMPANY,
@@ -18,7 +19,7 @@ import {
   getDemoWorkspaceKey,
 } from "@/lib/demo-data";
 import type { Language } from "@/lib/i18n";
-import type { Department } from "@/lib/types";
+import type { CompanyIntelligenceProfile, Department } from "@/lib/types";
 
 type ActiveWorkspace =
   | {
@@ -27,7 +28,24 @@ type ActiveWorkspace =
   | {
       kind: "department";
       departmentId: string;
+    }
+  | {
+      kind: "settings";
     };
+
+const emptyCompanyProfile: CompanyIntelligenceProfile = {
+  company_name: "",
+  industry: "",
+  business_type: "B2B",
+  country_market: "",
+  company_size: "",
+  departments_enabled: [],
+  primary_goals: "",
+  current_operational_challenges: "",
+  growth_priorities: "",
+  preferred_response_language: "en",
+  is_active: false,
+};
 
 const departmentTypeLabels: Record<string, string> = {
   sales_ai: "Sales AI",
@@ -61,6 +79,8 @@ export function WorkspaceShell() {
   );
   const [departmentError, setDepartmentError] = useState<string | null>(null);
   const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "ceo" });
+  const [companyProfile, setCompanyProfile] = useState<CompanyIntelligenceProfile>(emptyCompanyProfile);
+  const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
   const canReadFiles = hasPermission(permissions, "files.read");
@@ -98,6 +118,36 @@ export function WorkspaceShell() {
     };
   }, [canReadDepartments, t, token]);
 
+  useEffect(() => {
+    if (!token) {
+      setCompanyProfile(emptyCompanyProfile);
+      setProfileStatus("idle");
+      return;
+    }
+
+    let isMounted = true;
+    setProfileStatus("loading");
+
+    getCompanyIntelligenceProfile(token)
+      .then((profile) => {
+        if (!isMounted) {
+          return;
+        }
+        setCompanyProfile(profile);
+        setProfileStatus("ready");
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+        setProfileStatus("error");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
   const displayDepartments = departments.length > 0 ? departments : DEMO_DEPARTMENTS;
   const isDemoDataset = departments.length === 0;
 
@@ -109,7 +159,12 @@ export function WorkspaceShell() {
   }, [activeWorkspace, displayDepartments]);
 
   const demoWorkspaceKey = getDemoWorkspaceKey(activeDepartment);
-  const activeTitle = activeDepartment ? getDepartmentAgentLabel(activeDepartment, language) : t("ceoAiWorkspace");
+  const activeTitle =
+    activeWorkspace.kind === "settings"
+      ? t("companyIntelligenceProfile")
+      : activeDepartment
+        ? getDepartmentAgentLabel(activeDepartment, language)
+        : t("ceoAiWorkspace");
   const activeScope = activeDepartment ? t("departmentScoped") : t("companyWide");
   const activeDescription = activeDepartment
     ? localizeDepartmentDescription(activeDepartment, language)
@@ -159,6 +214,14 @@ export function WorkspaceShell() {
               badge="CEO"
               active={activeWorkspace.kind === "ceo"}
               onClick={() => setActiveWorkspace({ kind: "ceo" })}
+            />
+
+            <SidebarItem
+              label={t("companyIntelligenceProfile")}
+              description={companyProfile.is_active ? t("companyContextActive") : t("companyContextInactive")}
+              badge="CTX"
+              active={activeWorkspace.kind === "settings"}
+              onClick={() => setActiveWorkspace({ kind: "settings" })}
             />
 
             <div className="px-2 pt-3 text-xs font-semibold uppercase text-white/60">{t("departments")}</div>
@@ -237,41 +300,247 @@ export function WorkspaceShell() {
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">{activeDescription}</p>
               </div>
               <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70">
+                {companyProfile.is_active ? (
+                  <span className="me-2 inline-flex items-center gap-1 text-gold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                    {t("companyContextActive")}
+                  </span>
+                ) : null}
                 {t("scope")}: {activeScope}
               </div>
             </div>
           </div>
 
-          <QuickStartPanel activeTitle={activeTitle} canReadFiles={canReadFiles} />
+          {activeWorkspace.kind === "settings" ? (
+            <CompanyProfilePanel
+              token={token}
+              profile={companyProfile}
+              profileStatus={profileStatus}
+              departments={displayDepartments}
+              onSaved={setCompanyProfile}
+            />
+          ) : (
+            <>
+              <QuickStartPanel activeTitle={activeTitle} canReadFiles={canReadFiles} />
 
-          <div className="grid gap-3 md:grid-cols-3">
-            {DEMO_KPIS[demoWorkspaceKey].map((kpi) => (
-              <StatusPanel
-                key={kpi.title}
-                title={localizeWorkspaceText(kpi.title, language)}
-                value={kpi.value}
-                detail={localizeWorkspaceText(kpi.detail, language)}
-              />
-            ))}
-          </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {DEMO_KPIS[demoWorkspaceKey].map((kpi) => (
+                  <StatusPanel
+                    key={kpi.title}
+                    title={localizeWorkspaceText(kpi.title, language)}
+                    value={kpi.value}
+                    detail={localizeWorkspaceText(kpi.detail, language)}
+                  />
+                ))}
+              </div>
 
-          <DemoBriefingPanel workspaceKey={demoWorkspaceKey} />
+              <DemoBriefingPanel workspaceKey={demoWorkspaceKey} />
 
-          {token && me ? (
-            <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
-              <ChatPanel
-                token={token}
-                companyId={me.company.id}
-                workspaceKey={activeWorkspaceKey}
-                title={activeTitle}
-                department={activeDepartment}
-              />
-              {canReadFiles ? <FilesPanel token={token} departments={displayDepartments} /> : null}
-            </div>
-          ) : null}
+              {token && me ? (
+                <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
+                  <ChatPanel
+                    token={token}
+                    companyId={me.company.id}
+                    workspaceKey={activeWorkspaceKey}
+                    title={activeTitle}
+                    department={activeDepartment}
+                  />
+                  {canReadFiles ? <FilesPanel token={token} departments={displayDepartments} /> : null}
+                </div>
+              ) : null}
+            </>
+          )}
         </section>
       </div>
     </main>
+  );
+}
+
+function CompanyProfilePanel({
+  token,
+  profile,
+  profileStatus,
+  departments,
+  onSaved,
+}: {
+  token: string | null;
+  profile: CompanyIntelligenceProfile;
+  profileStatus: "idle" | "loading" | "ready" | "error";
+  departments: Department[];
+  onSaved: (profile: CompanyIntelligenceProfile) => void;
+}) {
+  const { language, t } = useLanguage();
+  const [draft, setDraft] = useState<CompanyIntelligenceProfile>(profile);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  useEffect(() => {
+    setDraft(profile);
+  }, [profile]);
+
+  async function handleSave() {
+    if (!token || saveStatus === "saving") {
+      return;
+    }
+
+    setSaveStatus("saving");
+    try {
+      const saved = await updateCompanyIntelligenceProfile(token, draft);
+      onSaved(saved);
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    }
+  }
+
+  function updateField<K extends keyof CompanyIntelligenceProfile>(key: K, value: CompanyIntelligenceProfile[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleDepartment(name: string) {
+    const current = new Set(draft.departments_enabled);
+    if (current.has(name)) {
+      current.delete(name);
+    } else {
+      current.add(name);
+    }
+    updateField("departments_enabled", Array.from(current));
+  }
+
+  return (
+    <section className="panel p-5">
+      <div className="flex flex-col justify-between gap-3 border-b border-line pb-4 md:flex-row md:items-start">
+        <div>
+          <div className="executive-label">{t("settings")}</div>
+          <h2 className="mt-1 text-lg font-semibold text-ink">{t("companyIntelligenceProfile")}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{t("companyProfileDescription")}</p>
+        </div>
+        <span
+          className={`rounded-md border px-3 py-2 text-xs font-medium ${
+            draft.is_active
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-line bg-surface text-muted"
+          }`}
+        >
+          {draft.is_active ? t("companyContextActive") : t("companyContextInactive")}
+        </span>
+      </div>
+
+      {profileStatus === "loading" ? (
+        <div className="mt-4 text-sm text-muted">{t("loadingCompanyProfile")}</div>
+      ) : null}
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <ProfileField
+          label={t("profileCompanyName")}
+          value={draft.company_name}
+          onChange={(value) => updateField("company_name", value)}
+        />
+        <ProfileField label={t("profileIndustry")} value={draft.industry} onChange={(value) => updateField("industry", value)} />
+        <label className="space-y-1.5">
+          <span className="text-xs font-semibold uppercase text-muted">{t("profileBusinessType")}</span>
+          <select
+            className="input"
+            value={draft.business_type}
+            onChange={(event) => updateField("business_type", event.target.value)}
+          >
+            <option value="B2B">B2B</option>
+            <option value="B2C">B2C</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
+        </label>
+        <ProfileField
+          label={t("profileCountryMarket")}
+          value={draft.country_market}
+          onChange={(value) => updateField("country_market", value)}
+        />
+        <ProfileField
+          label={t("profileCompanySize")}
+          value={draft.company_size}
+          onChange={(value) => updateField("company_size", value)}
+        />
+        <label className="space-y-1.5">
+          <span className="text-xs font-semibold uppercase text-muted">{t("profilePreferredLanguage")}</span>
+          <select
+            className="input"
+            value={draft.preferred_response_language}
+            onChange={(event) => updateField("preferred_response_language", event.target.value as "en" | "ar")}
+          >
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-5">
+        <div className="text-xs font-semibold uppercase text-muted">{t("profileDepartmentsEnabled")}</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {departments.map((department) => {
+            const selected = draft.departments_enabled.includes(department.name);
+            return (
+              <button
+                key={department.id}
+                className={`rounded-md border px-3 py-2 text-sm transition ${
+                  selected ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-white text-muted hover:text-ink"
+                }`}
+                type="button"
+                onClick={() => toggleDepartment(department.name)}
+              >
+                {localizeDepartmentName(department.name, language)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4">
+        <ProfileTextarea
+          label={t("profilePrimaryGoals")}
+          value={draft.primary_goals}
+          onChange={(value) => updateField("primary_goals", value)}
+        />
+        <ProfileTextarea
+          label={t("profileOperationalChallenges")}
+          value={draft.current_operational_challenges}
+          onChange={(value) => updateField("current_operational_challenges", value)}
+        />
+        <ProfileTextarea
+          label={t("profileGrowthPriorities")}
+          value={draft.growth_priorities}
+          onChange={(value) => updateField("growth_priorities", value)}
+        />
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-muted">
+          {saveStatus === "saved"
+            ? t("profileSaved")
+            : saveStatus === "error" || profileStatus === "error"
+              ? t("profileSaveError")
+              : t("profileSaveHint")}
+        </div>
+        <button className="button-primary sm:w-36" type="button" onClick={handleSave} disabled={!token || saveStatus === "saving"}>
+          {saveStatus === "saving" ? t("saving") : t("saveProfile")}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ProfileField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="space-y-1.5">
+      <span className="text-xs font-semibold uppercase text-muted">{label}</span>
+      <input className="input" value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function ProfileTextarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="space-y-1.5">
+      <span className="text-xs font-semibold uppercase text-muted">{label}</span>
+      <textarea className="input min-h-24 resize-none leading-6" value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
   );
 }
 

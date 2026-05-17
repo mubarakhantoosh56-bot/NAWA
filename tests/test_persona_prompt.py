@@ -226,3 +226,39 @@ def test_ceo_chat_response_follows_english_language(monkeypatch):
     assert "Priority Level" in result["ceo_text"]
     assert "الملخص التنفيذي" not in result["ceo_text"]
     assert result["meta"]["language"] == "en"
+
+
+def test_company_profile_is_injected_when_active(monkeypatch):
+    service, fake_client = _service_with_fake_client()
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    result = asyncio.run(
+        service.chat(
+            session_id="company-profile-session",
+            message="Give me the CEO briefing.",
+            context={
+                "response_language": "en",
+                "company_intelligence_profile": {
+                    "company_name": "Mesopotamia Foods",
+                    "industry": "Food distribution",
+                    "business_type": "B2B",
+                    "country_market": "Iraq",
+                    "company_size": "120 employees across branches and warehouses",
+                    "departments_enabled": ["CEO", "Sales", "Operations"],
+                    "primary_goals": "Improve branch fulfillment reliability.",
+                    "current_operational_challenges": "Inventory accuracy and last-mile delivery capacity.",
+                    "growth_priorities": "Expand into two new city branches.",
+                    "preferred_response_language": "en",
+                    "is_active": True,
+                },
+            },
+            company_id=str(uuid4()),
+        )
+    )
+
+    messages = fake_client.chat_completions.messages[0]
+    profile_blocks = [message["content"] for message in messages if "COMPANY INTELLIGENCE PROFILE" in message["content"]]
+    assert len(profile_blocks) == 1
+    assert "Food distribution" in profile_blocks[0]
+    assert "branches, fulfillment, or inventory" in profile_blocks[0]
+    assert result["meta"]["context"]["company_intelligence_profile"]["company_name"] == "Mesopotamia Foods"

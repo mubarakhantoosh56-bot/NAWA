@@ -10,7 +10,9 @@ from app.core.dependencies import AuthContext
 from app.core.permissions import has_permission, require_permission
 from app.models.request import ChatRequest
 from app.models.response import ChatResponse
+from app.repositories.company_repository import CompanyRepository
 from app.repositories.department_repository import DepartmentRepository
+from app.services.company_profile import normalize_company_profile
 from app.services.openai_client import ai_engine
 
 router = APIRouter(tags=["AI"])
@@ -73,8 +75,16 @@ async def _build_chat_context(
     request: ChatRequest,
     auth_context: AuthContext,
 ) -> dict[str, Any] | None:
+    context = dict(request.context or {})
+    company_repo = await _get_company_repository(http_request)
+    profile = await company_repo.get_intelligence_profile(UUID(auth_context.company_id))
+    normalized_profile = normalize_company_profile(profile)
+    context["company_intelligence_profile"] = normalized_profile
+    if normalized_profile.get("preferred_response_language") and not context.get("response_language"):
+        context["response_language"] = normalized_profile["preferred_response_language"]
+
     if request.department_id is None:
-        return request.context
+        return context
 
     try:
         company_id = UUID(auth_context.company_id)
@@ -104,7 +114,6 @@ async def _build_chat_context(
             detail="Missing permission",
         )
 
-    context = dict(request.context or {})
     context["aimx_department"] = {
         "id": str(department["id"]),
         "name": department["name"],
@@ -113,6 +122,24 @@ async def _build_chat_context(
         "ai_agent_enabled": department["ai_agent_enabled"],
     }
     return context
+
+
+async def _get_company_repository(request: Request) -> CompanyRepository:
+    pool = getattr(request.app.state, "auth_db_pool", None)
+    if pool is None:
+        if not settings.DATABASE_URL:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Company service unavailable",
+            )
+        pool = await asyncpg.create_pool(
+            dsn=settings.DATABASE_URL,
+            min_size=1,
+            max_size=5,
+        )
+        request.app.state.auth_db_pool = pool
+
+    return CompanyRepository(pool)
 
 
 async def _get_department_repository(request: Request) -> DepartmentRepository:

@@ -26,6 +26,22 @@ class ChatResponse(BaseModel):
     meta: ChatMeta
 
 
+class CompanyIntelligenceProfileResponse(BaseModel):
+    """Persisted MVP company intelligence profile."""
+
+    company_name: str = ""
+    industry: str = ""
+    business_type: str = ""
+    country_market: str = ""
+    company_size: str = ""
+    departments_enabled: list[str] = Field(default_factory=list)
+    primary_goals: str = ""
+    current_operational_challenges: str = ""
+    growth_priorities: str = ""
+    preferred_response_language: str = "en"
+    is_active: bool = False
+
+
 class AuthCompanyResponse(BaseModel):
     """Safe company fields returned by auth endpoints."""
 

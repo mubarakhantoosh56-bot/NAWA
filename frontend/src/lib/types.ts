@@ -62,6 +62,20 @@ export type DepartmentListResponse = {
   departments: Department[];
 };
 
+export type CompanyIntelligenceProfile = {
+  company_name: string;
+  industry: string;
+  business_type: string;
+  country_market: string;
+  company_size: string;
+  departments_enabled: string[];
+  primary_goals: string;
+  current_operational_challenges: string;
+  growth_priorities: string;
+  preferred_response_language: "en" | "ar";
+  is_active: boolean;
+};
+
 export type ChatRequest = {
   company_id: string;
   session_id: string;

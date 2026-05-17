@@ -6,6 +6,7 @@ from uuid import UUID
 import asyncpg
 
 RowDict = dict[str, object]
+PROFILE_METADATA_KEY = "company_intelligence_profile"
 
 
 class CompanyRepository:
@@ -122,6 +123,47 @@ class CompanyRepository:
             updated_by_user_id,
         )
         return self._optional_row_to_dict(row)
+
+    async def get_intelligence_profile(self, company_id: UUID) -> dict[str, object]:
+        """Return the persisted company intelligence profile from company metadata."""
+        company = await self.get_by_id(company_id)
+        if company is None:
+            return {}
+
+        metadata = company.get("metadata")
+        if not isinstance(metadata, dict):
+            return {}
+
+        profile = metadata.get(PROFILE_METADATA_KEY)
+        if not isinstance(profile, dict):
+            return {}
+        return profile
+
+    async def update_intelligence_profile(
+        self,
+        company_id: UUID,
+        profile: dict[str, object],
+        updated_by_user_id: UUID | None = None,
+    ) -> dict[str, object] | None:
+        """Persist the company intelligence profile inside company metadata."""
+        company = await self.get_by_id(company_id)
+        if company is None:
+            return None
+
+        metadata = company.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        next_metadata = dict(metadata)
+        next_metadata[PROFILE_METADATA_KEY] = profile
+        updated = await self.update_company(
+            company_id=company_id,
+            metadata=next_metadata,
+            updated_by_user_id=updated_by_user_id,
+        )
+        if updated is None:
+            return None
+        return profile
 
     async def soft_delete_company(
         self,

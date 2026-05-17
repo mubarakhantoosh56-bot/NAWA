@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
@@ -49,3 +49,18 @@ class DepartmentUpdateRequest(BaseModel):
     description: str | None = None
     ai_agent_enabled: bool | None = None
     ai_agent_config: dict[str, object] | None = None
+
+
+class CompanyIntelligenceProfileRequest(BaseModel):
+    """Editable MVP company intelligence profile."""
+
+    company_name: str = ""
+    industry: str = ""
+    business_type: str = ""
+    country_market: str = ""
+    company_size: str = ""
+    departments_enabled: list[str] = Field(default_factory=list)
+    primary_goals: str = ""
+    current_operational_challenges: str = ""
+    growth_priorities: str = ""
+    preferred_response_language: str = "en"

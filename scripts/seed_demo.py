@@ -206,6 +206,19 @@ async def seed_demo() -> dict[str, object]:
                 "demo": True,
                 "industry": "Commercial services and supply operations",
                 "demo_flow": "investor_ready",
+                "company_intelligence_profile": {
+                    "company_name": "Northstar Commercial Group",
+                    "industry": "Commercial distribution and facility supply services",
+                    "business_type": "B2B",
+                    "country_market": "United States multi-site commercial accounts",
+                    "company_size": "186 employees across sales, finance, marketing, and operations",
+                    "departments_enabled": ["CEO", "Sales", "Finance", "Marketing", "Operations"],
+                    "primary_goals": "Increase qualified enterprise expansion revenue by 18 percent while protecting gross margin above 30 percent.",
+                    "current_operational_challenges": "Fulfillment capacity, discount exposure, procurement timing, and service reliability across distributed accounts.",
+                    "growth_priorities": "Focus expansion on high-fit accounts with active budgets, low delivery complexity, and repeat purchasing patterns.",
+                    "preferred_response_language": "en",
+                    "is_active": True,
+                },
             },
         )
 

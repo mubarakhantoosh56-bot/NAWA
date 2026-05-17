@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.core.persona_prompt import build_persona_prompt, resolve_response_language
+from app.services.company_profile import build_company_profile_prompt_block
 
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
@@ -706,6 +707,11 @@ class AIService:
             memory_events_block = ""
             memory_facts_block = ""
             company_profile_block = ""
+            company_intelligence_profile_block = build_company_profile_prompt_block(
+                context.get("company_intelligence_profile")
+                if isinstance(context.get("company_intelligence_profile"), dict)
+                else None
+            )
             rag_knowledge_block = ""
             memory_injected = False
             events_count = 0
@@ -776,6 +782,9 @@ class AIService:
 
             if company_profile_block:
                 messages.append({"role": "system", "content": company_profile_block})
+
+            if company_intelligence_profile_block:
+                messages.append({"role": "system", "content": company_intelligence_profile_block})
 
             if memory_facts_block:
                 messages.append({"role": "system", "content": memory_facts_block})
