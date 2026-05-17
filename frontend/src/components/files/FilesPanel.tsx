@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { ApiError } from "@/lib/api/client";
 import { listFiles } from "@/lib/api/files";
 import { DEMO_FILES } from "@/lib/demo-data";
@@ -13,6 +14,7 @@ type FilesPanelProps = {
 };
 
 export function FilesPanel({ token, departments }: FilesPanelProps) {
+  const { language, t } = useLanguage();
   const [files, setFiles] = useState<CompanyFile[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
         }
         setFiles([]);
         setStatus("error");
-        setError(caught instanceof ApiError ? caught.detail : "Unable to load files.");
+        setError(caught instanceof ApiError ? caught.detail : t("unableLoadFiles"));
       }
     }
 
@@ -54,7 +56,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [t, token]);
 
   async function refreshFiles() {
     setError(null);
@@ -64,7 +66,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
       setStatus("ready");
     } catch (caught) {
       setStatus("error");
-      setError(caught instanceof ApiError ? caught.detail : "Unable to refresh files.");
+      setError(caught instanceof ApiError ? caught.detail : t("unableRefreshFiles"));
     }
   }
 
@@ -73,8 +75,8 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
       <div className="border-b border-line px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase text-muted">Company knowledge</div>
-            <h2 className="mt-1 text-base font-semibold text-ink">Knowledge files</h2>
+            <div className="text-xs font-semibold uppercase text-muted">{t("companyKnowledge")}</div>
+            <h2 className="mt-1 text-base font-semibold text-ink">{t("knowledgeFiles")}</h2>
           </div>
           <button
             className="button-secondary px-2.5 py-1.5 text-xs"
@@ -82,7 +84,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
             onClick={refreshFiles}
             disabled={status === "loading"}
           >
-            Refresh
+            {t("refresh")}
           </button>
         </div>
       </div>
@@ -92,7 +94,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
           <div className="rounded-md border border-line bg-surface p-3 text-sm text-muted">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-              Loading company knowledge...
+              {t("loadingCompanyKnowledge")}
             </span>
             <div className="mt-3 space-y-2">
               <div className="h-2 w-4/5 rounded bg-slate-200" />
@@ -109,10 +111,8 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
 
         {status === "ready" && isDemoDataset ? (
           <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-sm font-medium text-ink">Investor demo knowledge base</div>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Showing curated demo files for a realistic executive walkthrough.
-            </p>
+            <div className="text-sm font-medium text-ink">{t("investorKnowledgeBase")}</div>
+            <p className="mt-1 text-sm leading-6 text-muted">{t("investorKnowledgeBaseText")}</p>
           </div>
         ) : null}
 
@@ -121,6 +121,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
             key={file.id}
             file={file}
             departmentName={file.department_id ? departmentNames[file.department_id] : null}
+            language={language}
           />
         ))}
       </div>
@@ -131,10 +132,14 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
 function FileRow({
   file,
   departmentName,
+  language,
 }: {
   file: CompanyFile;
   departmentName: string | null;
+  language: "en" | "ar";
 }) {
+  const { t } = useLanguage();
+
   return (
     <article className="rounded-md border border-line bg-white p-3 shadow-panel transition hover:border-slate-300">
       <div className="flex items-start justify-between gap-3">
@@ -147,18 +152,22 @@ function FileRow({
             {file.filename}
           </div>
           <div className="mt-1 text-xs text-muted">
-            {departmentName || "Company-wide"} - {formatBytes(file.file_size_bytes)}
+            {departmentName ? localizeDepartmentName(departmentName, language) : t("companyWideScope")} -{" "}
+            {formatBytes(file.file_size_bytes)}
           </div>
           </div>
         </div>
         <StatusBadge status={file.status} />
       </div>
-      <div className="mt-2 text-xs text-muted">Added {formatDate(file.created_at)}</div>
+      <div className="mt-2 text-xs text-muted">
+        {t("added")} {formatDate(file.created_at, language)}
+      </div>
     </article>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { language } = useLanguage();
   const normalized = status.toLowerCase();
   const toneClass =
     normalized === "ready" || normalized === "processed"
@@ -171,7 +180,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`shrink-0 rounded border px-2 py-1 text-xs capitalize ${toneClass}`}>
-      {status}
+      {localizeStatus(status, language)}
     </span>
   );
 }
@@ -187,16 +196,47 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, language: "en" | "ar"): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "recently";
+    return language === "ar" ? "حديثا" : "recently";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(language === "ar" ? "ar" : undefined, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function localizeDepartmentName(value: string, language: "en" | "ar"): string {
+  if (language === "en") {
+    return value;
+  }
+
+  const names: Record<string, string> = {
+    CEO: "الإدارة التنفيذية",
+    Sales: "المبيعات",
+    Finance: "المالية",
+    Marketing: "التسويق",
+    Operations: "العمليات",
+  };
+  return names[value] || value;
+}
+
+function localizeStatus(value: string, language: "en" | "ar"): string {
+  if (language === "en") {
+    return value;
+  }
+
+  const statuses: Record<string, string> = {
+    ready: "جاهز",
+    processed: "معالج",
+    failed: "فشل",
+    error: "خطأ",
+    processing: "قيد المعالجة",
+    uploaded: "مرفوع",
+  };
+  return statuses[value.toLowerCase()] || value;
 }

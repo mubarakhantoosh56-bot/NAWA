@@ -24,6 +24,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LanguageToggle } from "@/components/i18n/LanguageToggle";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 const navItems = [
   { label: "Platform", ar: "المنصة" },
@@ -78,6 +80,8 @@ export default function LandingPage() {
 }
 
 function Navbar() {
+  const { language } = useLanguage();
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#070d16]/72 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-6 lg:px-8">
@@ -101,14 +105,17 @@ function Navbar() {
               className="flex items-baseline gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white/48 transition hover:bg-white/[0.045] hover:text-white/82"
             >
               <span>{item.label}</span>
-              <span dir="rtl" className="font-normal text-white/28">
-                {item.ar}
-              </span>
+              {language === "ar" ? (
+                <span dir="rtl" className="font-normal text-white/28">
+                  {item.ar}
+                </span>
+              ) : null}
             </a>
           ))}
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link href="/login">Sign in</Link>
           </Button>

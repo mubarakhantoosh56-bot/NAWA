@@ -4,9 +4,11 @@ import { FormEvent, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 export function LoginForm() {
   const { loginUser, status } = useAuth();
+  const { t } = useLanguage();
   const [companySlug, setCompanySlug] = useState("northstar-commercial");
   const [email, setEmail] = useState("owner@northstar-demo.local");
   const [password, setPassword] = useState("password123");
@@ -27,7 +29,7 @@ export function LoginForm() {
         setError(caught.detail);
         return;
       }
-      setError("Unable to sign in. Check the backend and try again.");
+      setError(t("signInError"));
     }
   }
 
@@ -36,7 +38,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="block">
-        <span className="field-label">Company slug</span>
+        <span className="field-label">{t("companySlug")}</span>
         <input
           className="input"
           value={companySlug}
@@ -47,7 +49,7 @@ export function LoginForm() {
       </label>
 
       <label className="block">
-        <span className="field-label">Email</span>
+        <span className="field-label">{t("email")}</span>
         <input
           className="input"
           type="email"
@@ -59,7 +61,7 @@ export function LoginForm() {
       </label>
 
       <label className="block">
-        <span className="field-label">Password</span>
+        <span className="field-label">{t("password")}</span>
         <input
           className="input"
           type="password"
@@ -77,7 +79,7 @@ export function LoginForm() {
       ) : null}
 
       <button className="button-primary w-full" type="submit" disabled={isLoading}>
-        {isLoading ? "Signing in..." : "Sign in"}
+        {isLoading ? t("signingIn") : t("signIn")}
       </button>
     </form>
   );
