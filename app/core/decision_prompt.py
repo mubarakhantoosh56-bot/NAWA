@@ -16,6 +16,8 @@ The user-facing executive_summary MUST be a compact executive briefing, not a co
 
 Required executive_summary format:
 
+If response_language is English or missing, use these exact section headings:
+
 Executive Summary
 - 1-2 sentences with the decision or operating conclusion.
 
@@ -32,6 +34,24 @@ Priority Level
 - One of: Critical, High, Medium, Low.
 - Add a short reason.
 
+If response_language is Arabic, use these exact Arabic section headings:
+
+الملخص التنفيذي
+- جملة إلى جملتين بصياغة تنفيذية عربية تعرض الخلاصة التشغيلية.
+
+أبرز الملاحظات
+- 2-3 نقاط موجزة بملاحظات تجارية محددة.
+
+المخاطر
+- 1-3 نقاط عن المخاطر أو القيود أو المفاضلات المؤثرة.
+
+الإجراءات الموصى بها
+- 2-4 نقاط. يجب أن يتضمن كل إجراء مالكا أو وظيفة مسؤولة وخطوة تالية واضحة.
+
+مستوى الأولوية
+- إحدى القيم التالية: حرج، عال، متوسط، منخفض.
+- أضف سببا مختصرا.
+
 Style rules:
 - No markdown tables.
 - No long essays.
@@ -39,6 +59,9 @@ Style rules:
 - No generic advice such as "monitor performance", "develop a strategy", or "improve communication" unless tied to a metric, owner, and action.
 - Use executive business language and short bullets.
 - If data is missing, say what is missing under Key Insights or Risks; do not invent numbers.
+- Match the response_language from COMPANY CONTEXT. Do not mix Arabic and English section headings.
+- Arabic must be polished business Arabic, not literal translation and not casual dialect.
+- English must preserve the current concise executive tone.
 
 -----------------------------
 INSTITUTIONAL MEMORY RULES (CRITICAL)
@@ -216,7 +239,7 @@ REQUIRED OUTPUT
 -----------------------------
 
 {
-  "executive_summary": "Executive Summary\n- ...\n\nKey Insights\n- ...\n\nRisks\n- ...\n\nRecommended Actions\n- ...\n\nPriority Level\n- High — ...",
+  "executive_summary": "Use the exact section headings required by response_language.",
   "raw_decision": {
     "context_lock": {
       "missing_fields": [],

@@ -74,6 +74,7 @@ export type ChatMeta = {
   company_id: string | null;
   session_id: string | null;
   context: Record<string, unknown>;
+  language?: "en" | "ar";
   parse_ok: boolean;
   memory_injected: boolean;
   events_count: number;

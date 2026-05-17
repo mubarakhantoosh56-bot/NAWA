@@ -11,6 +11,7 @@ class ChatMeta(BaseModel):
     company_id: str | None = None
     session_id: str | None = None
     context: dict[str, Any] = Field(default_factory=dict)
+    language: str | None = None
     parse_ok: bool
     memory_injected: bool
     events_count: int

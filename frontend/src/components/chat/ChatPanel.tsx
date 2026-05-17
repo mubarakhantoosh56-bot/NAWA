@@ -81,7 +81,7 @@ export function ChatPanel({
         company_id: companyId,
         session_id: sessionId,
         message,
-        context: buildChatContext(department),
+        context: buildChatContext(department, language),
         ...(department ? { department_id: department.id } : {}),
       });
 
@@ -292,11 +292,13 @@ function Badge({
   return <span className={`rounded border px-2 py-1 ${toneClass}`}>{children}</span>;
 }
 
-function buildChatContext(department: Department | null): Record<string, unknown> {
+function buildChatContext(department: Department | null, language: "en" | "ar"): Record<string, unknown> {
   return {
     stage: "Enterprise expansion",
     industry: "Commercial services and supply operations",
     resources: "Tenant-scoped NAWA workspace",
+    response_language: language,
+    ui_language: language,
     ...(department
       ? {
           active_workspace: department.slug,

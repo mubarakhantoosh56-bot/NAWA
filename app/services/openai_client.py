@@ -11,7 +11,7 @@ from app.services.output_formatter import format_ai_response
 from app.core.config import settings
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
-from app.core.persona_prompt import build_persona_prompt
+from app.core.persona_prompt import build_persona_prompt, resolve_response_language
 
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
@@ -688,6 +688,7 @@ class AIService:
         context = context or {}
         company_id = company_id or "default"
         key = self._memory_key(company_id, session_id)
+        response_language = resolve_response_language(context)
 
         if key not in self.sessions:
             self.sessions[key] = []
@@ -699,6 +700,7 @@ class AIService:
                 f"Size: {context.get('size', 'N/A')}\n"
                 f"Industry: {context.get('industry', 'N/A')}\n"
                 f"Resources: {context.get('resources', 'N/A')}\n"
+                f"response_language: {response_language}\n"
             )
 
             memory_events_block = ""
@@ -819,6 +821,7 @@ class AIService:
                         "role": "system",
                         "content": (
                             "Your previous response was INVALID. Rewrite the FULL JSON. "
+                            f"Keep executive_summary in response_language={response_language} and use only the required headings for that language. "
                             "EVERY item inside urgent_30_days, mid_term_90_days, long_term_6_12_months, "
                             "priority_order, quick_wins, and high_impact_moves must include: "
                             "1. exact platform, 2. exact audience, 3. exact KPI, 4. exact quantity, "
@@ -911,6 +914,7 @@ class AIService:
                 parsed=parsed,
                 memory_injected=memory_injected,
                 events_count=events_count,
+                language=response_language,
             )
 
         except Exception as e:

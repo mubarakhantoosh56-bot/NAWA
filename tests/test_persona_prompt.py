@@ -4,13 +4,14 @@ from uuid import uuid4
 
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
-from app.core.persona_prompt import build_persona_prompt, resolve_persona
+from app.core.persona_prompt import build_persona_prompt, resolve_persona, resolve_response_language
 from app.services.openai_client import AIService
+from app.services.output_formatter import format_ai_response
 
 
 VALID_AI_JSON = """
 {
-  "executive_summary": "ok",
+  "executive_summary": "Executive Summary\\n- Operating posture is clear.\\n\\nKey Insights\\n- Execution quality is improving.\\n\\nRisks\\n- Capacity remains the main constraint.\\n\\nRecommended Actions\\n- CEO: confirm the weekly execution review within 7 days.\\n\\nPriority Level\\n- High.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
@@ -26,8 +27,20 @@ class _FakeChatCompletions:
 
     async def create(self, **kwargs):
         self.messages.append(kwargs["messages"])
+        content = VALID_AI_JSON
+        if any("response_language: ar" in message["content"] for message in kwargs["messages"]):
+            content = """
+{
+  "executive_summary": "الملخص التنفيذي\\n- الموقف التشغيلي واضح ويتطلب ضبط الأولويات.\\n\\nأبرز الملاحظات\\n- جودة التنفيذ تتحسن.\\n\\nالمخاطر\\n- السعة التشغيلية هي القيد الرئيسي.\\n\\nالإجراءات الموصى بها\\n- الإدارة التنفيذية: تثبيت مراجعة أسبوعية للتنفيذ خلال 7 أيام.\\n\\nمستوى الأولوية\\n- عال.",
+  "raw_decision": {
+    "truth_validation": {
+      "contradictions": []
+    }
+  }
+}
+"""
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=VALID_AI_JSON))]
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
         )
 
 
@@ -56,6 +69,18 @@ def test_ceo_default_selection():
     assert "Scope: company_wide" in prompt
     assert "priorities, risks, execution" in prompt
     assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in prompt
+
+
+def test_arabic_response_language_rules():
+    context = {"response_language": "ar"}
+    prompt = build_persona_prompt(context)
+
+    assert resolve_response_language(context) == "ar"
+    assert "Response language: Arabic" in prompt
+    assert "الملخص التنفيذي" in prompt
+    assert "أبرز الملاحظات" in prompt
+    assert "مستوى الأولوية" in prompt
+    assert "literal translation" in prompt
 
 
 def test_department_persona_selection():
@@ -117,14 +142,87 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
     assert "Name: Finance AI" in messages[2]["content"]
     assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in messages[2]["content"]
     assert "COMPANY CONTEXT:" in messages[3]["content"]
+    assert "response_language: en" in messages[3]["content"]
 
     assert set(result.keys()) == {"ceo_text", "logic_json", "followup_question", "meta"}
     assert set(result["meta"].keys()) == {
         "company_id",
         "session_id",
         "context",
+        "language",
         "parse_ok",
         "memory_injected",
         "events_count",
     }
     assert "NAWA PERSONA" not in result["ceo_text"]
+
+
+def test_output_formatter_normalizes_arabic_headings():
+    parsed = {
+        "executive_summary": (
+            "Executive Summary\n"
+            "- Margin pressure is contained.\n\n"
+            "Key Insights\n"
+            "- Pipeline quality is improving.\n\n"
+            "Risks\n"
+            "- Capacity may constrain delivery.\n\n"
+            "Recommended Actions\n"
+            "- CEO: approve the weekly operating review.\n\n"
+            "Priority Level\n"
+            "- High."
+        ),
+        "raw_decision": {},
+    }
+
+    result = format_ai_response(
+        answer_text="{}",
+        parsed=parsed,
+        session_id="s1",
+        company_id="c1",
+        language="ar",
+    )
+
+    assert "الملخص التنفيذي" in result["ceo_text"]
+    assert "أبرز الملاحظات" in result["ceo_text"]
+    assert "Executive Summary" not in result["ceo_text"]
+    assert result["meta"]["language"] == "ar"
+
+
+def test_ceo_chat_response_follows_arabic_language(monkeypatch):
+    service, fake_client = _service_with_fake_client()
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    result = asyncio.run(
+        service.chat(
+            session_id="ceo-ar-session",
+            message="اعطني الإحاطة التنفيذية",
+            context={"response_language": "ar", "ui_language": "ar"},
+            company_id=str(uuid4()),
+        )
+    )
+
+    messages = fake_client.chat_completions.messages[0]
+    assert "response_language: ar" in messages[3]["content"]
+    assert "الملخص التنفيذي" in result["ceo_text"]
+    assert "مستوى الأولوية" in result["ceo_text"]
+    assert "Executive Summary" not in result["ceo_text"]
+    assert result["meta"]["language"] == "ar"
+
+
+def test_ceo_chat_response_follows_english_language(monkeypatch):
+    service, _fake_client = _service_with_fake_client()
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    result = asyncio.run(
+        service.chat(
+            session_id="ceo-en-session",
+            message="Give me the CEO briefing.",
+            context={"response_language": "en", "ui_language": "en"},
+            company_id=str(uuid4()),
+        )
+    )
+
+    assert "Executive Summary" in result["ceo_text"]
+    assert "Priority Level" in result["ceo_text"]
+    assert "الملخص التنفيذي" not in result["ceo_text"]
+    assert result["meta"]["language"] == "en"
