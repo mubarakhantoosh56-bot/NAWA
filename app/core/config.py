@@ -19,5 +19,6 @@ class Settings:
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
     RAG_RETRIEVAL_MODE: str = os.getenv("RAG_RETRIEVAL_MODE", "semantic")
+    DECISION_CONTEXT_DEBUG: bool = os.getenv("DECISION_CONTEXT_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
 
 settings = Settings()

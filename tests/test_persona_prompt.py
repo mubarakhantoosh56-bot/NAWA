@@ -137,11 +137,12 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
 
     messages = fake_client.chat_completions.messages[0]
     assert messages[0]["content"] == AIMX_SYSTEM_PROMPT
-    assert messages[1]["content"] == AIMX_DECISION_PROMPT
-    assert messages[2]["content"].startswith("NAWA PERSONA:")
-    assert "Name: Finance AI" in messages[2]["content"]
-    assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in messages[2]["content"]
-    assert "DECISION CONTEXT ENGINE" in messages[3]["content"]
+    assert "DECISION CONTEXT ENGINE" in messages[1]["content"]
+    assert '"root_cause_reasoning"' in messages[1]["content"]
+    assert messages[2]["content"] == AIMX_DECISION_PROMPT
+    assert messages[3]["content"].startswith("NAWA PERSONA:")
+    assert "Name: Finance AI" in messages[3]["content"]
+    assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in messages[3]["content"]
     assert "COMPANY CONTEXT:" in messages[4]["content"]
     assert "response_language: en" in messages[4]["content"]
 

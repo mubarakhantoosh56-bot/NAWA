@@ -14,6 +14,10 @@ from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.core.persona_prompt import build_persona_prompt, resolve_response_language
 from app.services.company_profile import build_company_profile_prompt_block
 from app.services.decision_context import build_decision_context, build_decision_context_prompt_block
+from app.services.decision_debug import (
+    start_decision_debug_snapshot,
+    update_decision_debug_snapshot,
+)
 
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
@@ -357,6 +361,106 @@ def _validate_execution_structure(parsed: Optional[Dict[str, Any]]) -> bool:
             return False
 
     return True
+
+
+def _is_ceo_decision_context(decision_context: Dict[str, Any]) -> bool:
+    department = decision_context.get("department") if isinstance(decision_context, dict) else {}
+    return isinstance(department, dict) and department.get("key") == "ceo"
+
+
+def _operational_response_missing_elements(
+    *,
+    parsed: Optional[Dict[str, Any]],
+    decision_context: Dict[str, Any],
+) -> List[str]:
+    """Return mandatory CEO operational elements missing from executive_summary."""
+
+    if not _is_ceo_decision_context(decision_context):
+        return []
+    if not isinstance(parsed, dict):
+        return ["root operational bottleneck", "cause/effect chain", "affected departments", "operational impact"]
+
+    executive_summary = str(parsed.get("executive_summary") or "")
+    text = executive_summary.lower()
+    if not text.strip():
+        return ["root operational bottleneck", "cause/effect chain", "affected departments", "operational impact"]
+
+    required_signals = {
+        "root operational bottleneck": [
+            "bottleneck",
+            "constraint",
+            "constraining",
+            "capacity",
+            "line speed",
+            "production reliability",
+        ],
+        "cause/effect chain": [
+            "cause",
+            "because",
+            "therefore",
+            "leading to",
+            "drives",
+            "creates",
+            "results in",
+            "→",
+        ],
+        "affected departments": [
+            "production",
+            "sales",
+            "finance",
+            "distribution",
+            "operations",
+            "warehouse",
+            "affected departments",
+        ],
+        "operational impact": [
+            "fulfillment",
+            "otif",
+            "service level",
+            "inventory",
+            "delivery",
+            "backlog",
+            "operational impact",
+        ],
+    }
+
+    missing: List[str] = []
+    for element, signals in required_signals.items():
+        if not any(signal in text for signal in signals):
+            missing.append(element)
+
+    generic_phrases = [
+        "there are challenges",
+        "performance should improve",
+        "focus on efficiency",
+        "increase revenue",
+        "there are operational risks",
+    ]
+    if any(phrase in text for phrase in generic_phrases) and missing:
+        missing.append("generic unsupported wording")
+
+    return missing
+
+
+def _build_operational_regeneration_instruction(
+    *,
+    missing_elements: List[str],
+    response_language: str,
+) -> str:
+    missing = ", ".join(missing_elements)
+    return (
+        "Your previous response failed NAWA operational-response enforcement. "
+        "Regenerate the FULL valid JSON response once, using executive_summary directly from the Decision Context object. "
+        f"Missing mandatory elements: {missing}. "
+        "Start the executive_summary with the concrete root operational bottleneck. "
+        "Then explain the cause/effect chain, affected departments, operational impact, business impact, and one priority executive action. "
+        "You MUST cite operational events, KPI direction, detected patterns, and department relationships when present. "
+        "Use this hierarchy before any formatting: root_cause_reasoning, detected_patterns, operational_events, KPI/trend context, company profile. "
+        "For FMCG, apply concrete logic such as rising demand + slower production line = fulfillment bottleneck, "
+        "overtime + delayed collections = margin pressure, delayed production + sales growth = execution instability. "
+        "Avoid vague phrases such as there are challenges, performance should improve, focus on efficiency, increase revenue. "
+        f"Keep executive_summary concise and in response_language={response_language}. Return only JSON."
+    )
 
 
 class AIService:
@@ -793,9 +897,13 @@ class AIService:
 
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
-                {"role": "system", "content": AIMX_DECISION_PROMPT},
-                {"role": "system", "content": build_persona_prompt(context)},
             ]
+
+            if decision_context_block:
+                messages.append({"role": "system", "content": decision_context_block})
+
+            messages.append({"role": "system", "content": AIMX_DECISION_PROMPT})
+            messages.append({"role": "system", "content": build_persona_prompt(context)})
 
             if company_profile_block:
                 messages.append({"role": "system", "content": company_profile_block})
@@ -812,12 +920,17 @@ class AIService:
             if rag_knowledge_block:
                 messages.append({"role": "system", "content": rag_knowledge_block})
 
-            if decision_context_block:
-                messages.append({"role": "system", "content": decision_context_block})
-
             messages.append({"role": "system", "content": context_block})
             messages.extend(self.sessions[key])
             messages.append({"role": "user", "content": message})
+
+            debug_snapshot = start_decision_debug_snapshot(
+                company_id=company_id,
+                session_id=session_id,
+                decision_context=decision_context,
+                messages=messages,
+                decision_context_block=decision_context_block,
+            )
 
             model_name = getattr(settings, "MODEL", "gpt-4o-mini")
 
@@ -830,6 +943,11 @@ class AIService:
 
             answer_text = resp.choices[0].message.content or "لم يتم توليد رد."
             parsed: Optional[Dict[str, Any]] = _safe_json_loads(answer_text)
+            update_decision_debug_snapshot(
+                debug_snapshot,
+                raw_model_response=answer_text,
+                raw_model_response_before_regeneration=answer_text,
+            )
 
             max_retries = 2
             retry_count = 0
@@ -879,6 +997,74 @@ class AIService:
                 logger.warning(
                     "Retry response still invalid",
                     extra={"company_id": company_id, "session_id": session_id},
+                )
+            update_decision_debug_snapshot(debug_snapshot, raw_model_response=answer_text)
+
+            missing_operational_elements = _operational_response_missing_elements(
+                parsed=parsed,
+                decision_context=decision_context,
+            )
+            if missing_operational_elements:
+                logger.warning(
+                    "Operational response enforcement failed, regenerating once",
+                    extra={
+                        "company_id": company_id,
+                        "session_id": session_id,
+                        "missing_elements": missing_operational_elements,
+                    },
+                )
+                regeneration_messages = messages + [
+                    {"role": "assistant", "content": answer_text},
+                    {
+                        "role": "system",
+                        "content": _build_operational_regeneration_instruction(
+                            missing_elements=missing_operational_elements,
+                            response_language=response_language,
+                        ),
+                    },
+                ]
+                update_decision_debug_snapshot(
+                    debug_snapshot,
+                    operational_regeneration={
+                        "attempted": True,
+                        "missing_elements": missing_operational_elements,
+                        "raw_response": None,
+                    },
+                )
+                regeneration_resp = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=regeneration_messages,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                )
+                regenerated_answer_text = regeneration_resp.choices[0].message.content or answer_text
+                regenerated_parsed = _safe_json_loads(regenerated_answer_text)
+                regenerated_missing = _operational_response_missing_elements(
+                    parsed=regenerated_parsed,
+                    decision_context=decision_context,
+                )
+                if not regenerated_missing:
+                    answer_text = regenerated_answer_text
+                    parsed = regenerated_parsed
+                else:
+                    logger.warning(
+                        "Operational response enforcement retry still missing elements",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "missing_elements": regenerated_missing,
+                        },
+                    )
+                update_decision_debug_snapshot(
+                    debug_snapshot,
+                    raw_model_response=answer_text,
+                    operational_regeneration={
+                        "attempted": True,
+                        "missing_elements": missing_operational_elements,
+                        "raw_response": regenerated_answer_text,
+                        "accepted": not regenerated_missing,
+                        "remaining_missing_elements": regenerated_missing,
+                    },
                 )
 
             try:
