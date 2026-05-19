@@ -83,4 +83,77 @@ def test_decision_context_includes_root_cause_reasoning_and_prompt_rules():
     assert "root_cause_reasoning" in block
     assert "operating narrative spine" in block
     assert "execution capacity, fulfillment constraints, production readiness" in block
-    assert "Avoid generic phrases" in block
+    assert "Block vague phrases" in block
+
+
+def test_baghdad_orange_demand_prompt_enforces_operational_specificity():
+    events = [
+        {
+            "event_type": "operational.sales.kpi",
+            "executive_summary": "Sales kpi: Baghdad orange demand is up 22% with customer orders above forecast.",
+            "logic_json": {"impact_hint": "Sales growth affects production, inventory, and fulfillment."},
+            "context": {
+                "source_role": "sales_manager",
+                "source_department": "sales",
+                "category": "kpi",
+                "priority": "high",
+                "payload": {
+                    "text": "Baghdad retailers are asking for more orange supply this week.",
+                    "metrics": {"orange_demand": "up 22%", "orders": "above forecast"},
+                },
+            },
+        },
+        {
+            "event_type": "operational.production.issue",
+            "executive_summary": "Production issue: orange line speed down 14% and overtime added after downtime.",
+            "logic_json": {"impact_hint": "Line speed and overtime affect fulfillment and margin."},
+            "context": {
+                "source_role": "production_manager",
+                "source_department": "production",
+                "category": "issue",
+                "priority": "high",
+                "payload": {
+                    "text": "Reduced orange line speed is limiting finished goods availability.",
+                    "metrics": {"line_speed": "down 14%", "overtime": "up 11%"},
+                },
+            },
+        },
+        {
+            "event_type": "operational.finance.issue",
+            "executive_summary": "Finance issue: delayed collections from two distributors while overtime cost increased.",
+            "logic_json": {"impact_hint": "Collections and overtime affect operating margin."},
+            "context": {
+                "source_role": "finance_manager",
+                "source_department": "finance",
+                "category": "issue",
+                "priority": "watch",
+                "payload": {
+                    "text": "Distributor collections are delayed while overtime costs are rising.",
+                    "metrics": {"collections": "delayed", "overtime_cost": "up 11%"},
+                },
+            },
+        },
+    ]
+    context = build_decision_context(
+        context={
+            "nawa_role": {"slug": "ceo"},
+            "company_intelligence_profile": {
+                "industry": "FMCG juice distribution in Baghdad",
+                "current_operational_challenges": "Orange fulfillment and distributor collection timing.",
+            },
+        },
+        response_language="en",
+        memory_events=events,
+    )
+    block = build_decision_context_prompt_block(context)
+    reasoning = context["root_cause_reasoning"]
+
+    assert "Production reliability is constraining fulfillment capacity" in reasoning["likely_operational_bottleneck"]
+    assert "margin pressure" in reasoning["operational_impact"]
+    assert "production" in reasoning["affected_departments"]
+    assert "finance" in reasoning["affected_departments"]
+    assert "root operational bottleneck" in block
+    assert "operational events, KPI direction, detected patterns, and department relationships" in block
+    assert "rising demand plus slower production line means fulfillment bottleneck" in block
+    assert "overtime plus delayed collections means margin pressure" in block
+    assert "focus on efficiency" in block

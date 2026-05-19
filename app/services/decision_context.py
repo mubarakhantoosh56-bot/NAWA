@@ -153,6 +153,7 @@ def build_decision_context(
         "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
         "impact_assessment": _impact_assessment(department_key),
+        "response_enforcement": _response_enforcement(),
         "confidence": "MVP directional context; use exact user, memory, profile, and retrieved-file facts when available.",
         "response_language": "ar" if response_language == "ar" else "en",
     }
@@ -167,6 +168,12 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
         [
             "DECISION CONTEXT ENGINE (MVP - INTERNAL):",
             payload,
+            "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT:",
+            "1) Use this hierarchy in order: root_cause_reasoning, detected_patterns, operational_events, KPI/trend context, company profile, generic executive formatting.",
+            "2) Final CEO executive_summary MUST explicitly include the root operational bottleneck, cause/effect chain, affected departments, operational impact, business impact, and priority executive action.",
+            "3) The final answer MUST reference operational events, KPI direction, detected patterns, and department relationships when present in the context.",
+            "4) The narrative must answer: what is actually happening, why it is happening, what is affected, what risk this creates, and what should happen next.",
+            "5) Keep it concise: use the existing response headings, but make every bullet operational and evidence-aware.",
             "RULES:",
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
@@ -175,17 +182,63 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Use detected_patterns to infer risks, mistakes, positives, bottlenecks, missing follow-ups, KPI changes, and recurring friction even when the user did not state them explicitly.",
             "- For FMCG decisions, reason across production, inventory/warehouse, sales, distribution/operations, and finance.",
             "- CEO responses must explicitly reason about execution capacity, fulfillment constraints, production readiness, distribution pressure, sales impact, profitability pressure, and operational dependencies when relevant.",
-            "- Apply FMCG cause rules: increased demand plus reduced line speed means fulfillment bottleneck; downtime plus overtime means margin pressure; low stock plus sales growth means supply risk; repeated market complaints plus delayed production means execution instability.",
+            "- Apply FMCG cause rules: rising demand plus slower production line means fulfillment bottleneck; overtime plus delayed collections means margin pressure; delayed production plus sales growth means execution instability; low stock plus sales growth means supply risk.",
             "- If the user asks for a report, CEO scope may summarize all departments; department roles must stay department-scoped unless evidence names another dependency.",
             "- CEO responses must summarize biggest risks, operational mistakes, positive signals, dependencies, and recommended decisions when detected_patterns are present.",
             "- Department responses must summarize department-specific problems, repeated mistakes, positive signals, and follow-up needs when detected_patterns are present.",
             "- Prioritize actions that protect fulfillment, margin, cash, service level, and execution speed.",
             "- Recommended Actions must be operationally actionable, prioritized, department-aware, and time-sensitive.",
-            "- Avoid generic phrases: 'there are challenges', 'performance should improve', 'there are operational risks'. Replace them with concrete bottlenecks, inferred cause/effect, evidence, owner, and deadline.",
+            "- Block vague phrases unless backed by concrete operational reasoning: 'there are challenges', 'performance should improve', 'focus on efficiency', 'increase revenue', 'there are operational risks'. Replace them with concrete bottlenecks, inferred cause/effect, evidence, owner, and deadline.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
             "- Keep the answer concise, executive, structured, decisive, and aligned to response_language.",
         ]
     )
+
+
+def _response_enforcement() -> dict[str, Any]:
+    return {
+        "generation_hierarchy": [
+            "root_cause_reasoning",
+            "detected_patterns",
+            "operational_events",
+            "key_kpis_and_trends",
+            "company_profile",
+            "generic_executive_formatting",
+        ],
+        "mandatory_ceo_elements": [
+            "root operational bottleneck",
+            "cause/effect chain",
+            "affected departments",
+            "operational impact",
+            "business impact",
+            "priority executive action",
+        ],
+        "mandatory_evidence": [
+            "operational events",
+            "KPI direction",
+            "detected patterns",
+            "department relationships",
+        ],
+        "narrative_questions": [
+            "what is actually happening",
+            "why it is happening",
+            "what is affected",
+            "what risk this creates",
+            "what should happen next",
+        ],
+        "blocked_generic_phrases": [
+            "there are challenges",
+            "performance should improve",
+            "focus on efficiency",
+            "increase revenue",
+            "there are operational risks",
+        ],
+        "fmcg_examples": [
+            "rising demand + slower production line = fulfillment bottleneck",
+            "overtime + delayed collections = margin pressure",
+            "delayed production + sales growth = execution instability",
+        ],
+    }
 
 
 def _resolve_department(context: dict[str, Any]) -> dict[str, Any]:

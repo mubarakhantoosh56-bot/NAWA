@@ -72,6 +72,7 @@ def test_decision_context_builds_ceo_fmcg_operating_lens():
     assert "Wastage increased" in decision_context["memory_events"][0]
     assert "Memory signal: service_level = below target" in decision_context["trends"]
     assert "detected_patterns" in decision_context
+    assert decision_context["response_enforcement"]["generation_hierarchy"][0] == "root_cause_reasoning"
 
 
 def test_decision_context_covers_production_sales_finance_relationships():
@@ -99,6 +100,8 @@ def test_decision_context_prompt_rules_force_decisive_operational_reasoning():
     assert "likely root cause" in block
     assert "production, inventory/warehouse, sales, distribution/operations, and finance" in block
     assert "detected_patterns" in block
+    assert "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT" in block
+    assert "root_cause_reasoning, detected_patterns, operational_events" in block
     assert "concise, executive, structured, decisive" in block
 
 
