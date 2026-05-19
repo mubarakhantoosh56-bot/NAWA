@@ -77,6 +77,10 @@ async def _build_chat_context(
     auth_context: AuthContext,
 ) -> dict[str, Any] | None:
     context = dict(request.context or {})
+    context["nawa_role"] = {
+        "slug": auth_context.role_slug,
+        "permissions": auth_context.permissions,
+    }
     company_repo = await _get_company_repository(http_request)
     profile = await company_repo.get_intelligence_profile(UUID(auth_context.company_id))
     normalized_profile = normalize_company_profile(profile)

@@ -357,7 +357,14 @@ export function WorkspaceShell() {
               <OperationalInputPanel
                 token={token || ""}
                 department={activeDepartment}
-                canSubmit={Boolean(token && activeDepartment && canUseActiveDepartment && canSubmitOperationalForms)}
+                departments={displayDepartments}
+                canSubmit={Boolean(
+                  token &&
+                    canSubmitOperationalForms &&
+                    (activeDepartment ? canUseActiveDepartment : canUseCeoWorkspace),
+                )}
+                canUpload={Boolean(token && canReadFiles)}
+                canAssignDepartment={canUseCeoWorkspace}
               />
 
               {token && me ? (

@@ -1,4 +1,4 @@
-"""Lightweight operational input service for FMCG MVP forms."""
+"""Universal operational input service for NAWA MVP updates."""
 
 from __future__ import annotations
 
@@ -11,16 +11,20 @@ from uuid import UUID
 from app.services.memory.repository import MemoryRepository
 
 
-OPERATIONAL_FIELDS: dict[str, list[str]] = {
-    "production_ai": ["production_quantity", "downtime", "wastage", "line_issues"],
-    "sales_ai": ["daily_sales", "collections", "market_issues"],
-    "finance_ai": ["expenses", "payment_delays", "cashflow_notes"],
-    "marketing_ai": ["campaign_status", "launch_updates", "competitor_notes"],
+UNIVERSAL_CATEGORIES = {
+    "daily_update",
+    "kpi",
+    "issue",
+    "decision",
+    "report",
+    "document",
+    "alert",
+    "note",
 }
 
 
 class OperationalInputService:
-    """Stores daily operational forms as tenant-scoped memory events."""
+    """Stores universal operational updates as tenant-scoped memory events."""
 
     def __init__(self, db: Any) -> None:
         self.memory_repo = MemoryRepository(db)
@@ -30,55 +34,83 @@ class OperationalInputService:
         *,
         company_id: UUID,
         user_id: UUID,
-        department_id: UUID,
-        department_type: str,
-        form_type: str,
+        source_role: str,
+        source_department_id: UUID | None,
+        source_department_type: str | None,
+        target_department_id: UUID | None,
+        target_department_type: str | None,
+        category: str,
+        priority: str,
+        event_date: str | None,
+        text: str,
         metrics: dict[str, Any],
-        notes: str,
-        severity: str,
+        files_attached: list[dict[str, Any]],
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
-        normalized_department_type = department_type.strip().lower()
-        normalized_severity = _normalize_severity(severity)
-        cleaned_metrics = _clean_metrics(metrics)
+        normalized_category = _normalize_category(category)
+        normalized_priority = _normalize_priority(priority)
+        cleaned_metrics = _clean_mapping(metrics)
+        cleaned_payload = _clean_mapping(payload)
+        cleaned_files = _clean_files(files_attached)
+        source_department = _department_key(source_department_type)
+        target_department = _department_key(target_department_type)
+        scope = target_department or source_department or "company"
         summary = _build_summary(
-            department_type=normalized_department_type,
+            category=normalized_category,
+            priority=normalized_priority,
+            scope=scope,
+            text=text,
             metrics=cleaned_metrics,
-            notes=notes,
-            severity=normalized_severity,
+            files_attached=cleaned_files,
         )
-        event_type = f"operational.{_department_key(normalized_department_type)}.{form_type or 'daily_input'}"
+        event_type = f"operational.{scope}.{normalized_category}"
         context = {
-            "source": "operational_input_form",
-            "department_id": str(department_id),
-            "department_type": normalized_department_type,
-            "form_type": form_type or "daily_input",
-            "metrics": cleaned_metrics,
-            "notes": notes.strip(),
-            "severity": normalized_severity,
+            "source": "universal_operational_input",
+            "source_role": source_role,
+            "source_department": source_department,
+            "source_department_id": str(source_department_id) if source_department_id else None,
+            "source_department_type": source_department_type,
+            "target_department": target_department,
+            "target_department_id": str(target_department_id) if target_department_id else None,
+            "target_department_type": target_department_type,
+            "category": normalized_category,
+            "priority": normalized_priority,
+            "event_date": event_date,
+            "payload": {
+                **cleaned_payload,
+                "text": " ".join((text or "").split())[:2000],
+                "metrics": cleaned_metrics,
+            },
+            "files_attached": cleaned_files,
             "submitted_by_user_id": str(user_id),
         }
-        idempotency_key = _idempotency_key(company_id, user_id, department_id, context)
+        idempotency_key = _idempotency_key(company_id, user_id, context)
 
         await self.memory_repo.insert_event(
             {
                 "company_id": str(company_id),
-                "session_id": f"operational-{department_id}",
+                "session_id": f"operational-{scope}",
                 "event_type": event_type,
-                "user_message": f"Operational form submitted for {normalized_department_type}",
+                "user_message": f"Universal operational update submitted for {scope}",
                 "executive_summary": summary,
                 "logic_json": {
                     "operational_event": True,
-                    "department_type": normalized_department_type,
-                    "metrics": cleaned_metrics,
-                    "severity": normalized_severity,
-                    "impact_hint": _impact_hint(normalized_department_type),
+                    "source_role": source_role,
+                    "source_department": source_department,
+                    "target_department": target_department,
+                    "category": normalized_category,
+                    "priority": normalized_priority,
+                    "payload": context["payload"],
+                    "files_attached": cleaned_files,
+                    "impact_hint": _impact_hint(scope, normalized_category),
                 },
                 "context": context,
                 "tags": [
                     "operational_event",
-                    normalized_department_type,
-                    normalized_severity,
-                    form_type or "daily_input",
+                    scope,
+                    normalized_category,
+                    normalized_priority,
+                    source_role,
                 ],
                 "idempotency_key": idempotency_key,
             }
@@ -87,64 +119,84 @@ class OperationalInputService:
         return {
             "status": "stored",
             "event_type": event_type,
-            "department_id": department_id,
-            "department_type": normalized_department_type,
+            "department_id": source_department_id,
+            "department_type": source_department_type,
+            "target_department_id": target_department_id,
+            "category": normalized_category,
+            "priority": normalized_priority,
             "summary": summary,
             "memory_event_created": True,
         }
 
 
-def _clean_metrics(metrics: dict[str, Any]) -> dict[str, str]:
+def _clean_mapping(values: dict[str, Any]) -> dict[str, str]:
     cleaned: dict[str, str] = {}
-    for key, value in (metrics or {}).items():
+    for key, value in (values or {}).items():
         clean_key = str(key).strip()
         clean_value = " ".join(str(value or "").split())
         if clean_key and clean_value:
-            cleaned[clean_key] = clean_value[:240]
+            cleaned[clean_key] = clean_value[:500]
     return cleaned
+
+
+def _clean_files(files: list[dict[str, Any]]) -> list[dict[str, str]]:
+    cleaned: list[dict[str, str]] = []
+    for item in files or []:
+        file_id = str(item.get("id") or "").strip()
+        filename = str(item.get("filename") or "").strip()
+        if file_id or filename:
+            cleaned.append({"id": file_id[:80], "filename": filename[:240]})
+    return cleaned[:10]
 
 
 def _build_summary(
     *,
-    department_type: str,
+    category: str,
+    priority: str,
+    scope: str,
+    text: str,
     metrics: dict[str, str],
-    notes: str,
-    severity: str,
+    files_attached: list[dict[str, str]],
 ) -> str:
-    label = _department_key(department_type).replace("_", " ").title()
-    metric_text = ", ".join(f"{key}: {value}" for key, value in metrics.items()) or "no metrics submitted"
-    note_text = " ".join((notes or "").split())[:300]
-    if note_text:
-        return f"{label} daily input ({severity}): {metric_text}. Notes: {note_text}"
-    return f"{label} daily input ({severity}): {metric_text}."
+    label = scope.replace("_", " ").title()
+    metric_text = ", ".join(f"{key}: {value}" for key, value in metrics.items())
+    note_text = " ".join((text or "").split())[:500]
+    file_text = f"{len(files_attached)} file(s) attached" if files_attached else ""
+    parts = [part for part in [note_text, metric_text, file_text] if part]
+    detail = ". ".join(parts) if parts else "No detail provided."
+    return f"{label} {category.replace('_', ' ')} ({priority}): {detail}"
 
 
-def _impact_hint(department_type: str) -> str:
-    hints = {
-        "production_ai": "Production affects stock availability, distribution timing, wastage, and margin.",
-        "sales_ai": "Sales affects demand signals, collections, stock pressure, fulfillment, and revenue quality.",
-        "finance_ai": "Finance affects margin, cash flow, payment discipline, and approval guardrails.",
-        "marketing_ai": "Marketing affects demand generation, launch timing, stock pressure, and campaign ROI.",
-    }
-    return hints.get(department_type, "Operational event may affect cross-department execution.")
+def _impact_hint(scope: str, category: str) -> str:
+    if scope == "company":
+        return "Company-wide update should be interpreted across departments, risks, and executive priorities."
+    if category == "issue":
+        return f"{scope.title()} issue may create cross-department operational risk."
+    if category == "kpi":
+        return f"{scope.title()} KPI should be interpreted against related departments and operational impact."
+    if category == "report":
+        return f"{scope.title()} report request should summarize evidence, risks, and recommended decisions."
+    return f"{scope.title()} update should be interpreted through department context and related operational dependencies."
 
 
-def _department_key(department_type: str) -> str:
-    return department_type.removesuffix("_ai") or "department"
+def _department_key(department_type: str | None) -> str | None:
+    if not department_type:
+        return None
+    return department_type.strip().lower().removesuffix("_ai") or None
 
 
-def _normalize_severity(value: str) -> str:
+def _normalize_category(value: str) -> str:
+    normalized = (value or "daily_update").strip().lower()
+    return normalized if normalized in UNIVERSAL_CATEGORIES else "daily_update"
+
+
+def _normalize_priority(value: str) -> str:
     normalized = (value or "normal").strip().lower()
-    return normalized if normalized in {"normal", "watch", "high", "critical"} else "normal"
+    return normalized if normalized in {"low", "normal", "watch", "high", "critical"} else "normal"
 
 
-def _idempotency_key(
-    company_id: UUID,
-    user_id: UUID,
-    department_id: UUID,
-    context: dict[str, Any],
-) -> str:
+def _idempotency_key(company_id: UUID, user_id: UUID, context: dict[str, Any]) -> str:
     day = datetime.now(timezone.utc).date().isoformat()
     raw = json.dumps(context, sort_keys=True, ensure_ascii=False)
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
-    return f"operational:{company_id}:{department_id}:{user_id}:{day}:{digest}"
+    return f"operational:{company_id}:{user_id}:{day}:{digest}"

@@ -155,8 +155,11 @@ class OperationalInputResponse(BaseModel):
 
     status: str
     event_type: str
-    department_id: UUID
-    department_type: str
+    department_id: UUID | None = None
+    department_type: str | None = None
+    target_department_id: UUID | None = None
+    category: str
+    priority: str
     summary: str
     memory_event_created: bool = True
 

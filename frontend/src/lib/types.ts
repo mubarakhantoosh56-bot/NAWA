@@ -120,19 +120,27 @@ export type FileListResponse = {
 };
 
 export type OperationalInputRequest = {
-  department_id: string;
-  department_type: string;
-  form_type?: string;
+  department_id?: string | null;
+  department_type?: string | null;
+  target_department_id?: string | null;
+  target_department_type?: string | null;
+  category?: "daily_update" | "kpi" | "issue" | "decision" | "report" | "document" | "alert" | "note";
+  priority?: "low" | "normal" | "watch" | "high" | "critical";
+  event_date?: string | null;
+  text?: string;
   metrics: Record<string, string>;
-  notes?: string;
-  severity?: "normal" | "watch" | "high" | "critical";
+  files_attached?: Array<Record<string, string>>;
+  payload?: Record<string, string>;
 };
 
 export type OperationalInputResponse = {
   status: string;
   event_type: string;
-  department_id: string;
-  department_type: string;
+  department_id: string | null;
+  department_type: string | null;
+  target_department_id: string | null;
+  category: string;
+  priority: string;
   summary: string;
   memory_event_created: boolean;
 };

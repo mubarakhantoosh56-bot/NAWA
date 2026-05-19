@@ -42,7 +42,7 @@ class MemoryRepository:
     ) -> List[Dict[str, Any]]:
         if session_id:
             query = """
-            SELECT created_at, event_type, user_message, executive_summary, logic_json
+            SELECT created_at, event_type, user_message, executive_summary, logic_json, context
             FROM public.memory_events
             WHERE company_id=$1 AND session_id=$2
             ORDER BY created_at DESC
@@ -52,7 +52,7 @@ class MemoryRepository:
                 rows = await conn.fetch(query, company_id, session_id, limit)
         else:
             query = """
-            SELECT created_at, event_type, user_message, executive_summary, logic_json
+            SELECT created_at, event_type, user_message, executive_summary, logic_json, context
             FROM public.memory_events
             WHERE company_id=$1
             ORDER BY created_at DESC
@@ -68,6 +68,7 @@ class MemoryRepository:
                 "user_message": r["user_message"],
                 "executive_summary": r["executive_summary"],
                 "logic_json": r["logic_json"],
+                "context": r["context"],
             }
             for r in rows
         ]

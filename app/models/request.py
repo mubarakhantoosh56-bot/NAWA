@@ -67,11 +67,16 @@ class CompanyIntelligenceProfileRequest(BaseModel):
 
 
 class OperationalInputRequest(BaseModel):
-    """Lightweight operational form submission for one workspace."""
+    """Universal operational update submission for any workspace."""
 
-    department_id: str
-    department_type: str
-    form_type: str = "daily_input"
+    department_id: str | None = None
+    department_type: str | None = None
+    target_department_id: str | None = None
+    target_department_type: str | None = None
+    category: str = "daily_update"
+    priority: str = "normal"
+    event_date: str | None = None
+    text: str = ""
     metrics: dict[str, Any] = Field(default_factory=dict)
-    notes: str = ""
-    severity: str = "normal"
+    files_attached: list[dict[str, Any]] = Field(default_factory=list)
+    payload: dict[str, Any] = Field(default_factory=dict)

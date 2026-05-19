@@ -126,6 +126,7 @@ def build_decision_context(
 
     return {
         "department": department,
+        "role_perspective": _resolve_role_perspective(context),
         "company_profile": profile,
         "key_kpis": MOCK_KPI_SUMMARIES.get(department_key, MOCK_KPI_SUMMARIES["ceo"]),
         "trends": trends,
@@ -155,6 +156,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
             "- Give extra weight to operational_events because they came from submitted daily forms.",
             "- For FMCG decisions, reason across production, inventory/warehouse, sales, distribution/operations, and finance.",
+            "- If the user asks for a report, CEO scope may summarize all departments; department roles must stay department-scoped unless evidence names another dependency.",
             "- Prioritize actions that protect fulfillment, margin, cash, service level, and execution speed.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
             "- Keep the answer concise, executive, structured, decisive, and aligned to response_language.",
@@ -175,6 +177,18 @@ def _resolve_department(context: dict[str, Any]) -> dict[str, Any]:
         "type": raw_type,
         "scope": "department",
     }
+
+
+def _resolve_role_perspective(context: dict[str, Any]) -> dict[str, str]:
+    role = context.get("nawa_role") if isinstance(context.get("nawa_role"), dict) else {}
+    slug = str(role.get("slug") or "").strip().lower()
+    if slug in {"owner", "admin", "ceo"}:
+        scope = "company_wide"
+    elif slug:
+        scope = "department_scoped"
+    else:
+        scope = "unknown"
+    return {"slug": slug or "unknown", "scope": scope}
 
 
 def _compact_company_profile(
@@ -291,11 +305,17 @@ def _compact_operational_events(events: list[dict[str, Any]]) -> list[dict[str, 
         if not event_type.startswith("operational."):
             continue
         summary = str(event.get("executive_summary") or event.get("user_message") or "").strip()
+        context = event.get("context") if isinstance(event.get("context"), dict) else {}
         if summary:
             compact.append(
                 {
                     "event_type": event_type,
                     "summary": summary[:260],
+                    "source_role": str(context.get("source_role") or ""),
+                    "source_department": str(context.get("source_department") or ""),
+                    "target_department": str(context.get("target_department") or ""),
+                    "category": str(context.get("category") or ""),
+                    "priority": str(context.get("priority") or ""),
                 }
             )
     return compact[:5]

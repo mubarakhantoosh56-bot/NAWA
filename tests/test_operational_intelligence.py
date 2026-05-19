@@ -61,45 +61,72 @@ def test_operational_input_submission_creates_memory_event():
         service.submit_input(
             company_id=uuid4(),
             user_id=uuid4(),
-            department_id=department_id,
-            department_type="production_ai",
-            form_type="daily_input",
+            source_role="production_manager",
+            source_department_id=department_id,
+            source_department_type="production_ai",
+            target_department_id=None,
+            target_department_type=None,
+            category="issue",
+            priority="high",
+            event_date="2026-05-19",
+            text="Packaging line stopped twice.",
             metrics={
-                "production_quantity": "18400 cartons",
                 "downtime": "45 minutes",
                 "wastage": "2.1%",
             },
-            notes="Packaging line stopped twice.",
-            severity="high",
+            files_attached=[{"id": "file-1", "filename": "line-report.pdf"}],
+            payload={"shift": "morning"},
         )
     )
 
     assert result["memory_event_created"] is True
-    assert result["event_type"] == "operational.production.daily_input"
-    assert "Production daily input" in result["summary"]
+    assert result["event_type"] == "operational.production.issue"
+    assert "Production issue" in result["summary"]
+    assert result["category"] == "issue"
+    assert result["priority"] == "high"
 
     args = db.executed[0][1]
-    assert args[2] == "operational.production.daily_input"
+    assert args[2] == "operational.production.issue"
     assert "Packaging line stopped twice" in args[4]
-    assert "operational_event" in args[7]
+    assert "production_manager" in args[6]
+    assert "line-report.pdf" in args[6]
 
 
 def test_decision_context_uses_operational_events():
     decision_context = build_decision_context(
-        context={"aimx_department": {"department_type": "finance_ai"}},
+        context={
+            "aimx_department": {"department_type": "finance_ai"},
+            "nawa_role": {"slug": "finance_manager"},
+        },
         response_language="en",
         memory_events=[
             {
                 "event_type": "operational.sales.daily_input",
                 "executive_summary": "Sales daily input (watch): collections delayed by 3 key accounts.",
+                "context": {
+                    "source_role": "sales_manager",
+                    "source_department": "sales",
+                    "target_department": "finance",
+                    "category": "kpi",
+                    "priority": "watch",
+                },
             }
         ],
     )
 
+    assert decision_context["role_perspective"] == {
+        "slug": "finance_manager",
+        "scope": "department_scoped",
+    }
     assert decision_context["operational_events"] == [
         {
             "event_type": "operational.sales.daily_input",
             "summary": "Sales daily input (watch): collections delayed by 3 key accounts.",
+            "source_role": "sales_manager",
+            "source_department": "sales",
+            "target_department": "finance",
+            "category": "kpi",
+            "priority": "watch",
         }
     ]
 
