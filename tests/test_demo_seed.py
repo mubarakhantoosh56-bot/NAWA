@@ -6,7 +6,8 @@ from scripts import seed_demo
 def test_demo_departments_are_curated():
     departments = {department.slug: department for department in seed_demo.DEMO_DEPARTMENTS}
 
-    assert set(departments) == {"ceo", "sales", "finance", "marketing", "operations"}
+    assert set(departments) == {"ceo", "production", "sales", "finance", "marketing", "operations"}
+    assert departments["production"].department_type == "production_ai"
     assert departments["sales"].department_type == "sales_ai"
     assert departments["finance"].department_type == "finance_ai"
     assert departments["marketing"].department_type == "marketing_ai"
@@ -52,6 +53,20 @@ def test_demo_files_exist_and_support_keyword_retrieval():
 def test_demo_seed_requires_password(monkeypatch):
     monkeypatch.delenv("DEMO_OWNER_PASSWORD", raising=False)
     assert seed_demo.DEMO_OWNER_EMAIL == "owner@northstar-demo.local"
+
+
+def test_demo_department_users_are_seeded():
+    users = {user.role_slug: user for user in seed_demo.DEMO_USERS}
+
+    assert set(users) == {
+        "ceo",
+        "production_manager",
+        "sales_manager",
+        "finance_manager",
+        "marketing_manager",
+        "employee",
+    }
+    assert users["production_manager"].department_slug == "production"
 
 
 def test_demo_run_instructions_exist():

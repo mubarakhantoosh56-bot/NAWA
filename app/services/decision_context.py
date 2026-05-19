@@ -133,6 +133,7 @@ def build_decision_context(
         "related_departments": FMCG_RELATIONSHIPS.get(department_key, FMCG_RELATIONSHIPS["ceo"]),
         "operational_risks": risks[:6],
         "memory_events": _compact_memory_events(memory_events or []),
+        "operational_events": _compact_operational_events(memory_events or []),
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
         "impact_assessment": _impact_assessment(department_key),
         "confidence": "MVP directional context; use exact user, memory, profile, and retrieved-file facts when available.",
@@ -152,6 +153,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "RULES:",
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
+            "- Give extra weight to operational_events because they came from submitted daily forms.",
             "- For FMCG decisions, reason across production, inventory/warehouse, sales, distribution/operations, and finance.",
             "- Prioritize actions that protect fulfillment, margin, cash, service level, and execution speed.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
@@ -280,6 +282,23 @@ def _compact_memory_events(events: list[dict[str, Any]]) -> list[str]:
         if summary:
             compact.append(summary[:220])
     return compact
+
+
+def _compact_operational_events(events: list[dict[str, Any]]) -> list[dict[str, str]]:
+    compact: list[dict[str, str]] = []
+    for event in events[:10]:
+        event_type = str(event.get("event_type") or "")
+        if not event_type.startswith("operational."):
+            continue
+        summary = str(event.get("executive_summary") or event.get("user_message") or "").strip()
+        if summary:
+            compact.append(
+                {
+                    "event_type": event_type,
+                    "summary": summary[:260],
+                }
+            )
+    return compact[:5]
 
 
 def _uploaded_file_summaries(context: dict[str, Any], rag_knowledge_available: bool) -> list[str]:

@@ -64,3 +64,14 @@ class CompanyIntelligenceProfileRequest(BaseModel):
     current_operational_challenges: str = ""
     growth_priorities: str = ""
     preferred_response_language: str = "en"
+
+
+class OperationalInputRequest(BaseModel):
+    """Lightweight operational form submission for one workspace."""
+
+    department_id: str
+    department_type: str
+    form_type: str = "daily_input"
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    notes: str = ""
+    severity: str = "normal"

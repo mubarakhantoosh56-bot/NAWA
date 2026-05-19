@@ -7,6 +7,7 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { FilesPanel } from "@/components/files/FilesPanel";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { OperationalInputPanel } from "@/components/operations/OperationalInputPanel";
 import { ApiError } from "@/lib/api/client";
 import { getCompanyIntelligenceProfile, updateCompanyIntelligenceProfile } from "@/lib/api/company-profile";
 import { listDepartments } from "@/lib/api/departments";
@@ -84,6 +85,8 @@ export function WorkspaceShell() {
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
   const canReadFiles = hasPermission(permissions, "files.read");
+  const canSubmitOperationalForms = hasPermission(permissions, "operational.forms.submit");
+  const canUseCeoWorkspace = hasPermission(permissions, "workspace.ceo");
 
   useEffect(() => {
     if (!token || !canReadDepartments) {
@@ -151,6 +154,18 @@ export function WorkspaceShell() {
   const displayDepartments = departments.length > 0 ? departments : DEMO_DEPARTMENTS;
   const isDemoDataset = departments.length === 0;
 
+  useEffect(() => {
+    if (activeWorkspace.kind !== "ceo" || canUseCeoWorkspace || displayDepartments.length === 0) {
+      return;
+    }
+    const firstAllowed = displayDepartments.find(
+      (department) => isDemoDataset || canUseAgent(permissions, department.department_type),
+    );
+    if (firstAllowed) {
+      setActiveWorkspace({ kind: "department", departmentId: firstAllowed.id });
+    }
+  }, [activeWorkspace.kind, canUseCeoWorkspace, displayDepartments, isDemoDataset, permissions]);
+
   const activeDepartment = useMemo(() => {
     if (activeWorkspace.kind !== "department") {
       return null;
@@ -173,6 +188,7 @@ export function WorkspaceShell() {
         language,
       );
   const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
+  const canUseActiveDepartment = activeDepartment ? canUseAgent(permissions, activeDepartment.department_type) : true;
 
   return (
     <main className="min-h-screen text-ink">
@@ -213,6 +229,8 @@ export function WorkspaceShell() {
               description={t("executiveCommand")}
               badge="CEO"
               active={activeWorkspace.kind === "ceo"}
+              disabled={!canUseCeoWorkspace}
+              lockLabel={t("locked")}
               onClick={() => setActiveWorkspace({ kind: "ceo" })}
             />
 
@@ -336,6 +354,12 @@ export function WorkspaceShell() {
 
               <DemoBriefingPanel workspaceKey={demoWorkspaceKey} />
 
+              <OperationalInputPanel
+                token={token || ""}
+                department={activeDepartment}
+                canSubmit={Boolean(token && activeDepartment && canUseActiveDepartment && canSubmitOperationalForms)}
+              />
+
               {token && me ? (
                 <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
                   <ChatPanel
@@ -345,7 +369,13 @@ export function WorkspaceShell() {
                     title={activeTitle}
                     department={activeDepartment}
                   />
-                  {canReadFiles ? <FilesPanel token={token} departments={displayDepartments} /> : null}
+                  {canReadFiles ? (
+                    <FilesPanel
+                      token={token}
+                      departments={displayDepartments}
+                      activeDepartmentId={canUseCeoWorkspace ? null : activeDepartment?.id ?? null}
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </>

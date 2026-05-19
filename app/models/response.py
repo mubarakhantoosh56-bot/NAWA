@@ -148,3 +148,30 @@ class FileListResponse(BaseModel):
     """List response for tenant files."""
 
     files: list[FileResponse]
+
+
+class OperationalInputResponse(BaseModel):
+    """Safe response after storing a lightweight operational input."""
+
+    status: str
+    event_type: str
+    department_id: UUID
+    department_type: str
+    summary: str
+    memory_event_created: bool = True
+
+
+class IntegrationProviderResponse(BaseModel):
+    """MVP integration provider capability descriptor."""
+
+    key: str
+    name: str
+    status: str
+    ingestion_modes: list[str]
+    description: str
+
+
+class IntegrationProviderListResponse(BaseModel):
+    """Available future operational-system providers."""
+
+    providers: list[IntegrationProviderResponse]

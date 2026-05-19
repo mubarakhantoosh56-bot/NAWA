@@ -39,8 +39,8 @@ class _PermissionAuthService:
             },
             "role": {
                 "id": uuid4(),
-                "slug": "member",
-                "permissions": ["ai.chat"],
+                "slug": "ceo",
+                "permissions": ["ai.chat", "workspace.ceo"],
             },
         }
 

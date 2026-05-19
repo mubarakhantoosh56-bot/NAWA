@@ -9,6 +9,16 @@ export const DEMO_COMPANY = {
 
 export const DEMO_DEPARTMENTS: Department[] = [
   {
+    id: "demo-production",
+    company_id: "demo-company",
+    name: "Production",
+    slug: "production",
+    description: "Production AI for output, downtime, wastage, and line issues.",
+    department_type: "production_ai",
+    ai_agent_enabled: true,
+    ai_agent_config: { demo: true },
+  },
+  {
     id: "demo-sales",
     company_id: "demo-company",
     name: "Sales",
@@ -61,6 +71,11 @@ export const DEMO_KPIS = {
     { title: "Win Rate", value: "27%", detail: "+4 pts after account segmentation" },
     { title: "Next Actions", value: "18", detail: "CEO-ready follow-ups due this week" },
   ],
+  production: [
+    { title: "Production Output", value: "18.4K", detail: "Cartons completed today" },
+    { title: "Downtime", value: "45m", detail: "Packaging line issue" },
+    { title: "Wastage", value: "2.1%", detail: "Above weekly guardrail" },
+  ],
   finance: [
     { title: "Cash Coverage", value: "5.8 mo", detail: "Healthy with controlled hiring" },
     { title: "Discount Exposure", value: "$86K", detail: "Two deals require approval" },
@@ -70,6 +85,11 @@ export const DEMO_KPIS = {
     { title: "Qualified Demand", value: "412", detail: "High-intent accounts this month" },
     { title: "CAC Payback", value: "8.6 mo", detail: "Improved by 1.4 months" },
     { title: "Campaign Signal", value: "Strong", detail: "Operations proof points outperform" },
+  ],
+  operations: [
+    { title: "OTIF", value: "91%", detail: "Distribution timing under watch" },
+    { title: "Backlog", value: "23", detail: "Orders waiting dispatch" },
+    { title: "Exceptions", value: "7", detail: "Route and stock issues" },
   ],
 };
 
@@ -82,6 +102,10 @@ export const DEMO_REPORTS = {
     { title: "Pipeline Quality Review", detail: "Enterprise services and facilities accounts show the best margin-adjusted conversion." },
     { title: "Account Focus Plan", detail: "Prioritize 14 accounts with active budget, low delivery complexity, and renewal urgency." },
   ],
+  production: [
+    { title: "Production Control", detail: "Downtime and wastage are the highest leverage constraints for today's fulfillment plan." },
+    { title: "Line Issue Review", detail: "Packaging reliability must be confirmed before Sales accepts delivery-heavy commitments." },
+  ],
   finance: [
     { title: "Margin Guardrail Report", detail: "Finance should approve growth spend, but hold discounts above 8% for executive review." },
     { title: "Cash Discipline Memo", detail: "Working capital remains stable if procurement stays inside the approved replenishment model." },
@@ -90,13 +114,19 @@ export const DEMO_REPORTS = {
     { title: "Campaign Signal Review", detail: "Operational reliability messaging is outperforming generic productivity language." },
     { title: "Demand Generation Brief", detail: "Shift spend toward proof-led executive campaigns and reduce broad awareness placements." },
   ],
+  operations: [
+    { title: "Fulfillment Review", detail: "Route timing and warehouse staging are creating the current service-level risk." },
+    { title: "Exception Queue", detail: "Escalate stock and delivery exceptions before they turn into customer commitments." },
+  ],
 };
 
 export const DEMO_EXECUTIVE_SUMMARIES = {
   ceo: "Northstar is ready to accelerate, but the next phase should be governed by fulfillment capacity, margin protection, and account-level focus.",
   sales: "Sales should concentrate on expansion accounts with budget authority and low operational drag, then escalate only margin-sensitive deals.",
+  production: "Production should protect output reliability first: resolve packaging downtime, reduce wastage, and confirm availability before Sales commits.",
   finance: "Finance can support the growth plan while preserving cash coverage, provided discounting and procurement commitments remain governed.",
   marketing: "Marketing should lead with operational reliability, measurable execution outcomes, and proof from high-fit commercial accounts.",
+  operations: "Operations should focus on fulfillment reliability, exception clearance, and route discipline before accepting new service pressure.",
 };
 
 export const DEMO_FILES: CompanyFile[] = [
@@ -117,11 +147,17 @@ export function getDemoWorkspaceKey(department: Department | null): keyof typeof
   if (department.department_type === "sales_ai") {
     return "sales";
   }
+  if (department.department_type === "production_ai") {
+    return "production";
+  }
   if (department.department_type === "finance_ai") {
     return "finance";
   }
   if (department.department_type === "marketing_ai") {
     return "marketing";
+  }
+  if (department.department_type === "operations_ai") {
+    return "operations";
   }
   return "ceo";
 }
@@ -153,6 +189,16 @@ const DEMO_CHAT_HISTORY = {
       },
     ),
   ],
+  production: [
+    turn(
+      "What should Production fix today?",
+      "Prioritize the packaging line issue before increasing output.\n\nThe 45 minutes of downtime and 2.1% wastage are already pressuring fulfillment and margin. Production should stabilize the line, confirm finished-goods availability with Warehouse, and give Sales a realistic commitment window before accepting delivery-heavy orders.",
+      {
+        bottleneck: "Packaging line downtime",
+        next_actions: ["Stabilize line", "Confirm finished goods", "Update Sales commitment window"],
+      },
+    ),
+  ],
   finance: [
     turn(
       "Give me the finance briefing for the growth plan.",
@@ -171,6 +217,16 @@ const DEMO_CHAT_HISTORY = {
       {
         message: "Operational reliability",
         channel_focus: ["Executive proof campaigns", "Account-based follow-up", "Sales enablement"],
+      },
+    ),
+  ],
+  operations: [
+    turn(
+      "Where is fulfillment risk coming from?",
+      "Fulfillment risk is coming from handoff friction between production release, warehouse staging, and route timing.\n\nOperations should clear the exception queue, confirm stock availability before dispatch, and escalate repeated route failures to the CEO operating review.",
+      {
+        bottleneck: "Production-warehouse-distribution handoff",
+        next_actions: ["Clear exceptions", "Confirm stock before dispatch", "Escalate route failures"],
       },
     ),
   ],

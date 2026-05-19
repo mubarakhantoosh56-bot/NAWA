@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.core.config import settings
 from app.core.dependencies import AuthContext
 from app.core.permissions import require_permission
+from app.core.role_permissions import visible_department_types
 from app.models.request import DepartmentCreateRequest, DepartmentUpdateRequest
 from app.models.response import DepartmentListResponse, DepartmentResponse
 from app.services.department_service import DepartmentService
@@ -46,6 +47,13 @@ async def list_departments(
         departments = await department_service.list_departments(
             company_id=UUID(auth_context.company_id),
         )
+        visible_types = visible_department_types(auth_context.permissions)
+        if visible_types is not None:
+            departments = [
+                department
+                for department in departments
+                if str(department.get("department_type") or "") in visible_types
+            ]
         return DepartmentListResponse.model_validate({"departments": departments})
     except ValueError as exc:
         logger.info("List departments failed with safe domain error")

@@ -6,6 +6,7 @@ from typing import AsyncIterator
 
 import asyncpg
 
+from app.core.role_permissions import OPERATIONAL_ROLE_TEMPLATES
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.membership_repository import MembershipRepository
 from app.repositories.role_repository import RoleRepository
@@ -94,12 +95,24 @@ class CompanyBootstrapService:
             except ValueError as exc:
                 raise ValueError("department bootstrap failed") from exc
 
+            roles = {"owner": owner_role}
+            for slug, template in OPERATIONAL_ROLE_TEMPLATES.items():
+                roles[slug] = await role_repo.upsert_company_role(
+                    company_id=company["id"],
+                    name=str(template["name"]),
+                    slug=slug,
+                    description=str(template["description"]),
+                    permissions=[str(item) for item in template["permissions"]],
+                    created_by_user_id=user["id"],
+                )
+
             return {
                 "company": company,
                 "user": self._without_password_hash(user),
                 "role": owner_role,
                 "membership": membership,
                 "departments": departments,
+                "roles": roles,
             }
 
     @asynccontextmanager

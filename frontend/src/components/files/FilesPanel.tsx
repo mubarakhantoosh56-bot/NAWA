@@ -11,9 +11,10 @@ import type { CompanyFile, Department } from "@/lib/types";
 type FilesPanelProps = {
   token: string;
   departments: Department[];
+  activeDepartmentId?: string | null;
 };
 
-export function FilesPanel({ token, departments }: FilesPanelProps) {
+export function FilesPanel({ token, departments, activeDepartmentId = null }: FilesPanelProps) {
   const { language, t } = useLanguage();
   const [files, setFiles] = useState<CompanyFile[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -35,7 +36,7 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
       setStatus("loading");
       setError(null);
       try {
-        const response = await listFiles(token);
+        const response = await listFiles(token, activeDepartmentId);
         if (!isMounted) {
           return;
         }
@@ -56,12 +57,12 @@ export function FilesPanel({ token, departments }: FilesPanelProps) {
     return () => {
       isMounted = false;
     };
-  }, [t, token]);
+  }, [activeDepartmentId, t, token]);
 
   async function refreshFiles() {
     setError(null);
     try {
-      const response = await listFiles(token);
+      const response = await listFiles(token, activeDepartmentId);
       setFiles(response.files);
       setStatus("ready");
     } catch (caught) {

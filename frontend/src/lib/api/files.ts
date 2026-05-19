@@ -1,8 +1,16 @@
 import { ApiError, apiRequest, getApiBaseUrl } from "@/lib/api/client";
 import type { CompanyFile, FileListResponse } from "@/lib/types";
 
-export function listFiles(token: string): Promise<FileListResponse> {
-  return apiRequest<FileListResponse>("/files", { method: "GET" }, { token });
+export function listFiles(token: string, departmentId?: string | null): Promise<FileListResponse> {
+  const query = new URLSearchParams();
+  if (departmentId) {
+    query.set("department_id", departmentId);
+  }
+  return apiRequest<FileListResponse>(
+    `/files${query.toString() ? `?${query.toString()}` : ""}`,
+    { method: "GET" },
+    { token },
+  );
 }
 
 export async function uploadFile(

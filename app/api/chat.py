@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, status
 from app.core.config import settings
 from app.core.dependencies import AuthContext
 from app.core.permissions import has_permission, require_permission
+from app.core.role_permissions import CEO_WORKSPACE_PERMISSION
 from app.models.request import ChatRequest
 from app.models.response import ChatResponse
 from app.repositories.company_repository import CompanyRepository
@@ -84,6 +85,11 @@ async def _build_chat_context(
         context["response_language"] = normalized_profile["preferred_response_language"]
 
     if request.department_id is None:
+        if not has_permission(auth_context.permissions, CEO_WORKSPACE_PERMISSION):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Missing permission",
+            )
         return context
 
     try:

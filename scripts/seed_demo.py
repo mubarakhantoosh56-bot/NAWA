@@ -17,6 +17,9 @@ from app.core.config import settings
 from app.core.passwords import hash_password
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.department_repository import DepartmentRepository
+from app.repositories.membership_repository import MembershipRepository
+from app.repositories.role_repository import RoleRepository
+from app.repositories.user_repository import UserRepository
 from app.services import file_ingestion_service as file_ingestion_module
 from app.services.company_bootstrap_service import CompanyBootstrapService
 from app.services.department_service import DepartmentService
@@ -44,12 +47,36 @@ class DemoDepartment:
     filename: str | None = None
 
 
+@dataclass(frozen=True)
+class DemoUser:
+    email: str
+    full_name: str
+    role_slug: str
+    department_slug: str | None = None
+
+
+DEMO_USERS = (
+    DemoUser("ceo@northstar-demo.local", "Maya CEO", "ceo", None),
+    DemoUser("production@northstar-demo.local", "Production Manager", "production_manager", "production"),
+    DemoUser("sales@northstar-demo.local", "Sales Manager", "sales_manager", "sales"),
+    DemoUser("finance@northstar-demo.local", "Finance Manager", "finance_manager", "finance"),
+    DemoUser("marketing@northstar-demo.local", "Marketing Manager", "marketing_manager", "marketing"),
+    DemoUser("employee@northstar-demo.local", "Operations Employee", "employee", "operations"),
+)
+
+
 DEMO_DEPARTMENTS = (
     DemoDepartment(
         name="CEO",
         slug="ceo",
         department_type="custom",
         description="Company-wide executive AI for cross-department priorities.",
+    ),
+    DemoDepartment(
+        name="Production",
+        slug="production",
+        department_type="production_ai",
+        description="Production AI for output, downtime, wastage, and line issues.",
     ),
     DemoDepartment(
         name="Sales",
@@ -238,6 +265,13 @@ async def seed_demo() -> dict[str, object]:
             company_id=company["id"],
             user_id=user["id"],
         )
+        users_seeded = await _seed_demo_users(
+            conn=conn,
+            company_id=company["id"],
+            owner_user_id=user["id"],
+            departments=departments,
+            password=password,
+        )
 
         await _ensure_demo_memory_tables(conn)
         facts_seeded = await _seed_demo_facts(conn, company_id=company["id"])
@@ -250,9 +284,10 @@ async def seed_demo() -> dict[str, object]:
         )
 
         logger.info(
-            "demo_seed_complete company_slug=%s departments=%s facts=%s events=%s files=%s",
+            "demo_seed_complete company_slug=%s departments=%s users=%s facts=%s events=%s files=%s",
             DEMO_COMPANY_SLUG,
             len(departments),
+            users_seeded,
             facts_seeded,
             events_seeded,
             files_seeded,
@@ -261,6 +296,7 @@ async def seed_demo() -> dict[str, object]:
             "company_id": company["id"],
             "user_id": user["id"],
             "departments": departments,
+            "users_seeded": users_seeded,
             "facts_seeded": facts_seeded,
             "events_seeded": events_seeded,
             "files_seeded": files_seeded,
@@ -314,6 +350,65 @@ async def _configure_demo_departments(
         configured[department.slug] = existing
 
     return configured
+
+
+async def _seed_demo_users(
+    conn: asyncpg.Connection,
+    company_id: UUID,
+    owner_user_id: UUID,
+    departments: dict[str, dict[str, object]],
+    password: str,
+) -> int:
+    user_repo = UserRepository(conn)
+    role_repo = RoleRepository(conn)
+    membership_repo = MembershipRepository(conn)
+    count = 0
+
+    for demo_user in DEMO_USERS:
+        user = await user_repo.get_by_email(demo_user.email)
+        password_hash = hash_password(password)
+        if user is None:
+            user = await user_repo.create_user(
+                email=demo_user.email,
+                full_name=demo_user.full_name,
+                password_hash=password_hash,
+                created_by_user_id=owner_user_id,
+            )
+        else:
+            user = await user_repo.update_user(
+                user_id=user["id"],
+                full_name=demo_user.full_name,
+                password_hash=password_hash,
+                updated_by_user_id=owner_user_id,
+            ) or user
+
+        role = await role_repo.get_company_role_by_slug(company_id, demo_user.role_slug)
+        if role is None:
+            role = await role_repo.get_system_role_by_slug(demo_user.role_slug)
+        if role is None:
+            raise RuntimeError(f"missing demo role: {demo_user.role_slug}")
+
+        department_id = (
+            departments[demo_user.department_slug]["id"]
+            if demo_user.department_slug is not None
+            else None
+        )
+        existing_membership = await membership_repo.get_active_membership(
+            company_id=company_id,
+            user_id=user["id"],
+        )
+        if existing_membership is None:
+            await membership_repo.create_membership(
+                company_id=company_id,
+                user_id=user["id"],
+                role_id=role["id"],
+                department_id=department_id,
+                status="active",
+                created_by_user_id=owner_user_id,
+            )
+            count += 1
+
+    return count
 
 
 async def _seed_demo_facts(conn: asyncpg.Connection, company_id: UUID) -> int:

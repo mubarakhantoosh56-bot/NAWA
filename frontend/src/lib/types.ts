@@ -118,3 +118,21 @@ export type CompanyFile = {
 export type FileListResponse = {
   files: CompanyFile[];
 };
+
+export type OperationalInputRequest = {
+  department_id: string;
+  department_type: string;
+  form_type?: string;
+  metrics: Record<string, string>;
+  notes?: string;
+  severity?: "normal" | "watch" | "high" | "critical";
+};
+
+export type OperationalInputResponse = {
+  status: string;
+  event_type: string;
+  department_id: string;
+  department_type: string;
+  summary: string;
+  memory_event_created: boolean;
+};
