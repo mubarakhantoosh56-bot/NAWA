@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.services.operational_pattern_detector import detect_operational_patterns
 
 DEPARTMENT_ALIASES = {
     "sales_ai": "sales",
@@ -116,6 +117,10 @@ def build_decision_context(
     department = _resolve_department(context)
     profile = _compact_company_profile(context.get("company_intelligence_profile"), memory_profile)
     department_key = department["key"]
+    detected_patterns = detect_operational_patterns(
+        memory_events or [],
+        active_department=department_key,
+    )
 
     trends = _build_trends(profile, department_key, rag_knowledge_available, memory_facts or [])
     bottlenecks = _merge_unique(
@@ -135,6 +140,7 @@ def build_decision_context(
         "operational_risks": risks[:6],
         "memory_events": _compact_memory_events(memory_events or []),
         "operational_events": _compact_operational_events(memory_events or []),
+        "detected_patterns": detected_patterns,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
         "impact_assessment": _impact_assessment(department_key),
         "confidence": "MVP directional context; use exact user, memory, profile, and retrieved-file facts when available.",
@@ -155,8 +161,11 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
             "- Give extra weight to operational_events because they came from submitted daily forms.",
+            "- Use detected_patterns to infer risks, mistakes, positives, bottlenecks, missing follow-ups, KPI changes, and recurring friction even when the user did not state them explicitly.",
             "- For FMCG decisions, reason across production, inventory/warehouse, sales, distribution/operations, and finance.",
             "- If the user asks for a report, CEO scope may summarize all departments; department roles must stay department-scoped unless evidence names another dependency.",
+            "- CEO responses must summarize biggest risks, operational mistakes, positive signals, dependencies, and recommended decisions when detected_patterns are present.",
+            "- Department responses must summarize department-specific problems, repeated mistakes, positive signals, and follow-up needs when detected_patterns are present.",
             "- Prioritize actions that protect fulfillment, margin, cash, service level, and execution speed.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
             "- Keep the answer concise, executive, structured, decisive, and aligned to response_language.",
