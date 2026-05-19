@@ -13,6 +13,7 @@ from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.core.persona_prompt import build_persona_prompt, resolve_response_language
 from app.services.company_profile import build_company_profile_prompt_block
+from app.services.decision_context import build_decision_context, build_decision_context_prompt_block
 
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
@@ -707,6 +708,9 @@ class AIService:
             memory_events_block = ""
             memory_facts_block = ""
             company_profile_block = ""
+            recent_events: List[Dict[str, Any]] = []
+            memory_profile: Dict[str, Any] = {}
+            facts: List[Dict[str, Any]] = []
             company_intelligence_profile_block = build_company_profile_prompt_block(
                 context.get("company_intelligence_profile")
                 if isinstance(context.get("company_intelligence_profile"), dict)
@@ -739,10 +743,10 @@ class AIService:
                     facts = await self.repo.fetch_facts(company_id=company_id, limit=25)
                     memory_facts_block = _build_facts_block(facts) or ""
 
-                    profile = await self.repo.build_company_profile(company_id=company_id)
-                    company_profile_block = _build_company_profile_block(profile) or ""
+                    memory_profile = await self.repo.build_company_profile(company_id=company_id)
+                    company_profile_block = _build_company_profile_block(memory_profile) or ""
 
-                    profile_has_values = any(bool(value) for value in profile.values())
+                    profile_has_values = any(bool(value) for value in memory_profile.values())
                     memory_injected = bool(recent_events or facts or profile_has_values)
 
                     logger.info(
@@ -764,6 +768,8 @@ class AIService:
                     memory_events_block = ""
                     memory_facts_block = ""
                     company_profile_block = ""
+                    memory_profile = {}
+                    facts = []
                     memory_injected = False
                     events_count = 0
 
@@ -773,6 +779,17 @@ class AIService:
                 message=message,
                 context=context,
             )
+
+            decision_context = build_decision_context(
+                context=context,
+                response_language=response_language,
+                memory_events=recent_events,
+                memory_profile=memory_profile,
+                memory_facts=facts,
+                rag_knowledge_available=bool(rag_knowledge_block),
+            )
+            context["decision_context"] = decision_context
+            decision_context_block = build_decision_context_prompt_block(decision_context)
 
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
@@ -794,6 +811,9 @@ class AIService:
 
             if rag_knowledge_block:
                 messages.append({"role": "system", "content": rag_knowledge_block})
+
+            if decision_context_block:
+                messages.append({"role": "system", "content": decision_context_block})
 
             messages.append({"role": "system", "content": context_block})
             messages.extend(self.sessions[key])

@@ -141,8 +141,9 @@ def test_persona_prompt_order_and_response_contract(monkeypatch):
     assert messages[2]["content"].startswith("NAWA PERSONA:")
     assert "Name: Finance AI" in messages[2]["content"]
     assert "Executive Summary, Key Insights, Risks, Recommended Actions, Priority Level" in messages[2]["content"]
-    assert "COMPANY CONTEXT:" in messages[3]["content"]
-    assert "response_language: en" in messages[3]["content"]
+    assert "DECISION CONTEXT ENGINE" in messages[3]["content"]
+    assert "COMPANY CONTEXT:" in messages[4]["content"]
+    assert "response_language: en" in messages[4]["content"]
 
     assert set(result.keys()) == {"ceo_text", "logic_json", "followup_question", "meta"}
     assert set(result["meta"].keys()) == {
@@ -202,7 +203,7 @@ def test_ceo_chat_response_follows_arabic_language(monkeypatch):
     )
 
     messages = fake_client.chat_completions.messages[0]
-    assert "response_language: ar" in messages[3]["content"]
+    assert any("response_language: ar" in message["content"] for message in messages)
     assert "الملخص التنفيذي" in result["ceo_text"]
     assert "مستوى الأولوية" in result["ceo_text"]
     assert "Executive Summary" not in result["ceo_text"]
