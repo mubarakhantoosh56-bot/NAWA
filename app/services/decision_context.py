@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from app.services.operational_pattern_detector import detect_operational_patterns
+from app.services.root_cause_reasoning import build_root_cause_reasoning
 
 DEPARTMENT_ALIASES = {
     "sales_ai": "sales",
@@ -128,6 +129,14 @@ def build_decision_context(
         BOTTLENECK_HINTS.get(department_key, BOTTLENECK_HINTS["ceo"]),
     )
     risks = _build_risks(department_key, profile)
+    related_departments = FMCG_RELATIONSHIPS.get(department_key, FMCG_RELATIONSHIPS["ceo"])
+    operational_events = _compact_operational_events(memory_events or [])
+    root_cause_reasoning = build_root_cause_reasoning(
+        department_key=department_key,
+        detected_patterns=detected_patterns,
+        operational_events=operational_events,
+        related_departments=related_departments,
+    )
 
     return {
         "department": department,
@@ -136,11 +145,12 @@ def build_decision_context(
         "key_kpis": MOCK_KPI_SUMMARIES.get(department_key, MOCK_KPI_SUMMARIES["ceo"]),
         "trends": trends,
         "bottlenecks": bottlenecks[:6],
-        "related_departments": FMCG_RELATIONSHIPS.get(department_key, FMCG_RELATIONSHIPS["ceo"]),
+        "related_departments": related_departments,
         "operational_risks": risks[:6],
         "memory_events": _compact_memory_events(memory_events or []),
-        "operational_events": _compact_operational_events(memory_events or []),
+        "operational_events": operational_events,
         "detected_patterns": detected_patterns,
+        "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
         "impact_assessment": _impact_assessment(department_key),
         "confidence": "MVP directional context; use exact user, memory, profile, and retrieved-file facts when available.",
@@ -160,13 +170,18 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "RULES:",
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
+            "- Use root_cause_reasoning as the operating narrative spine: what happened, why it happened, affected departments, operational impact, business risk, executive action.",
             "- Give extra weight to operational_events because they came from submitted daily forms.",
             "- Use detected_patterns to infer risks, mistakes, positives, bottlenecks, missing follow-ups, KPI changes, and recurring friction even when the user did not state them explicitly.",
             "- For FMCG decisions, reason across production, inventory/warehouse, sales, distribution/operations, and finance.",
+            "- CEO responses must explicitly reason about execution capacity, fulfillment constraints, production readiness, distribution pressure, sales impact, profitability pressure, and operational dependencies when relevant.",
+            "- Apply FMCG cause rules: increased demand plus reduced line speed means fulfillment bottleneck; downtime plus overtime means margin pressure; low stock plus sales growth means supply risk; repeated market complaints plus delayed production means execution instability.",
             "- If the user asks for a report, CEO scope may summarize all departments; department roles must stay department-scoped unless evidence names another dependency.",
             "- CEO responses must summarize biggest risks, operational mistakes, positive signals, dependencies, and recommended decisions when detected_patterns are present.",
             "- Department responses must summarize department-specific problems, repeated mistakes, positive signals, and follow-up needs when detected_patterns are present.",
             "- Prioritize actions that protect fulfillment, margin, cash, service level, and execution speed.",
+            "- Recommended Actions must be operationally actionable, prioritized, department-aware, and time-sensitive.",
+            "- Avoid generic phrases: 'there are challenges', 'performance should improve', 'there are operational risks'. Replace them with concrete bottlenecks, inferred cause/effect, evidence, owner, and deadline.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
             "- Keep the answer concise, executive, structured, decisive, and aligned to response_language.",
         ]

@@ -127,6 +127,7 @@ def test_decision_context_includes_patterns_for_ceo_and_scopes_for_department():
     )
 
     assert len(ceo_context["detected_patterns"]) >= 2
+    assert "root_cause_reasoning" in ceo_context
     assert all(
         finding["department"] == "production" or "production" in finding["related_departments"]
         for finding in production_context["detected_patterns"]
@@ -149,4 +150,5 @@ def test_decision_context_prompt_mentions_detected_patterns():
     block = build_decision_context_prompt_block(context)
 
     assert "detected_patterns" in block
+    assert "root_cause_reasoning" in block
     assert "biggest risks, operational mistakes, positive signals" in block
