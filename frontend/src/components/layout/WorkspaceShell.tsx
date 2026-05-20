@@ -14,10 +14,6 @@ import { listDepartments } from "@/lib/api/departments";
 import {
   DEMO_COMPANY,
   DEMO_DEPARTMENTS,
-  DEMO_EXECUTIVE_SUMMARIES,
-  DEMO_KPIS,
-  DEMO_REPORTS,
-  getDemoWorkspaceKey,
 } from "@/lib/demo-data";
 import type { Language } from "@/lib/i18n";
 import type { CompanyIntelligenceProfile, Department } from "@/lib/types";
@@ -27,12 +23,260 @@ type ActiveWorkspace =
       kind: "ceo";
     }
   | {
-      kind: "department";
-      departmentId: string;
+      kind: "division";
+      divisionKey: DivisionKey;
     }
   | {
-      kind: "settings";
+      kind: "memory" | "reports" | "automations" | "settings";
     };
+
+type DivisionKey = "dairtna" | "caesar" | "shared";
+
+type BrainWorkspace =
+  | {
+      kind: "ceo";
+      label: string;
+      badge: string;
+      description: string;
+    }
+  | {
+      kind: "division";
+      divisionKey: DivisionKey;
+      label: string;
+      badge: string;
+      description: string;
+    }
+  | {
+      kind: "memory" | "reports" | "automations" | "settings";
+      label: string;
+      badge: string;
+      description: string;
+    };
+
+type Signal = {
+  label: string;
+  value: string;
+  tone?: "good" | "warn" | "risk" | "neutral";
+};
+
+type DivisionConfig = {
+  title: string;
+  subtitle: string;
+  scope: string;
+  signals: Signal[];
+  risks: string[];
+  positives: string[];
+  actions: string[];
+  relatedFiles: string[];
+};
+
+const brainWorkspaces: BrainWorkspace[] = [
+  {
+    kind: "ceo",
+    label: "CEO Brain",
+    badge: "CEO",
+    description: "Company-wide reasoning",
+  },
+  {
+    kind: "division",
+    divisionKey: "dairtna",
+    label: "Dairtna Poultry",
+    badge: "DP",
+    description: "Poultry operations",
+  },
+  {
+    kind: "division",
+    divisionKey: "caesar",
+    label: "Caesar Beverage",
+    badge: "CB",
+    description: "Beverage operations",
+  },
+  {
+    kind: "division",
+    divisionKey: "shared",
+    label: "Shared Corporate",
+    badge: "SC",
+    description: "HR, finance, procurement",
+  },
+  {
+    kind: "memory",
+    label: "Company Memory",
+    badge: "MEM",
+    description: "Files, updates, decisions",
+  },
+  {
+    kind: "reports",
+    label: "Reports",
+    badge: "RPT",
+    description: "Briefings and summaries",
+  },
+  {
+    kind: "automations",
+    label: "Automations",
+    badge: "AUTO",
+    description: "Future triggers",
+  },
+  {
+    kind: "settings",
+    label: "Settings",
+    badge: "SET",
+    description: "Company context",
+  },
+];
+
+const divisionConfigs: Record<"ceo" | DivisionKey | "memory" | "reports" | "automations", DivisionConfig> = {
+  ceo: {
+    title: "CEO Brain",
+    subtitle:
+      "Ask NAWA anything: operational analysis, executive reports, SOPs, PPT outlines, avatar briefings, and automation-ready actions.",
+    scope: "Jannat Al-Firdaws",
+    signals: [
+      { label: "Dairtna Poultry", value: "Feed, halls, production, veterinary, sales", tone: "warn" },
+      { label: "Caesar Beverage", value: "Production, warehouse, distribution, marketing", tone: "neutral" },
+      { label: "Shared Corporate", value: "HR coverage, procurement, finance control", tone: "good" },
+    ],
+    risks: [
+      "Production promises need warehouse and logistics confirmation before Sales commits.",
+      "HR attendance and leave signals can quietly create execution risk.",
+      "Procurement timing depends on finance approval and supplier readiness.",
+    ],
+    positives: [
+      "Native operational inputs are available even before ERP integration.",
+      "Decision context can already combine memory, files, events, and patterns.",
+    ],
+    actions: [
+      "Ask for today's cross-division risk summary.",
+      "Upload operating files or add manual updates before requesting reports.",
+      "Generate a CEO briefing for Dairtna, Caesar, and Shared Corporate.",
+    ],
+    relatedFiles: ["Executive operating brief", "Company profile", "Department dependencies"],
+  },
+  dairtna: {
+    title: "Dairtna Poultry",
+    subtitle:
+      "Poultry intelligence across halls, feed, egg production, veterinary, warehouse, sales/distribution, and finance signals.",
+    scope: "Jannat Al-Firdaws / Dairtna Poultry",
+    signals: [
+      { label: "Halls overview", value: "Hall status, flock pressure, capacity", tone: "neutral" },
+      { label: "Feed signals", value: "Feed withdrawal, silo balance, supplier risk", tone: "warn" },
+      { label: "Egg production", value: "Output direction, yield movement, losses", tone: "risk" },
+      { label: "Veterinary", value: "Mortality, medication, disease alerts", tone: "warn" },
+      { label: "Sales/distribution", value: "Demand, delivery, route readiness", tone: "neutral" },
+      { label: "Finance", value: "Feed cost, cash, procurement approvals", tone: "neutral" },
+    ],
+    risks: [
+      "Feed shortage can become production drop and finance pressure in the same cycle.",
+      "Hall health issues affect sales availability, logistics planning, and cash expectations.",
+      "Production updates without veterinary context can hide root cause.",
+    ],
+    positives: [
+      "Arabic natural updates can capture halls, quantities, feed, and production direction.",
+      "Dairtna can run natively before ERP and still feed operational memory.",
+    ],
+    actions: [
+      "Ask NAWA to explain today's hall/feed/production chain.",
+      "Add a hall update with quantities and issue words.",
+      "Generate a Dairtna poultry morning briefing.",
+    ],
+    relatedFiles: ["Poultry hall SOP", "Feed consumption sheet", "Veterinary notes"],
+  },
+  caesar: {
+    title: "Caesar Beverage",
+    subtitle:
+      "Beverage intelligence across production, warehouse, sales/distribution, marketing, and finance signals.",
+    scope: "Jannat Al-Firdaws / Caesar Beverage",
+    signals: [
+      { label: "Production", value: "Line output, downtime, batch quality", tone: "neutral" },
+      { label: "Warehouse", value: "Stock accuracy, aging, release readiness", tone: "warn" },
+      { label: "Sales/distribution", value: "Orders, route load, customer commitments", tone: "neutral" },
+      { label: "Marketing", value: "Campaign demand, promo pressure", tone: "good" },
+      { label: "Finance", value: "Margin, collections, promo cost", tone: "neutral" },
+    ],
+    risks: [
+      "Campaign demand can outpace stock and route capacity.",
+      "Warehouse aging and production timing affect discount and margin decisions.",
+    ],
+    positives: [
+      "Marketing and Sales signals can be interpreted against warehouse readiness.",
+      "Reports can connect campaign lift to operational capacity.",
+    ],
+    actions: [
+      "Ask for Caesar production-to-distribution bottlenecks.",
+      "Create a campaign readiness checklist.",
+      "Generate a beverage sales and warehouse brief.",
+    ],
+    relatedFiles: ["Beverage production plan", "Warehouse stock report", "Campaign calendar"],
+  },
+  shared: {
+    title: "Shared Corporate",
+    subtitle:
+      "Shared intelligence across HR, procurement, corporate finance, assets, governance, and executive follow-up.",
+    scope: "Jannat Al-Firdaws / Shared Corporate Departments",
+    signals: [
+      { label: "HR", value: "Attendance, leave, shifts, performance notes", tone: "warn" },
+      { label: "Procurement", value: "Supplier readiness, purchase approvals", tone: "neutral" },
+      { label: "Corporate Finance", value: "Cash, budget, accounting signals", tone: "neutral" },
+      { label: "Assets", value: "Equipment, maintenance, utilization", tone: "good" },
+    ],
+    risks: [
+      "Attendance gaps can break plans that look healthy in production or logistics.",
+      "Finance approval delays can block procurement and scaling.",
+      "Asset downtime can appear as department underperformance unless linked.",
+    ],
+    positives: [
+      "Shared functions can be analyzed as execution enablers, not back-office tables.",
+      "HR signals are available to decision context and pattern detection.",
+    ],
+    actions: [
+      "Ask for HR impact on today's execution risk.",
+      "Create a procurement approval follow-up report.",
+      "Draft a shared corporate weekly briefing.",
+    ],
+    relatedFiles: ["HR attendance summary", "Procurement approvals", "Asset register"],
+  },
+  memory: {
+    title: "Company Memory",
+    subtitle: "Operational memory from chats, files, manual updates, forms, future ERP inputs, and automations.",
+    scope: "Company-wide memory",
+    signals: [
+      { label: "Raw inputs", value: "Stored before parsing", tone: "good" },
+      { label: "Files", value: "Knowledge and operational evidence", tone: "neutral" },
+      { label: "Events", value: "Operational signals for patterns", tone: "warn" },
+    ],
+    risks: ["Unreviewed files may lack extracted context until processed."],
+    positives: ["No input is lost before classification."],
+    actions: ["Upload files, add updates, then ask NAWA to summarize evidence."],
+    relatedFiles: ["Uploaded files", "Decision memory", "Operational update stream"],
+  },
+  reports: {
+    title: "Reports",
+    subtitle: "Ask NAWA to generate executive reports, SOPs, PPT outlines, operating briefs, and avatar briefing scripts.",
+    scope: "Generated intelligence",
+    signals: [
+      { label: "CEO brief", value: "Risks, positives, actions", tone: "good" },
+      { label: "SOP", value: "Workflow-ready procedures", tone: "neutral" },
+      { label: "PPT", value: "Slide narrative and sections", tone: "neutral" },
+    ],
+    risks: ["Reports are strongest after files and daily updates are captured."],
+    positives: ["Decision context carries memory, patterns, and organization dependencies."],
+    actions: ["Ask: create a CEO report for Dairtna and Caesar today."],
+    relatedFiles: ["Board narrative", "Executive report", "SOP drafts"],
+  },
+  automations: {
+    title: "Automations",
+    subtitle: "Future workspace for n8n, ERP triggers, alerts, report schedules, and action routing.",
+    scope: "Automation-ready intelligence",
+    signals: [
+      { label: "Triggers", value: "Planned for risks and recurring patterns", tone: "warn" },
+      { label: "n8n", value: "Future automation input/output", tone: "neutral" },
+      { label: "Alerts", value: "Event-driven follow-up", tone: "neutral" },
+    ],
+    risks: ["Automation execution is intentionally planned, not forced into this MVP."],
+    positives: ["Current raw-input/event architecture is ready for automation triggers."],
+    actions: ["Ask NAWA to design an automation flow before implementation."],
+    relatedFiles: ["Automation backlog", "Integration providers", "Alert rules"],
+  },
+};
 
 const emptyCompanyProfile: CompanyIntelligenceProfile = {
   company_name: "",
@@ -48,31 +292,9 @@ const emptyCompanyProfile: CompanyIntelligenceProfile = {
   is_active: false,
 };
 
-const departmentTypeLabels: Record<string, string> = {
-  sales_ai: "Sales AI",
-  finance_ai: "Finance AI",
-  marketing_ai: "Marketing AI",
-  hr_ai: "HR AI",
-  operations_ai: "Operations AI",
-  warehouse_ai: "Warehouse AI",
-  production_ai: "Production AI",
-  custom: "Department AI",
-};
-
-const departmentTypeBadges: Record<string, string> = {
-  sales_ai: "SA",
-  finance_ai: "FA",
-  marketing_ai: "MA",
-  hr_ai: "HR",
-  operations_ai: "OP",
-  warehouse_ai: "WH",
-  production_ai: "PR",
-  custom: "AI",
-};
-
 export function WorkspaceShell() {
   const { me, token, logout } = useAuth();
-  const { language, t } = useLanguage();
+  const { direction, language, t } = useLanguage();
   const permissions = me?.role.permissions ?? [];
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentStatus, setDepartmentStatus] = useState<"idle" | "loading" | "ready" | "blocked" | "error">(
@@ -152,54 +374,31 @@ export function WorkspaceShell() {
   }, [token]);
 
   const displayDepartments = departments.length > 0 ? departments : DEMO_DEPARTMENTS;
-  const isDemoDataset = departments.length === 0;
-
-  useEffect(() => {
-    if (activeWorkspace.kind !== "ceo" || canUseCeoWorkspace || displayDepartments.length === 0) {
-      return;
-    }
-    const firstAllowed = displayDepartments.find(
-      (department) => isDemoDataset || canUseAgent(permissions, department.department_type),
-    );
-    if (firstAllowed) {
-      setActiveWorkspace({ kind: "department", departmentId: firstAllowed.id });
-    }
-  }, [activeWorkspace.kind, canUseCeoWorkspace, displayDepartments, isDemoDataset, permissions]);
-
-  const activeDepartment = useMemo(() => {
-    if (activeWorkspace.kind !== "department") {
-      return null;
-    }
-    return displayDepartments.find((department) => department.id === activeWorkspace.departmentId) ?? null;
-  }, [activeWorkspace, displayDepartments]);
-
-  const demoWorkspaceKey = getDemoWorkspaceKey(activeDepartment);
-  const activeTitle =
-    activeWorkspace.kind === "settings"
-      ? t("companyIntelligenceProfile")
-      : activeDepartment
-        ? getDepartmentAgentLabel(activeDepartment, language)
-        : t("ceoAiWorkspace");
-  const activeScope = activeDepartment ? t("departmentScoped") : t("companyWide");
-  const activeDescription = activeDepartment
-    ? localizeDepartmentDescription(activeDepartment, language)
-    : localizeWorkspaceText(
-        "Company Brain workspace for organizational intelligence, live operational awareness, cross-department priorities, and enterprise decisions.",
-        language,
-      );
-  const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
+  const activeConfig = getWorkspaceConfig(activeWorkspace);
+  const activeDepartment = useMemo(
+    () => resolveWorkspaceDepartment(activeWorkspace, displayDepartments, permissions),
+    [activeWorkspace, displayDepartments, permissions],
+  );
+  const activeWorkspaceKey = getWorkspaceKey(activeWorkspace, activeDepartment);
+  const chatTitle = localizeWorkspaceText(activeConfig.title, language);
   const canUseActiveDepartment = activeDepartment ? canUseAgent(permissions, activeDepartment.department_type) : true;
+  const canChatInWorkspace = activeWorkspace.kind === "ceo" ? canUseCeoWorkspace : true;
+  const canSubmitInWorkspace = Boolean(
+    token &&
+      canSubmitOperationalForms &&
+      (canUseCeoWorkspace || activeWorkspace.kind === "division" || canUseActiveDepartment),
+  );
 
   return (
-    <main className="min-h-screen text-ink">
+    <main className="min-h-screen text-ink" dir={direction}>
       <header className="border-b border-white/10 bg-executive text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-white/10 text-sm font-semibold text-white">
               N
             </div>
             <div>
-              <div className="text-sm font-semibold tracking-wide text-white">{t("brandNawa")}</div>
+              <div className="text-sm font-semibold tracking-wide text-white">Jannat Al-Firdaws</div>
               <div className="text-xs text-white/60">{t("aiWorkforcePlatform")}</div>
             </div>
           </div>
@@ -220,114 +419,24 @@ export function WorkspaceShell() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[260px_1fr]">
-        <aside className="command-panel h-fit p-3 lg:sticky lg:top-4">
-          <div className="px-2 pb-2 text-xs font-semibold uppercase text-white/60">{t("workspace")}</div>
-          <nav className="space-y-1">
-            <SidebarItem
-              label={t("ceoAi")}
-              description={t("executiveCommand")}
-              badge="CEO"
-              active={activeWorkspace.kind === "ceo"}
-              disabled={!canUseCeoWorkspace}
-              lockLabel={t("locked")}
-              onClick={() => setActiveWorkspace({ kind: "ceo" })}
-            />
+      <div className="mx-auto grid max-w-[1600px] gap-4 px-4 py-4 sm:px-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+        <BrainSidebar
+          activeWorkspace={activeWorkspace}
+          companyProfileActive={companyProfile.is_active}
+          departmentStatus={departmentStatus}
+          departmentError={departmentError}
+          permissionsCount={permissions.length}
+          roleName={me?.role.name || DEMO_COMPANY.role}
+          canUseCeoWorkspace={canUseCeoWorkspace}
+          onSelect={setActiveWorkspace}
+        />
 
-            <SidebarItem
-              label={t("companyIntelligenceProfile")}
-              description={companyProfile.is_active ? t("companyContextActive") : t("companyContextInactive")}
-              badge="CTX"
-              active={activeWorkspace.kind === "settings"}
-              onClick={() => setActiveWorkspace({ kind: "settings" })}
-            />
-
-            <div className="px-2 pt-3 text-xs font-semibold uppercase text-white/60">{t("departments")}</div>
-
-            {departmentStatus === "loading" ? (
-              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-gold" />
-                  {t("loadingDepartments")}
-                </span>
-              </div>
-            ) : null}
-
-            {departmentStatus === "blocked" ? (
-              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
-                {t("departmentListUnavailable")}
-              </div>
-            ) : null}
-
-            {departmentStatus === "error" ? (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {departmentError}
-              </div>
-            ) : null}
-
-            {isDemoDataset ? (
-              <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
-                <div className="text-sm font-medium text-white">{t("investorDemoDataset")}</div>
-                <div className="mt-1 text-xs leading-5 text-white/55">{t("investorDemoDatasetDetail")}</div>
-              </div>
-            ) : null}
-
-            {displayDepartments.map((department) => {
-              const canUseDepartment = isDemoDataset || canUseAgent(permissions, department.department_type);
-              return (
-                <SidebarItem
-                  key={department.id}
-                  label={getDepartmentAgentLabel(department, language)}
-                  description={localizeDepartmentName(department.name, language)}
-                  badge={getDepartmentBadge(department)}
-                  active={activeWorkspace.kind === "department" && activeWorkspace.departmentId === department.id}
-                  disabled={!canUseDepartment || !department.ai_agent_enabled}
-                  lockLabel={!canUseDepartment ? t("locked") : t("offLabel")}
-                  onClick={() =>
-                    setActiveWorkspace({
-                      kind: "department",
-                      departmentId: department.id,
-                    })
-                  }
-                />
-              );
-            })}
-          </nav>
-          <div className="mt-4 border-t border-white/10 px-2 pt-3">
-            <div className="text-xs font-semibold uppercase text-white/60">{t("role")}</div>
-            <div className="mt-1 text-sm font-medium text-white">
-              {localizeWorkspaceText(me?.role.name || DEMO_COMPANY.role, language)}
-            </div>
-            <div className="mt-1 text-xs text-white/60">
-              {permissions.length} {t("permissionsAvailable")}
-            </div>
-          </div>
-        </aside>
-
-        <section className="space-y-4">
-          <div className="command-panel p-4">
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-              <div>
-                <div className="text-xs font-semibold uppercase text-white/60">{t("liveAiWorkforce")}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold text-white">{activeTitle}</h1>
-                  <span className="rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs font-medium text-white/70">
-                    {activeDepartment ? localizeDepartmentName(activeDepartment.name, language) : t("executive")}
-                  </span>
-                </div>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">{activeDescription}</p>
-              </div>
-              <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70">
-                {companyProfile.is_active ? (
-                  <span className="me-2 inline-flex items-center gap-1 text-gold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                    {t("companyContextActive")}
-                  </span>
-                ) : null}
-                {t("scope")}: {activeScope}
-              </div>
-            </div>
-          </div>
+        <section className="min-w-0 space-y-4">
+          <CompanyBrainHeader
+            config={activeConfig}
+            companyProfileActive={companyProfile.is_active}
+            canChatInWorkspace={canChatInWorkspace}
+          />
 
           {activeWorkspace.kind === "settings" ? (
             <CompanyProfilePanel
@@ -339,57 +448,297 @@ export function WorkspaceShell() {
             />
           ) : (
             <>
-              <QuickStartPanel activeTitle={activeTitle} canReadFiles={canReadFiles} />
-
-              <div className="grid gap-3 md:grid-cols-3">
-                {DEMO_KPIS[demoWorkspaceKey].map((kpi) => (
-                  <StatusPanel
-                    key={kpi.title}
-                    title={localizeWorkspaceText(kpi.title, language)}
-                    value={kpi.value}
-                    detail={localizeWorkspaceText(kpi.detail, language)}
+              {token && me ? (
+                <>
+                  <ChatPanel
+                    token={token}
+                    companyId={me.company.id}
+                    workspaceKey={activeWorkspaceKey}
+                    title={chatTitle}
+                    department={activeDepartment}
                   />
-                ))}
-              </div>
-
-              <DemoBriefingPanel workspaceKey={demoWorkspaceKey} />
+                </>
+              ) : null}
 
               <OperationalInputPanel
                 token={token || ""}
                 department={activeDepartment}
                 departments={displayDepartments}
-                canSubmit={Boolean(
-                  token &&
-                    canSubmitOperationalForms &&
-                    (activeDepartment ? canUseActiveDepartment : canUseCeoWorkspace),
-                )}
+                canSubmit={canSubmitInWorkspace}
                 canUpload={Boolean(token && canReadFiles)}
                 canAssignDepartment={canUseCeoWorkspace}
               />
-
-              {token && me ? (
-                <div className={canReadFiles ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" : ""}>
-                  <ChatPanel
-                    token={token}
-                    companyId={me.company.id}
-                    workspaceKey={activeWorkspaceKey}
-                    title={activeTitle}
-                    department={activeDepartment}
-                  />
-                  {canReadFiles ? (
-                    <FilesPanel
-                      token={token}
-                      departments={displayDepartments}
-                      activeDepartmentId={canUseCeoWorkspace ? null : activeDepartment?.id ?? null}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
             </>
           )}
         </section>
+
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:h-fit">
+          <IntelligencePanel
+            config={activeConfig}
+            companyProfileActive={companyProfile.is_active}
+            activeWorkspace={activeWorkspace}
+          />
+          {token && canReadFiles ? (
+            <FilesPanel
+              token={token}
+              departments={displayDepartments}
+              activeDepartmentId={canUseCeoWorkspace ? null : activeDepartment?.id ?? null}
+            />
+          ) : null}
+        </aside>
       </div>
     </main>
+  );
+}
+
+function BrainSidebar({
+  activeWorkspace,
+  companyProfileActive,
+  departmentStatus,
+  departmentError,
+  permissionsCount,
+  roleName,
+  canUseCeoWorkspace,
+  onSelect,
+}: {
+  activeWorkspace: ActiveWorkspace;
+  companyProfileActive: boolean;
+  departmentStatus: "idle" | "loading" | "ready" | "blocked" | "error";
+  departmentError: string | null;
+  permissionsCount: number;
+  roleName: string;
+  canUseCeoWorkspace: boolean;
+  onSelect: (workspace: ActiveWorkspace) => void;
+}) {
+  const { language, t } = useLanguage();
+
+  return (
+    <aside className="command-panel h-fit p-3 xl:sticky xl:top-4">
+      <div className="px-2 pb-3">
+        <div className="text-xs font-semibold uppercase text-white/55">Company</div>
+        <div className="mt-1 text-base font-semibold text-white">Jannat Al-Firdaws</div>
+        <div className="mt-1 text-xs leading-5 text-white/55">Company Brain + Operational Intelligence</div>
+      </div>
+
+      <nav className="space-y-1">
+        {brainWorkspaces.map((workspace) => {
+          const workspaceKey = workspace.kind === "division" ? workspace.divisionKey : workspace.kind;
+          const active =
+            activeWorkspace.kind === workspace.kind &&
+            (workspace.kind !== "division" ||
+              (activeWorkspace.kind === "division" && activeWorkspace.divisionKey === workspace.divisionKey));
+          const disabled = workspace.kind === "ceo" && !canUseCeoWorkspace;
+          return (
+            <SidebarItem
+              key={workspaceKey}
+              label={localizeWorkspaceText(workspace.label, language)}
+              description={localizeWorkspaceText(workspace.description, language)}
+              badge={workspace.badge}
+              active={active}
+              disabled={disabled}
+              lockLabel={t("locked")}
+              onClick={() => {
+                if (workspace.kind === "division") {
+                  onSelect({ kind: "division", divisionKey: workspace.divisionKey });
+                } else {
+                  onSelect({ kind: workspace.kind });
+                }
+              }}
+            />
+          );
+        })}
+      </nav>
+
+      <div className="mt-4 space-y-3 border-t border-white/10 px-2 pt-3">
+        {departmentStatus === "loading" ? (
+          <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-gold" />
+              {t("loadingDepartments")}
+            </span>
+          </div>
+        ) : null}
+
+        {departmentStatus === "blocked" ? (
+          <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70">
+            {t("departmentListUnavailable")}
+          </div>
+        ) : null}
+
+        {departmentStatus === "error" ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {departmentError}
+          </div>
+        ) : null}
+
+        <div>
+          <div className="text-xs font-semibold uppercase text-white/60">{t("role")}</div>
+          <div className="mt-1 text-sm font-medium text-white">{localizeWorkspaceText(roleName, language)}</div>
+          <div className="mt-1 text-xs text-white/60">
+            {permissionsCount} {t("permissionsAvailable")}
+          </div>
+        </div>
+        <div className="rounded-md border border-white/10 bg-white/5 p-2.5 text-xs leading-5 text-white/60">
+          <span className={companyProfileActive ? "text-gold" : "text-white/60"}>
+            {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
+          </span>
+          <span className="block">ERP is one source. NAWA remains the company brain.</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function CompanyBrainHeader({
+  config,
+  companyProfileActive,
+  canChatInWorkspace,
+}: {
+  config: DivisionConfig;
+  companyProfileActive: boolean;
+  canChatInWorkspace: boolean;
+}) {
+  const { language, t } = useLanguage();
+
+  return (
+    <section className="command-panel p-4">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+        <div>
+          <div className="text-xs font-semibold uppercase text-white/60">{t("liveAiWorkforce")}</div>
+          <h1 className="mt-1 text-2xl font-semibold text-white">{localizeWorkspaceText(config.title, language)}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
+            {localizeWorkspaceText(config.subtitle, language)}
+          </p>
+        </div>
+        <div className="grid gap-2 text-xs text-white/70 sm:grid-cols-2 lg:min-w-80">
+          <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2">
+            <span className="block text-white/45">{t("scope")}</span>
+            <span className="mt-1 block font-medium text-white">{localizeWorkspaceText(config.scope, language)}</span>
+          </div>
+          <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2">
+            <span className="block text-white/45">Context</span>
+            <span className="mt-1 block font-medium text-white">
+              {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
+            </span>
+          </div>
+          {!canChatInWorkspace ? (
+            <div className="rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2 sm:col-span-2">
+              {t("workspaceUnavailable")}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IntelligencePanel({
+  config,
+  companyProfileActive,
+  activeWorkspace,
+}: {
+  config: DivisionConfig;
+  companyProfileActive: boolean;
+  activeWorkspace: ActiveWorkspace;
+}) {
+  const { language, t } = useLanguage();
+
+  return (
+    <section className="panel overflow-hidden">
+      <div className="border-b border-line bg-white px-4 py-3">
+        <div className="executive-label">Live Company Intelligence</div>
+        <h2 className="mt-1 text-base font-semibold text-ink">{localizeWorkspaceText(config.title, language)}</h2>
+      </div>
+      <div className="space-y-4 bg-white p-4">
+        <IntelligenceSection title="Active division">
+          <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">
+            {localizeWorkspaceText(config.scope, language)}
+          </div>
+        </IntelligenceSection>
+
+        <IntelligenceSection title="Live signals">
+          <div className="space-y-2">
+            {config.signals.map((signal) => (
+              <SignalRow key={signal.label} signal={signal} />
+            ))}
+          </div>
+        </IntelligenceSection>
+
+        <IntelligenceSection title="Detected risks">
+          <InsightList items={config.risks} tone="risk" />
+        </IntelligenceSection>
+
+        <IntelligenceSection title="Positive signals">
+          <InsightList items={config.positives} tone="good" />
+        </IntelligenceSection>
+
+        <IntelligenceSection title="Suggested actions">
+          <InsightList items={config.actions} tone="neutral" />
+        </IntelligenceSection>
+
+        <IntelligenceSection title="Related files">
+          <div className="flex flex-wrap gap-2">
+            {config.relatedFiles.map((file) => (
+              <span key={file} className="rounded-md border border-line bg-surface px-2 py-1 text-xs text-muted">
+                {localizeWorkspaceText(file, language)}
+              </span>
+            ))}
+          </div>
+        </IntelligenceSection>
+
+        <div className="rounded-md border border-line bg-surface p-3 text-xs leading-5 text-muted">
+          <span className="font-semibold text-ink">{t("companyContextActive")}: </span>
+          {companyProfileActive ? "Connected to decision context." : "Add profile data in Settings."}
+          <span className="mt-1 block">
+            Workspace mode: {activeWorkspace.kind === "settings" ? "Settings" : "Company Brain"}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IntelligenceSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-xs font-semibold uppercase text-muted">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function SignalRow({ signal }: { signal: Signal }) {
+  const { language } = useLanguage();
+  const toneClass =
+    signal.tone === "good"
+      ? "border-emerald-200 bg-emerald-50"
+      : signal.tone === "risk"
+        ? "border-red-200 bg-red-50"
+        : signal.tone === "warn"
+          ? "border-amber-200 bg-amber-50"
+          : "border-line bg-surface";
+
+  return (
+    <div className={`rounded-md border px-3 py-2 ${toneClass}`}>
+      <div className="text-sm font-medium text-ink">{localizeWorkspaceText(signal.label, language)}</div>
+      <div className="mt-0.5 text-xs leading-5 text-muted">{localizeWorkspaceText(signal.value, language)}</div>
+    </div>
+  );
+}
+
+function InsightList({ items, tone }: { items: string[]; tone: "good" | "risk" | "neutral" }) {
+  const { language } = useLanguage();
+  const markerClass = tone === "good" ? "bg-emerald-500" : tone === "risk" ? "bg-red-500" : "bg-accent";
+
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <div key={item} className="flex gap-2 text-sm leading-6 text-muted">
+          <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${markerClass}`} />
+          <span>{localizeWorkspaceText(item, language)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -581,62 +930,6 @@ function ProfileTextarea({ label, value, onChange }: { label: string; value: str
   );
 }
 
-function DemoBriefingPanel({ workspaceKey }: { workspaceKey: keyof typeof DEMO_REPORTS }) {
-  const { language, t } = useLanguage();
-
-  return (
-    <section className="panel p-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-2xl">
-          <div className="executive-label">{t("executiveSummary")}</div>
-          <p className="mt-2 text-sm leading-6 text-ink">
-            {localizeWorkspaceText(DEMO_EXECUTIVE_SUMMARIES[workspaceKey], language)}
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[520px]">
-          {DEMO_REPORTS[workspaceKey].map((report) => (
-            <article key={report.title} className="rounded-md border border-line bg-surface px-3 py-2.5">
-              <div className="text-sm font-semibold text-ink">{localizeWorkspaceText(report.title, language)}</div>
-              <p className="mt-1 text-xs leading-5 text-muted">{localizeWorkspaceText(report.detail, language)}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function QuickStartPanel({ activeTitle, canReadFiles }: { activeTitle: string; canReadFiles: boolean }) {
-  const { t } = useLanguage();
-
-  return (
-    <section className="panel p-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div className="executive-label">{t("demoQuickStart")}</div>
-          <div className="mt-1 text-sm font-medium text-ink">{t("quickStartText")}</div>
-        </div>
-        <div className="grid gap-2 text-xs text-muted sm:grid-cols-3 lg:min-w-[520px]">
-          <QuickStartStep value="1" label={activeTitle} />
-          <QuickStartStep value="2" label={canReadFiles ? t("reviewKnowledgeFiles") : t("filesLocked")} />
-          <QuickStartStep value="3" label={t("useSuggestedPrompt")} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function QuickStartStep({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-accent/20 bg-white text-[11px] font-semibold text-accent">
-        {value}
-      </span>
-      <span className="truncate">{label}</span>
-    </div>
-  );
-}
-
 function SidebarItem({
   label,
   description,
@@ -694,25 +987,53 @@ function SidebarItem({
   );
 }
 
-function StatusPanel({ title, value, detail }: { title: string; value: string; detail: string }) {
+function getWorkspaceConfig(workspace: ActiveWorkspace): DivisionConfig {
+  if (workspace.kind === "division") {
+    return divisionConfigs[workspace.divisionKey];
+  }
+  if (workspace.kind === "settings") {
+    return {
+      ...divisionConfigs.memory,
+      title: "Settings",
+      subtitle: "Company context and organizational intelligence controls for NAWA.",
+      scope: "Jannat Al-Firdaws settings",
+    };
+  }
+  return divisionConfigs[workspace.kind];
+}
+
+function getWorkspaceKey(workspace: ActiveWorkspace, department: Department | null): string {
+  if (workspace.kind === "division") {
+    return `division-${workspace.divisionKey}-${department?.id ?? "company"}`;
+  }
+  return workspace.kind;
+}
+
+function resolveWorkspaceDepartment(
+  workspace: ActiveWorkspace,
+  departments: Department[],
+  permissions: string[],
+): Department | null {
+  if (workspace.kind !== "division") {
+    return null;
+  }
+  const preferredTypes: Record<DivisionKey, string[]> = {
+    dairtna: ["production_ai", "warehouse_ai", "operations_ai", "finance_ai"],
+    caesar: ["operations_ai", "sales_ai", "marketing_ai", "warehouse_ai", "finance_ai"],
+    shared: ["hr_ai", "finance_ai", "operations_ai"],
+  };
   return (
-    <div className="panel p-4">
-      <div className="text-xs font-semibold uppercase text-muted">{title}</div>
-      <div className="mt-2 text-base font-semibold text-ink">{value}</div>
-      <div className="mt-1 text-sm text-muted">{detail}</div>
-    </div>
+    preferredTypes[workspace.divisionKey]
+      .map((departmentType) =>
+        departments.find(
+          (department) =>
+            department.department_type === departmentType &&
+            department.ai_agent_enabled &&
+            canUseAgent(permissions, department.department_type),
+        ),
+      )
+      .find((department): department is Department => Boolean(department)) ?? null
   );
-}
-
-function getDepartmentAgentLabel(department: Department, language: Language): string {
-  return localizeWorkspaceText(
-    departmentTypeLabels[department.department_type] || `${department.name} AI`,
-    language,
-  );
-}
-
-function getDepartmentBadge(department: Department): string {
-  return departmentTypeBadges[department.department_type] || department.name.slice(0, 2).toUpperCase();
 }
 
 function canUseAgent(permissions: string[], departmentType: string): boolean {
@@ -736,22 +1057,6 @@ function localizeDepartmentName(value: string, language: Language): string {
     Operations: "العمليات",
   };
   return names[value] || value;
-}
-
-function localizeDepartmentDescription(department: Department, language: Language): string {
-  const fallback = department.description || `${department.name} workspace is ready for chat integration.`;
-  if (language === "en") {
-    return fallback;
-  }
-
-  const descriptions: Record<string, string> = {
-    sales_ai: "ذكاء الإيرادات لجودة pipeline وتركيز الحسابات والخطوات التنفيذية.",
-    finance_ai: "ذكاء مالي لمتابعة النقد والهامش وقرارات الميزانية.",
-    marketing_ai: "ذكاء تسويقي لتركيز الحملات وجودة الإشارات ونقاط الإثبات.",
-    operations_ai: "ذكاء تشغيلي للسعة ومخاطر الخدمة والتنفيذ الأسبوعي.",
-    custom: "ذكاء تنفيذي للأولويات والقرارات المشتركة بين الأقسام.",
-  };
-  return descriptions[department.department_type] || fallback;
 }
 
 function localizeWorkspaceText(value: string, language: Language): string {
