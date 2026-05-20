@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from app.services.operational_pattern_detector import detect_operational_patterns
+from app.services.organizational_intelligence import build_organizational_intelligence
 from app.services.root_cause_reasoning import build_root_cause_reasoning
 
 DEPARTMENT_ALIASES = {
@@ -117,6 +118,12 @@ def build_decision_context(
 
     department = _resolve_department(context)
     profile = _compact_company_profile(context.get("company_intelligence_profile"), memory_profile)
+    organization = context.get("organizational_intelligence")
+    if not isinstance(organization, dict):
+        organization = build_organizational_intelligence(
+            company_profile=profile,
+            snapshot=None,
+        )
     department_key = department["key"]
     detected_patterns = detect_operational_patterns(
         memory_events or [],
@@ -143,6 +150,7 @@ def build_decision_context(
         "department": department,
         "role_perspective": _resolve_role_perspective(context),
         "company_profile": profile,
+        "organizational_intelligence": organization,
         "key_kpis": MOCK_KPI_SUMMARIES.get(department_key, MOCK_KPI_SUMMARIES["ceo"]),
         "trends": trends,
         "bottlenecks": bottlenecks[:6],
@@ -181,6 +189,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "RULES:",
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
             "- Treat raw_input_summaries, parsed_entities, and structured_drafts as first-capture operational evidence that may explain the event trail.",
+            "- Use organizational_intelligence to reason about company divisions, department dependencies, HR execution signals, KPI ownership, workflows, users, and integration sources.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
             "- Use root_cause_reasoning as the operating narrative spine: what happened, why it happened, affected departments, operational impact, business risk, executive action.",
             "- Give extra weight to operational_events because they came from submitted daily forms.",

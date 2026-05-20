@@ -894,7 +894,6 @@ class AIService:
             )
             context["decision_context"] = decision_context
             decision_context_block = build_decision_context_prompt_block(decision_context)
-
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
             ]

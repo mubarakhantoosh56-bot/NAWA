@@ -184,7 +184,7 @@ export function WorkspaceShell() {
   const activeDescription = activeDepartment
     ? localizeDepartmentDescription(activeDepartment, language)
     : localizeWorkspaceText(
-        "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready NAWA decisions.",
+        "Company Brain workspace for organizational intelligence, live operational awareness, cross-department priorities, and enterprise decisions.",
         language,
       );
   const activeWorkspaceKey = activeDepartment ? `department-${activeDepartment.id}` : "ceo";
@@ -770,6 +770,8 @@ function localizeWorkspaceText(value: string, language: Language): string {
     "Executive Demo Owner": "مالك demo التنفيذي",
     "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready NAWA decisions.":
       "مساحة ذكاء على مستوى الشركة للتخطيط التنفيذي والأولويات المشتركة وقرارات NAWA الجاهزة للعرض.",
+    "Company Brain workspace for organizational intelligence, live operational awareness, cross-department priorities, and enterprise decisions.":
+      "مساحة Company Brain للاستحبارات التنظيمية والوعي التشغيلي الحي والأولويات بين الأقسام.",
     "Revenue Run Rate": "معدل الإيراد السنوي",
     "Gross Margin": "الهامش الإجمالي",
     "Execution Risk": "مخاطر التنفيذ",

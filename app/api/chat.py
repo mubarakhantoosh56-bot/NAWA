@@ -13,9 +13,11 @@ from app.models.request import ChatRequest
 from app.models.response import ChatResponse
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.department_repository import DepartmentRepository
+from app.repositories.organizational_intelligence_repository import OrganizationalIntelligenceRepository
 from app.services.memory.repository import MemoryRepository
 from app.services.company_profile import normalize_company_profile
 from app.services.openai_client import ai_engine
+from app.services.organizational_intelligence import build_organizational_intelligence
 from app.services.unified_data_capture import UnifiedDataCaptureService
 
 router = APIRouter(tags=["AI"])
@@ -93,6 +95,12 @@ async def _build_chat_context(
     profile = await company_repo.get_intelligence_profile(UUID(auth_context.company_id))
     normalized_profile = normalize_company_profile(profile)
     context["company_intelligence_profile"] = normalized_profile
+    context["organizational_intelligence"] = await _build_organizational_context(
+        http_request=http_request,
+        company_id=UUID(auth_context.company_id),
+        user_id=UUID(auth_context.user_id),
+        company_profile=normalized_profile,
+    )
     if normalized_profile.get("preferred_response_language") and not context.get("response_language"):
         context["response_language"] = normalized_profile["preferred_response_language"]
 
@@ -176,6 +184,34 @@ async def _get_department_repository(request: Request) -> DepartmentRepository:
         request.app.state.auth_db_pool = pool
 
     return DepartmentRepository(pool)
+
+
+async def _build_organizational_context(
+    *,
+    http_request: Request,
+    company_id: UUID,
+    user_id: UUID,
+    company_profile: dict[str, Any],
+) -> dict[str, Any]:
+    pool = getattr(http_request.app.state, "auth_db_pool", None)
+    snapshot: dict[str, Any] | None = None
+    if pool is not None:
+        try:
+            snapshot = await OrganizationalIntelligenceRepository(pool).get_snapshot(
+                company_id=company_id,
+                user_id=user_id,
+            )
+        except Exception:
+            logger.warning(
+                "organizational_intelligence_snapshot_failed",
+                extra={"company_id": str(company_id)},
+                exc_info=True,
+            )
+            snapshot = None
+    return build_organizational_intelligence(
+        company_profile=company_profile,
+        snapshot=snapshot,
+    )
 
 
 async def _capture_chat_input(
