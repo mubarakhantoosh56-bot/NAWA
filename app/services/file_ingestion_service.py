@@ -10,6 +10,7 @@ import asyncpg
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.file_chunk_repository import FileChunkRepository
 from app.repositories.file_repository import FileRepository
+from app.services.unified_data_capture import UnifiedDataCaptureService
 from app.services.rag.embeddings import store_chunk_embeddings
 from app.services.rag.chunking import chunk_text
 from app.services.rag.extractors import SUPPORTED_EXTENSIONS, extract_text
@@ -34,6 +35,7 @@ class FileIngestionService:
         self.file_repo = FileRepository(db)
         self.file_chunk_repo = FileChunkRepository(db)
         self.department_repo = DepartmentRepository(db)
+        self.capture_service = UnifiedDataCaptureService(db) if hasattr(db, "fetchrow") else None
 
     async def ingest_file(
         self,
@@ -133,6 +135,14 @@ class FileIngestionService:
                 },
                 updated_by_user_id=uploaded_by_user_id,
             )
+            await self._capture_file_raw_input(
+                company_id=company_id,
+                uploaded_by_user_id=uploaded_by_user_id,
+                file_record=ready_file or file_record,
+                department_id=department_id,
+                raw_content=text,
+                status="pending" if not text.strip() else None,
+            )
             return {
                 "file": ready_file or file_record,
                 "chunks": created_chunks,
@@ -144,6 +154,14 @@ class FileIngestionService:
                 status="failed",
                 metadata={"error": self._safe_error(exc)},
                 updated_by_user_id=uploaded_by_user_id,
+            )
+            await self._capture_file_raw_input(
+                company_id=company_id,
+                uploaded_by_user_id=uploaded_by_user_id,
+                file_record=failed_file or file_record,
+                department_id=department_id,
+                raw_content=f"Uploaded file: {filename}. Text extraction failed: {self._safe_error(exc)}",
+                status="failed",
             )
             return {
                 "file": failed_file or file_record,
@@ -208,6 +226,46 @@ class FileIngestionService:
 
     def _storage_path(self, company_id: UUID, file_id: UUID) -> Path:
         return self.storage_root / str(company_id) / str(file_id) / "source"
+
+    async def _capture_file_raw_input(
+        self,
+        *,
+        company_id: UUID,
+        uploaded_by_user_id: UUID,
+        file_record: RowDict,
+        department_id: UUID | None,
+        raw_content: str,
+        status: str | None,
+    ) -> None:
+        if self.capture_service is None:
+            return
+        try:
+            await self.capture_service.capture(
+                company_id=company_id,
+                created_by=uploaded_by_user_id,
+                source_type="file",
+                source_ref=str(file_record.get("filename") or ""),
+                raw_content=raw_content or str(file_record.get("filename") or "uploaded file"),
+                department_id=department_id,
+                file_id=file_record["id"],
+                submitted_category="document",
+                submitted_priority="normal",
+                payload={
+                    "filename": str(file_record.get("filename") or ""),
+                    "content_type": str(file_record.get("content_type") or ""),
+                    "file_status": str(file_record.get("status") or ""),
+                },
+                processing_status=status,
+            )
+        except Exception:
+            logger.warning(
+                "file_raw_input_capture_failed",
+                extra={
+                    "company_id": str(company_id),
+                    "file_id": str(file_record.get("id") or ""),
+                },
+                exc_info=True,
+            )
 
     @staticmethod
     def _save_source_file(source: Path, destination: Path) -> None:

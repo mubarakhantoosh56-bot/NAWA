@@ -13,8 +13,10 @@ from app.models.request import ChatRequest
 from app.models.response import ChatResponse
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.department_repository import DepartmentRepository
+from app.services.memory.repository import MemoryRepository
 from app.services.company_profile import normalize_company_profile
 from app.services.openai_client import ai_engine
+from app.services.unified_data_capture import UnifiedDataCaptureService
 
 router = APIRouter(tags=["AI"])
 logger = logging.getLogger(__name__)
@@ -38,6 +40,12 @@ async def chat_endpoint(
             http_request=http_request,
             request=request,
             auth_context=auth_context,
+        )
+        await _capture_chat_input(
+            http_request=http_request,
+            request=request,
+            auth_context=auth_context,
+            context=context or {},
         )
 
         result = await ai_engine.chat(
@@ -168,3 +176,102 @@ async def _get_department_repository(request: Request) -> DepartmentRepository:
         request.app.state.auth_db_pool = pool
 
     return DepartmentRepository(pool)
+
+
+async def _capture_chat_input(
+    *,
+    http_request: Request,
+    request: ChatRequest,
+    auth_context: AuthContext,
+    context: dict[str, Any],
+) -> None:
+    pool = getattr(http_request.app.state, "auth_db_pool", None)
+    if pool is None:
+        return
+
+    department_id = UUID(request.department_id) if request.department_id else None
+    try:
+        capture = await UnifiedDataCaptureService(pool).capture(
+            company_id=UUID(auth_context.company_id),
+            created_by=UUID(auth_context.user_id),
+            source_type="chat",
+            source_ref=request.session_id,
+            raw_content=request.message,
+            department_id=department_id,
+            submitted_category=None,
+            submitted_priority=None,
+            payload={
+                "session_id": request.session_id,
+                "role_slug": auth_context.role_slug,
+            },
+        )
+        context["latest_raw_input_id"] = str(capture.raw_input["id"])
+        context["latest_structured_record_draft_id"] = str(capture.structured_draft["id"])
+        context["latest_input_classification"] = _json_safe(capture.classification)
+
+        if not capture.should_create_event:
+            return
+
+        classification = capture.classification
+        department = (
+            classification.get("inferred_department")
+            or _department_key_from_context(context)
+            or "company"
+        )
+        category = str(classification.get("category") or "daily_update")
+        priority = str(classification.get("priority") or "normal")
+        await MemoryRepository(pool).insert_event(
+            {
+                "company_id": auth_context.company_id,
+                "session_id": request.session_id,
+                "event_type": f"operational.{department}.{category}",
+                "user_message": "Chat operational input captured",
+                "executive_summary": f"{str(department).title()} {category} ({priority}): {request.message[:500]}",
+                "logic_json": {
+                    "operational_event": True,
+                    "raw_input_id": str(capture.raw_input["id"]),
+                    "structured_record_draft_id": str(capture.structured_draft["id"]),
+                    "classification": _json_safe(capture.classification),
+                    "parsed_entities": _json_safe(capture.entities),
+                },
+                "context": {
+                    "source": "chat",
+                    "source_role": auth_context.role_slug,
+                    "source_department": _department_key_from_context(context),
+                    "target_department": department,
+                    "category": category,
+                    "priority": priority,
+                    "raw_input_id": str(capture.raw_input["id"]),
+                    "structured_record_draft_id": str(capture.structured_draft["id"]),
+                    "classification": _json_safe(capture.classification),
+                    "parsed_entities": _json_safe(capture.entities),
+                    "payload": {"text": request.message[:2000]},
+                },
+                "tags": ["operational_event", str(department), category, priority, "chat"],
+                "idempotency_key": f"chat:{auth_context.company_id}:{request.session_id}:{capture.raw_input['id']}",
+            }
+        )
+    except Exception:
+        logger.warning(
+            "chat_raw_input_capture_failed",
+            extra={"company_id": auth_context.company_id, "session_id": request.session_id},
+            exc_info=True,
+        )
+
+
+def _department_key_from_context(context: dict[str, Any]) -> str | None:
+    department = context.get("aimx_department") if isinstance(context.get("aimx_department"), dict) else {}
+    department_type = str(department.get("department_type") or "").strip().lower()
+    return department_type.removesuffix("_ai") or None
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value

@@ -291,8 +291,10 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any]:
     logic = event.get("logic_json") if isinstance(event.get("logic_json"), dict) else {}
     payload = context.get("payload") if isinstance(context.get("payload"), dict) else {}
     metrics = payload.get("metrics") if isinstance(payload.get("metrics"), dict) else {}
+    classification = context.get("classification") if isinstance(context.get("classification"), dict) else {}
     department = (
         str(context.get("target_department") or context.get("source_department") or "")
+        or str(classification.get("inferred_department") or "")
         or _department_from_event_type(str(event.get("event_type") or ""))
         or "company"
     )
@@ -304,6 +306,7 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any]:
             payload.get("text"),
             context.get("category"),
             context.get("priority"),
+            classification.get("operational_signal"),
             logic.get("impact_hint"),
             " ".join(f"{key} {value}" for key, value in metrics.items()),
         ]

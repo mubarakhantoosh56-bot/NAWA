@@ -13,6 +13,7 @@ from app.core.role_permissions import CEO_WORKSPACE_PERMISSION, OPERATIONAL_FORM
 from app.models.request import OperationalInputRequest
 from app.models.response import OperationalInputResponse
 from app.repositories.department_repository import DepartmentRepository
+from app.repositories.unified_data_capture_repository import UnifiedDataCaptureRepository
 from app.services.operational_input_service import OperationalInputService
 
 router = APIRouter(prefix="/operational-inputs", tags=["Operational Inputs"])
@@ -87,6 +88,27 @@ async def submit_operational_input(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Operational input service unavailable",
         ) from exc
+
+
+@router.get("/debug/{raw_input_id}")
+async def get_raw_input_debug(
+    raw_input_id: UUID,
+    http_request: Request,
+    auth_context: AuthContext = Depends(require_permission(CEO_WORKSPACE_PERMISSION)),
+) -> dict[str, object]:
+    """Inspect the unified data capture pipeline for one raw input."""
+    pool = await _get_pool(http_request)
+    repo = UnifiedDataCaptureRepository(pool)
+    snapshot = await repo.get_debug_snapshot(
+        company_id=UUID(auth_context.company_id),
+        raw_input_id=raw_input_id,
+    )
+    if snapshot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Raw input not found",
+        )
+    return snapshot
 
 
 async def _resolve_department_type(

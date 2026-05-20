@@ -162,6 +162,9 @@ class OperationalInputResponse(BaseModel):
     priority: str
     summary: str
     memory_event_created: bool = True
+    raw_input_id: UUID | None = None
+    structured_record_draft_id: UUID | None = None
+    classification: dict[str, Any] | None = None
 
 
 class IntegrationProviderResponse(BaseModel):

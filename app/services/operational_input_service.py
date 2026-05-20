@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from app.services.memory.repository import MemoryRepository
+from app.services.unified_data_capture import CaptureResult, UnifiedDataCaptureService
 
 
 UNIVERSAL_CATEGORIES = {
@@ -28,6 +29,7 @@ class OperationalInputService:
 
     def __init__(self, db: Any) -> None:
         self.memory_repo = MemoryRepository(db)
+        self.capture_service = UnifiedDataCaptureService(db) if _supports_capture_tables(db) else None
 
     async def submit_input(
         self,
@@ -54,7 +56,37 @@ class OperationalInputService:
         cleaned_files = _clean_files(files_attached)
         source_department = _department_key(source_department_type)
         target_department = _department_key(target_department_type)
-        scope = target_department or source_department or "company"
+        capture_result: CaptureResult | None = None
+        if self.capture_service is not None:
+            capture_result = await self.capture_service.capture(
+                company_id=company_id,
+                created_by=user_id,
+                source_type="form",
+                source_ref="universal_operational_input",
+                raw_content=_raw_input_content(
+                    text=text,
+                    metrics=cleaned_metrics,
+                    files_attached=cleaned_files,
+                    payload=cleaned_payload,
+                ),
+                department_id=target_department_id or source_department_id,
+                submitted_category=category,
+                submitted_priority=priority,
+                payload={
+                    **cleaned_payload,
+                    "source_role": source_role,
+                    "source_department_type": source_department_type,
+                    "target_department_type": target_department_type,
+                    "event_date": event_date,
+                    "files_attached": cleaned_files,
+                },
+            )
+            normalized_category = str(capture_result.classification.get("category") or normalized_category)
+            normalized_priority = str(capture_result.classification.get("priority") or normalized_priority)
+        inferred_department = None
+        if capture_result is not None:
+            inferred_department = str(capture_result.classification.get("inferred_department") or "") or None
+        scope = target_department or source_department or inferred_department or "company"
         summary = _build_summary(
             category=normalized_category,
             priority=normalized_priority,
@@ -84,37 +116,52 @@ class OperationalInputService:
             "files_attached": cleaned_files,
             "submitted_by_user_id": str(user_id),
         }
+        if capture_result is not None:
+            context.update(
+                {
+                    "raw_input_id": str(capture_result.raw_input["id"]),
+                    "structured_record_draft_id": str(capture_result.structured_draft["id"]),
+                    "classification": _json_safe(capture_result.classification),
+                    "parsed_entities": _json_safe(capture_result.entities),
+                }
+            )
         idempotency_key = _idempotency_key(company_id, user_id, context)
 
-        await self.memory_repo.insert_event(
-            {
-                "company_id": str(company_id),
-                "session_id": f"operational-{scope}",
-                "event_type": event_type,
-                "user_message": f"Universal operational update submitted for {scope}",
-                "executive_summary": summary,
-                "logic_json": {
-                    "operational_event": True,
-                    "source_role": source_role,
-                    "source_department": source_department,
-                    "target_department": target_department,
-                    "category": normalized_category,
-                    "priority": normalized_priority,
-                    "payload": context["payload"],
-                    "files_attached": cleaned_files,
-                    "impact_hint": _impact_hint(scope, normalized_category),
-                },
-                "context": context,
-                "tags": [
-                    "operational_event",
-                    scope,
-                    normalized_category,
-                    normalized_priority,
-                    source_role,
-                ],
-                "idempotency_key": idempotency_key,
-            }
-        )
+        memory_event_created = capture_result is None or capture_result.should_create_event
+        if memory_event_created:
+            await self.memory_repo.insert_event(
+                {
+                    "company_id": str(company_id),
+                    "session_id": f"operational-{scope}",
+                    "event_type": event_type,
+                    "user_message": f"Universal operational update submitted for {scope}",
+                    "executive_summary": summary,
+                    "logic_json": {
+                        "operational_event": True,
+                        "raw_input_id": context.get("raw_input_id"),
+                        "structured_record_draft_id": context.get("structured_record_draft_id"),
+                        "source_role": source_role,
+                        "source_department": source_department,
+                        "target_department": target_department,
+                        "category": normalized_category,
+                        "priority": normalized_priority,
+                        "classification": context.get("classification"),
+                        "parsed_entities": context.get("parsed_entities"),
+                        "payload": context["payload"],
+                        "files_attached": cleaned_files,
+                        "impact_hint": _impact_hint(scope, normalized_category),
+                    },
+                    "context": context,
+                    "tags": [
+                        "operational_event",
+                        scope,
+                        normalized_category,
+                        normalized_priority,
+                        source_role,
+                    ],
+                    "idempotency_key": idempotency_key,
+                }
+            )
 
         return {
             "status": "stored",
@@ -125,7 +172,10 @@ class OperationalInputService:
             "category": normalized_category,
             "priority": normalized_priority,
             "summary": summary,
-            "memory_event_created": True,
+            "memory_event_created": memory_event_created,
+            "raw_input_id": capture_result.raw_input["id"] if capture_result else None,
+            "structured_record_draft_id": capture_result.structured_draft["id"] if capture_result else None,
+            "classification": _json_safe(capture_result.classification) if capture_result else None,
         }
 
 
@@ -147,6 +197,20 @@ def _clean_files(files: list[dict[str, Any]]) -> list[dict[str, str]]:
         if file_id or filename:
             cleaned.append({"id": file_id[:80], "filename": filename[:240]})
     return cleaned[:10]
+
+
+def _raw_input_content(
+    *,
+    text: str,
+    metrics: dict[str, str],
+    files_attached: list[dict[str, str]],
+    payload: dict[str, str],
+) -> str:
+    parts = [text or ""]
+    parts.extend(f"{key}: {value}" for key, value in metrics.items())
+    parts.extend(f"file: {item.get('filename', '')}" for item in files_attached)
+    parts.extend(f"{key}: {value}" for key, value in payload.items())
+    return "\n".join(part for part in parts if str(part).strip())
 
 
 def _build_summary(
@@ -200,3 +264,19 @@ def _idempotency_key(company_id: UUID, user_id: UUID, context: dict[str, Any]) -
     raw = json.dumps(context, sort_keys=True, ensure_ascii=False)
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
     return f"operational:{company_id}:{user_id}:{day}:{digest}"
+
+
+def _supports_capture_tables(db: Any) -> bool:
+    return hasattr(db, "fetchrow")
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    return value

@@ -131,6 +131,7 @@ def build_decision_context(
     risks = _build_risks(department_key, profile)
     related_departments = FMCG_RELATIONSHIPS.get(department_key, FMCG_RELATIONSHIPS["ceo"])
     operational_events = _compact_operational_events(memory_events or [])
+    unified_capture_context = _compact_unified_capture_context(memory_events or [])
     root_cause_reasoning = build_root_cause_reasoning(
         department_key=department_key,
         detected_patterns=detected_patterns,
@@ -148,6 +149,9 @@ def build_decision_context(
         "related_departments": related_departments,
         "operational_risks": risks[:6],
         "memory_events": _compact_memory_events(memory_events or []),
+        "raw_input_summaries": unified_capture_context["raw_input_summaries"],
+        "parsed_entities": unified_capture_context["parsed_entities"],
+        "structured_drafts": unified_capture_context["structured_drafts"],
         "operational_events": operational_events,
         "detected_patterns": detected_patterns,
         "root_cause_reasoning": root_cause_reasoning,
@@ -176,6 +180,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "5) Keep it concise: use the existing response headings, but make every bullet operational and evidence-aware.",
             "RULES:",
             "- Use this context before generating the recommendation; do not mention the Decision Context Engine by name.",
+            "- Treat raw_input_summaries, parsed_entities, and structured_drafts as first-capture operational evidence that may explain the event trail.",
             "- Identify the likely root cause, the cross-department dependency, and the operational impact.",
             "- Use root_cause_reasoning as the operating narrative spine: what happened, why it happened, affected departments, operational impact, business risk, executive action.",
             "- Give extra weight to operational_events because they came from submitted daily forms.",
@@ -383,19 +388,66 @@ def _compact_operational_events(events: list[dict[str, Any]]) -> list[dict[str, 
             continue
         summary = str(event.get("executive_summary") or event.get("user_message") or "").strip()
         context = event.get("context") if isinstance(event.get("context"), dict) else {}
+        classification = context.get("classification") if isinstance(context.get("classification"), dict) else {}
         if summary:
             compact.append(
                 {
                     "event_type": event_type,
                     "summary": summary[:260],
                     "source_role": str(context.get("source_role") or ""),
-                    "source_department": str(context.get("source_department") or ""),
-                    "target_department": str(context.get("target_department") or ""),
+                    "source_department": str(context.get("source_department") or classification.get("inferred_department") or ""),
+                    "target_department": str(context.get("target_department") or classification.get("inferred_department") or ""),
                     "category": str(context.get("category") or ""),
                     "priority": str(context.get("priority") or ""),
                 }
             )
     return compact[:5]
+
+
+def _compact_unified_capture_context(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    raw_input_summaries: list[dict[str, Any]] = []
+    parsed_entities: list[dict[str, Any]] = []
+    structured_drafts: list[dict[str, Any]] = []
+
+    for event in events[:10]:
+        context = event.get("context") if isinstance(event.get("context"), dict) else {}
+        raw_input_id = context.get("raw_input_id")
+        if raw_input_id:
+            raw_input_summaries.append(
+                {
+                    "raw_input_id": str(raw_input_id),
+                    "summary": str(event.get("executive_summary") or event.get("user_message") or "").strip()[:240],
+                    "classification": context.get("classification") if isinstance(context.get("classification"), dict) else {},
+                }
+            )
+        entities = context.get("parsed_entities") if isinstance(context.get("parsed_entities"), list) else []
+        for entity in entities[:8]:
+            if not isinstance(entity, dict):
+                continue
+            parsed_entities.append(
+                {
+                    "raw_input_id": str(raw_input_id or entity.get("raw_input_id") or ""),
+                    "entity_type": str(entity.get("entity_type") or ""),
+                    "entity_value": str(entity.get("entity_value") or "")[:120],
+                    "confidence": entity.get("confidence"),
+                }
+            )
+        draft_id = context.get("structured_record_draft_id")
+        if draft_id:
+            structured_drafts.append(
+                {
+                    "structured_record_draft_id": str(draft_id),
+                    "raw_input_id": str(raw_input_id or ""),
+                    "category": str(context.get("category") or ""),
+                    "priority": str(context.get("priority") or ""),
+                }
+            )
+
+    return {
+        "raw_input_summaries": raw_input_summaries[:5],
+        "parsed_entities": parsed_entities[:20],
+        "structured_drafts": structured_drafts[:5],
+    }
 
 
 def _uploaded_file_summaries(context: dict[str, Any], rag_knowledge_available: bool) -> list[str]:

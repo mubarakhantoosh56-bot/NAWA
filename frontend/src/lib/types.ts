@@ -143,4 +143,7 @@ export type OperationalInputResponse = {
   priority: string;
   summary: string;
   memory_event_created: boolean;
+  raw_input_id?: string | null;
+  structured_record_draft_id?: string | null;
+  classification?: Record<string, unknown> | null;
 };
