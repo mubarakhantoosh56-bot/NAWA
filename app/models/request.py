@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -80,3 +81,20 @@ class OperationalInputRequest(BaseModel):
     metrics: dict[str, Any] = Field(default_factory=dict)
     files_attached: list[dict[str, Any]] = Field(default_factory=list)
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalEventCreateRequest(BaseModel):
+    """Request body for creating one Live Operational Timeline event."""
+
+    company_id: str | None = None
+    department_id: str | None = None
+    event_type: str = "operational.manual"
+    category: str = "daily_update"
+    priority: str = "normal"
+    title: str
+    summary: str
+    event_timestamp: datetime | None = None
+    source_type: str = "manual"
+    source_ref: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)

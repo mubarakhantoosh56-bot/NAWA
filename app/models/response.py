@@ -167,6 +167,33 @@ class OperationalInputResponse(BaseModel):
     classification: dict[str, Any] | None = None
 
 
+class OperationalEventResponse(BaseModel):
+    """Safe operational event returned by the Live Operational Timeline."""
+
+    id: UUID
+    company_id: UUID
+    department_id: UUID | None = None
+    created_by_user_id: UUID
+    event_type: str
+    category: str
+    priority: str
+    title: str
+    summary: str
+    event_timestamp: datetime
+    source_type: str
+    source_ref: str | None = None
+    payload: dict[str, Any]
+    metadata: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class OperationalEventListResponse(BaseModel):
+    """List response for the Live Operational Timeline."""
+
+    events: list[OperationalEventResponse]
+
+
 class IntegrationProviderResponse(BaseModel):
     """MVP integration provider capability descriptor."""
 
