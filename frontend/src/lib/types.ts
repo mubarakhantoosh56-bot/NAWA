@@ -187,3 +187,25 @@ export type OperationalEvent = {
 export type OperationalEventListResponse = {
   events: OperationalEvent[];
 };
+
+export type OperationalSituation = {
+  id: string;
+  company_id: string;
+  title: string;
+  summary: string;
+  situation_type: string;
+  severity: string;
+  status: string;
+  time_window_start: string;
+  time_window_end: string;
+  department_id: string | null;
+  detection_method: string;
+  source_type: string;
+  event_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OperationalSituationListResponse = {
+  situations: OperationalSituation[];
+};

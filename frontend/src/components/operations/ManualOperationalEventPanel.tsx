@@ -95,6 +95,7 @@ export function ManualOperationalEventPanel({
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [recentEvents, setRecentEvents] = useState<OperationalEvent[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "saved" | "error">("idle");
+  const [isOpen, setIsOpen] = useState(false);
 
   const template = templates[templateKey];
   const disabled = !canSubmit || status === "saving";
@@ -198,7 +199,11 @@ export function ManualOperationalEventPanel({
 
   return (
     <section className="panel p-4">
-      <div className="flex flex-col justify-between gap-3 border-b border-line pb-3 sm:flex-row sm:items-start">
+      <button
+        className="flex w-full flex-col justify-between gap-3 text-left sm:flex-row sm:items-start"
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+      >
         <div>
           <div className="executive-label">Dairtna Poultry</div>
           <h2 className="mt-1 text-base font-semibold text-ink">Advanced structured entry</h2>
@@ -207,11 +212,12 @@ export function ManualOperationalEventPanel({
           </p>
         </div>
         <span className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">
-          manual_form
+          {isOpen ? "Hide" : "Open"}
         </span>
-      </div>
+      </button>
 
-      <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+      {isOpen ? (
+      <form className="mt-4 space-y-4 border-t border-line pt-4" onSubmit={handleSubmit}>
         <div className="grid gap-3 md:grid-cols-4">
           <label className="space-y-1.5 md:col-span-2">
             <span className="text-xs font-semibold uppercase text-muted">Report type</span>
@@ -316,7 +322,9 @@ export function ManualOperationalEventPanel({
           </button>
         </div>
       </form>
+      ) : null}
 
+      {isOpen ? (
       <div className="mt-4 border-t border-line pt-3">
         <div className="text-xs font-semibold uppercase text-muted">Recent Dairtna timeline entries</div>
         <div className="mt-2 space-y-2">
@@ -337,6 +345,7 @@ export function ManualOperationalEventPanel({
           )}
         </div>
       </div>
+      ) : null}
     </section>
   );
 }

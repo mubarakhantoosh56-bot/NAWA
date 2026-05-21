@@ -9,6 +9,7 @@ import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { ManualOperationalEventPanel } from "@/components/operations/ManualOperationalEventPanel";
 import { NaturalOperationalCapturePanel } from "@/components/operations/NaturalOperationalCapturePanel";
+import { OperationalAwarenessPanel } from "@/components/operations/OperationalAwarenessPanel";
 import { OperationalInputPanel } from "@/components/operations/OperationalInputPanel";
 import { ApiError } from "@/lib/api/client";
 import { getCompanyIntelligenceProfile, updateCompanyIntelligenceProfile } from "@/lib/api/company-profile";
@@ -306,6 +307,7 @@ export function WorkspaceShell() {
   const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "ceo" });
   const [companyProfile, setCompanyProfile] = useState<CompanyIntelligenceProfile>(emptyCompanyProfile);
   const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [awarenessRefreshKey, setAwarenessRefreshKey] = useState(0);
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
   const canReadFiles = hasPermission(permissions, "files.read");
@@ -380,6 +382,13 @@ export function WorkspaceShell() {
   const activeDepartment = useMemo(
     () => resolveWorkspaceDepartment(activeWorkspace, displayDepartments, permissions),
     [activeWorkspace, displayDepartments, permissions],
+  );
+  const naturalCaptureDepartment = useMemo(
+    () =>
+      activeDepartment && departments.some((department) => department.id === activeDepartment.id)
+        ? activeDepartment
+        : null,
+    [activeDepartment, departments],
   );
   const activeWorkspaceKey = getWorkspaceKey(activeWorkspace, activeDepartment);
   const chatTitle = localizeWorkspaceText(activeConfig.title, language);
@@ -466,10 +475,12 @@ export function WorkspaceShell() {
                 <>
                   <NaturalOperationalCapturePanel
                     token={token || ""}
-                    departments={displayDepartments}
-                    defaultDepartment={activeDepartment}
+                    departments={departments}
+                    defaultDepartment={naturalCaptureDepartment}
                     canSubmit={canSubmitInWorkspace}
+                    onCaptured={() => setAwarenessRefreshKey((current) => current + 1)}
                   />
+                  <OperationalAwarenessPanel token={token || ""} refreshKey={awarenessRefreshKey} />
                   <ManualOperationalEventPanel
                     token={token || ""}
                     departments={displayDepartments}
