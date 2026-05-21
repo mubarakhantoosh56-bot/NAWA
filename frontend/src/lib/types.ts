@@ -147,3 +147,43 @@ export type OperationalInputResponse = {
   structured_record_draft_id?: string | null;
   classification?: Record<string, unknown> | null;
 };
+
+export type OperationalEventPriority = "low" | "normal" | "watch" | "high" | "critical";
+
+export type OperationalEventCreateRequest = {
+  company_id?: string | null;
+  department_id?: string | null;
+  event_type: string;
+  category: string;
+  priority: OperationalEventPriority;
+  title: string;
+  summary: string;
+  event_timestamp?: string | null;
+  source_type: string;
+  source_ref?: string | null;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+};
+
+export type OperationalEvent = {
+  id: string;
+  company_id: string;
+  department_id: string | null;
+  created_by_user_id: string;
+  event_type: string;
+  category: string;
+  priority: OperationalEventPriority;
+  title: string;
+  summary: string;
+  event_timestamp: string;
+  source_type: string;
+  source_ref: string | null;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OperationalEventListResponse = {
+  events: OperationalEvent[];
+};
