@@ -201,9 +201,9 @@ export function ManualOperationalEventPanel({
       <div className="flex flex-col justify-between gap-3 border-b border-line pb-3 sm:flex-row sm:items-start">
         <div>
           <div className="executive-label">Dairtna Poultry</div>
-          <h2 className="mt-1 text-base font-semibold text-ink">Manual Timeline Entry</h2>
+          <h2 className="mt-1 text-base font-semibold text-ink">Advanced structured entry</h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Capture field reports directly into the operational timeline. No AI, automation, or situation grouping runs from this form.
+            Use this when you already know the report type and structured details. No AI, automation, or situation grouping runs from this form.
           </p>
         </div>
         <span className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">

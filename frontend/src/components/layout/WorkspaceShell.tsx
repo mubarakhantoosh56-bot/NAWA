@@ -8,6 +8,7 @@ import { FilesPanel } from "@/components/files/FilesPanel";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { ManualOperationalEventPanel } from "@/components/operations/ManualOperationalEventPanel";
+import { NaturalOperationalCapturePanel } from "@/components/operations/NaturalOperationalCapturePanel";
 import { OperationalInputPanel } from "@/components/operations/OperationalInputPanel";
 import { ApiError } from "@/lib/api/client";
 import { getCompanyIntelligenceProfile, updateCompanyIntelligenceProfile } from "@/lib/api/company-profile";
@@ -462,12 +463,20 @@ export function WorkspaceShell() {
               ) : null}
 
               {activeWorkspace.kind === "division" && activeWorkspace.divisionKey === "dairtna" ? (
-                <ManualOperationalEventPanel
-                  token={token || ""}
-                  departments={displayDepartments}
-                  defaultDepartment={activeDepartment}
-                  canSubmit={canSubmitInWorkspace}
-                />
+                <>
+                  <NaturalOperationalCapturePanel
+                    token={token || ""}
+                    departments={displayDepartments}
+                    defaultDepartment={activeDepartment}
+                    canSubmit={canSubmitInWorkspace}
+                  />
+                  <ManualOperationalEventPanel
+                    token={token || ""}
+                    departments={displayDepartments}
+                    defaultDepartment={activeDepartment}
+                    canSubmit={canSubmitInWorkspace}
+                  />
+                </>
               ) : null}
 
               <OperationalInputPanel
