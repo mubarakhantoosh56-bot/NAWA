@@ -194,6 +194,49 @@ class OperationalEventListResponse(BaseModel):
     events: list[OperationalEventResponse]
 
 
+class OperationalSituationResponse(BaseModel):
+    """Safe operational situation returned by the feedback loop."""
+
+    id: UUID
+    company_id: UUID
+    title: str
+    summary: str
+    situation_type: str
+    severity: str
+    status: str
+    time_window_start: datetime
+    time_window_end: datetime
+    department_id: UUID | None = None
+    detection_method: str
+    source_type: str
+    event_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class OperationalSituationListResponse(BaseModel):
+    """List response for operational situations."""
+
+    situations: list[OperationalSituationResponse]
+
+
+class OperationalSituationDetailResponse(OperationalSituationResponse):
+    """Detailed operational situation with linked timeline events."""
+
+    events: list[OperationalEventResponse]
+
+
+class OperationalSituationGroupResponse(BaseModel):
+    """Response returned after manual rule-based situation grouping."""
+
+    created_situations: list[OperationalSituationResponse]
+    created_count: int
+    duplicate_clusters_skipped: int
+    analyzed_event_count: int
+    window_start: datetime
+    window_end: datetime
+
+
 class IntegrationProviderResponse(BaseModel):
     """MVP integration provider capability descriptor."""
 
