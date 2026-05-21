@@ -1,6 +1,6 @@
--- AIMX pgvector foundation for semantic RAG retrieval.
+-- NAWA pgvector foundation for semantic RAG retrieval.
 -- Depends on:
--- - 004_rag_foundation_files.sql
+-- - 005_rag_foundation_files.sql
 
 CREATE EXTENSION IF NOT EXISTS vector;
 

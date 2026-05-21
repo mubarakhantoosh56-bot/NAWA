@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: nawa-backend
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python scripts/migrate.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: ENVIRONMENT
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEMO_OWNER_PASSWORD
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: EMBEDDING_DIMENSIONS
+        value: "1536"
+      - key: RAG_RETRIEVAL_MODE
+        value: semantic

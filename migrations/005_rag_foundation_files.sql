@@ -1,6 +1,4 @@
--- AIMX RAG foundation files schema draft.
--- Review-only migration: do not execute until approved.
---
+-- NAWA RAG foundation files schema.
 -- Depends on:
 -- - 001_saas_foundation_schema.sql
 
