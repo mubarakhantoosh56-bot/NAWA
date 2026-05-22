@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { createOperationalEvent, listOperationalEvents } from "@/lib/api/operational-events";
 import type {
   Department,
@@ -20,61 +21,61 @@ type ManualOperationalEventPanelProps = {
 type TemplateKey = "mortality_report" | "feed_issue" | "veterinary_issue";
 
 type TemplateConfig = {
-  label: string;
+  labelKey: string;
   eventType: string;
   category: string;
   defaultPriority: OperationalEventPriority;
-  title: string;
-  summaryPlaceholder: string;
+  titleKey: string;
+  summaryPlaceholderKey: string;
   fields: Array<{
     key: string;
-    label: string;
-    placeholder: string;
+    labelKey: string;
+    placeholderKey: string;
     required?: boolean;
   }>;
 };
 
 const templates: Record<TemplateKey, TemplateConfig> = {
   mortality_report: {
-    label: "Mortality Report",
+    labelKey: "operations.manual.templates.mortality_report.label",
     eventType: "operational.dairtna.mortality",
     category: "mortality",
     defaultPriority: "critical",
-    title: "Mortality Report",
-    summaryPlaceholder: "Example: Hall 4 reported increased mortality during the morning check.",
+    titleKey: "operations.manual.templates.mortality_report.title",
+    summaryPlaceholderKey: "operations.manual.templates.mortality_report.placeholder",
     fields: [
-      { key: "hall", label: "Hall", placeholder: "Hall 4", required: true },
-      { key: "mortality_count", label: "Mortality count", placeholder: "42", required: true },
-      { key: "flock_age", label: "Flock age", placeholder: "31 days" },
-      { key: "observed_symptoms", label: "Observed symptoms", placeholder: "Low movement, respiratory signs" },
+      { key: "hall", labelKey: "operations.manual.templates.mortality_report.hall", placeholderKey: "operations.manual.templates.mortality_report.hallPlaceholder", required: true },
+      { key: "mortality_count", labelKey: "operations.manual.templates.mortality_report.mortalityCount", placeholderKey: "operations.manual.templates.mortality_report.mortalityCountPlaceholder", required: true },
+      { key: "flock_age", labelKey: "operations.manual.templates.mortality_report.flockAge", placeholderKey: "operations.manual.templates.mortality_report.flockAgePlaceholder" },
+      { key: "observed_symptoms", labelKey: "operations.manual.templates.mortality_report.observedSymptoms", placeholderKey: "operations.manual.templates.mortality_report.observedSymptomsPlaceholder" },
     ],
   },
   feed_issue: {
-    label: "Feed Shortage / Consumption Issue",
+    labelKey: "operations.manual.templates.feed_issue.label",
     eventType: "operational.dairtna.feed_shortage",
     category: "feed_shortage",
     defaultPriority: "high",
-    title: "Feed Shortage",
-    summaryPlaceholder: "Example: Feed delivery delay may affect Hall 2 and Hall 3 evening ration.",
+    titleKey: "operations.manual.templates.feed_issue.title",
+    summaryPlaceholderKey: "operations.manual.templates.feed_issue.placeholder",
     fields: [
-      { key: "hall_or_area", label: "Hall or area", placeholder: "Hall 2 / silo area", required: true },
-      { key: "feed_type", label: "Feed type", placeholder: "Starter / grower / layer" },
-      { key: "available_quantity", label: "Available quantity", placeholder: "1.5 tons" },
-      { key: "expected_impact", label: "Expected impact", placeholder: "Evening ration at risk" },
+      { key: "hall_or_area", labelKey: "operations.manual.templates.feed_issue.hallOrArea", placeholderKey: "operations.manual.templates.feed_issue.hallOrAreaPlaceholder", required: true },
+      { key: "feed_type", labelKey: "operations.manual.templates.feed_issue.feedType", placeholderKey: "operations.manual.templates.feed_issue.feedTypePlaceholder" },
+      { key: "available_quantity", labelKey: "operations.manual.templates.feed_issue.availableQuantity", placeholderKey: "operations.manual.templates.feed_issue.availableQuantityPlaceholder" },
+      { key: "expected_impact", labelKey: "operations.manual.templates.feed_issue.expectedImpact", placeholderKey: "operations.manual.templates.feed_issue.expectedImpactPlaceholder" },
     ],
   },
   veterinary_issue: {
-    label: "Medicine Delay / Veterinary Issue",
+    labelKey: "operations.manual.templates.veterinary_issue.label",
     eventType: "operational.dairtna.medicine_delay",
     category: "medicine_delay",
     defaultPriority: "high",
-    title: "Medicine Delay",
-    summaryPlaceholder: "Example: Requested medication has not arrived; veterinary follow-up is pending.",
+    titleKey: "operations.manual.templates.veterinary_issue.title",
+    summaryPlaceholderKey: "operations.manual.templates.veterinary_issue.placeholder",
     fields: [
-      { key: "hall", label: "Hall", placeholder: "Hall 5", required: true },
-      { key: "medicine_or_issue", label: "Medicine or issue", placeholder: "Antibiotic / vaccine / symptoms", required: true },
-      { key: "requested_date", label: "Requested date", placeholder: "2026-05-21" },
-      { key: "veterinary_owner", label: "Veterinary owner", placeholder: "Dr. name or team" },
+      { key: "hall", labelKey: "operations.manual.templates.veterinary_issue.hall", placeholderKey: "operations.manual.templates.veterinary_issue.hallPlaceholder", required: true },
+      { key: "medicine_or_issue", labelKey: "operations.manual.templates.veterinary_issue.medicineOrIssue", placeholderKey: "operations.manual.templates.veterinary_issue.medicineOrIssuePlaceholder", required: true },
+      { key: "requested_date", labelKey: "operations.manual.templates.veterinary_issue.requestedDate", placeholderKey: "operations.manual.templates.veterinary_issue.requestedDatePlaceholder" },
+      { key: "veterinary_owner", labelKey: "operations.manual.templates.veterinary_issue.veterinaryOwner", placeholderKey: "operations.manual.templates.veterinary_issue.veterinaryOwnerPlaceholder" },
     ],
   },
 };
@@ -87,6 +88,7 @@ export function ManualOperationalEventPanel({
   defaultDepartment,
   canSubmit,
 }: ManualOperationalEventPanelProps) {
+  const { t } = useLanguage();
   const [templateKey, setTemplateKey] = useState<TemplateKey>("mortality_report");
   const [departmentId, setDepartmentId] = useState(defaultDepartment?.id ?? "");
   const [priority, setPriority] = useState<OperationalEventPriority>(templates.mortality_report.defaultPriority);
@@ -166,7 +168,7 @@ export function ManualOperationalEventPanel({
       event_type: template.eventType,
       category: template.category,
       priority,
-      title: template.title,
+      title: t(template.titleKey),
       summary: summary.trim(),
       event_timestamp: timestamp,
       source_type: "manual_form",
@@ -205,14 +207,14 @@ export function ManualOperationalEventPanel({
         onClick={() => setIsOpen((current) => !current)}
       >
         <div>
-          <div className="executive-label">Dairtna Poultry</div>
-          <h2 className="mt-1 text-base font-semibold text-ink">Advanced structured entry</h2>
+          <div className="executive-label">{t("operations.manual.label")}</div>
+          <h2 className="mt-1 text-base font-semibold text-ink">{t("operations.manual.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Use this when you already know the report type and structured details. No AI, automation, or situation grouping runs from this form.
+            {t("operations.manual.description")}
           </p>
         </div>
         <span className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">
-          {isOpen ? "Hide" : "Open"}
+          {isOpen ? t("operations.manual.hide") : t("operations.manual.show")}
         </span>
       </button>
 
@@ -220,7 +222,7 @@ export function ManualOperationalEventPanel({
       <form className="mt-4 space-y-4 border-t border-line pt-4" onSubmit={handleSubmit}>
         <div className="grid gap-3 md:grid-cols-4">
           <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold uppercase text-muted">Report type</span>
+            <span className="text-xs font-semibold uppercase text-muted">{t("operations.manual.reportType")}</span>
             <select
               className="input"
               disabled={disabled}
@@ -229,13 +231,13 @@ export function ManualOperationalEventPanel({
             >
               {Object.entries(templates).map(([key, item]) => (
                 <option key={key} value={key}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </option>
               ))}
             </select>
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase text-muted">Priority</span>
+            <span className="text-xs font-semibold uppercase text-muted">{t("operations.manual.priority")}</span>
             <select
               className="input"
               disabled={disabled}
@@ -250,7 +252,7 @@ export function ManualOperationalEventPanel({
             </select>
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase text-muted">Event time</span>
+            <span className="text-xs font-semibold uppercase text-muted">{t("operations.manual.eventTime")}</span>
             <input
               className="input"
               disabled={disabled}
@@ -262,14 +264,14 @@ export function ManualOperationalEventPanel({
         </div>
 
         <label className="space-y-1.5">
-          <span className="text-xs font-semibold uppercase text-muted">Department</span>
+          <span className="text-xs font-semibold uppercase text-muted">{t("operations.manual.department")}</span>
           <select
             className="input"
             disabled={disabled || departments.length === 0}
             value={departmentId}
             onChange={(event) => setDepartmentId(event.target.value)}
           >
-            <option value="">Company-wide Dairtna timeline</option>
+            <option value="">{t("operations.manual.companyWideTimeline")}</option>
             {departments.map((department) => (
               <option key={department.id} value={department.id}>
                 {department.name}
@@ -282,13 +284,13 @@ export function ManualOperationalEventPanel({
           {template.fields.map((field) => (
             <label key={field.key} className="space-y-1.5">
               <span className="text-xs font-semibold uppercase text-muted">
-                {field.label}
+                {t(field.labelKey)}
                 {field.required ? " *" : ""}
               </span>
               <input
                 className="input"
                 disabled={disabled}
-                placeholder={field.placeholder}
+                placeholder={t(field.placeholderKey)}
                 value={fieldValues[field.key] || ""}
                 onChange={(event) => updateField(field.key, event.target.value)}
               />
@@ -297,11 +299,11 @@ export function ManualOperationalEventPanel({
         </div>
 
         <label className="block space-y-1.5">
-          <span className="text-xs font-semibold uppercase text-muted">Field summary *</span>
+          <span className="text-xs font-semibold uppercase text-muted">{t("operations.manual.fieldSummary")}</span>
           <textarea
             className="input min-h-24 resize-none leading-6"
             disabled={disabled}
-            placeholder={template.summaryPlaceholder}
+            placeholder={t(template.summaryPlaceholderKey)}
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
           />
@@ -310,15 +312,15 @@ export function ManualOperationalEventPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted">
             {!canSubmit
-              ? "Your current role cannot submit operational forms."
+              ? t("operations.manual.restricted")
               : status === "saved"
-                ? "Timeline event saved."
+                ? t("operations.manual.saved")
                 : status === "error"
-                  ? "Unable to save timeline event."
-                  : "Required fields are intentionally minimal for field use."}
+                  ? t("operations.manual.error")
+                  : t("operations.manual.hint")}
           </div>
           <button className="button-primary sm:w-40" type="submit" disabled={disabled || requiredMissing}>
-            {status === "saving" ? "Saving..." : "Save to timeline"}
+            {status === "saving" ? t("operations.manual.saving") : t("operations.manual.submit")}
           </button>
         </div>
       </form>
@@ -326,11 +328,11 @@ export function ManualOperationalEventPanel({
 
       {isOpen ? (
       <div className="mt-4 border-t border-line pt-3">
-        <div className="text-xs font-semibold uppercase text-muted">Recent Dairtna timeline entries</div>
+        <div className="text-xs font-semibold uppercase text-muted">{t("operations.manual.recentEntries")}</div>
         <div className="mt-2 space-y-2">
           {recentEvents.length === 0 ? (
             <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
-              No timeline entries loaded in this session.
+              {t("operations.manual.noRecent")}
             </div>
           ) : (
             recentEvents.map((event) => (

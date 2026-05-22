@@ -11,10 +11,10 @@ import {
 } from "react";
 
 import {
-  dictionaries,
   directionFor,
   isLanguage,
   LANGUAGE_STORAGE_KEY,
+  translate,
   type Language,
   type TranslationKey,
 } from "@/lib/i18n";
@@ -55,7 +55,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       language,
       direction: directionFor(language),
       setLanguage,
-      t: (key) => dictionaries[language][key],
+      t: (key) => translate(language, key),
     }),
     [language, setLanguage],
   );

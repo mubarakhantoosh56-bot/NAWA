@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { ApiError } from "@/lib/api/client";
 import { createOperationalEvent } from "@/lib/api/operational-events";
 import type {
@@ -27,6 +28,7 @@ export function NaturalOperationalCapturePanel({
   canSubmit,
   onCaptured,
 }: NaturalOperationalCapturePanelProps) {
+  const { t } = useLanguage();
   const [note, setNote] = useState("");
   const [priority, setPriority] = useState<OperationalEventPriority>("normal");
   const [departmentId, setDepartmentId] = useState(defaultDepartment?.id ?? "");
@@ -83,7 +85,7 @@ export function NaturalOperationalCapturePanel({
       setStatus("saved");
       onCaptured?.();
     } catch (caught) {
-      setErrorDetail(caught instanceof ApiError ? caught.detail : "Unable to send this note.");
+      setErrorDetail(caught instanceof ApiError ? caught.detail : t("operations.natural.error"));
       setStatus("error");
     }
   }
@@ -92,14 +94,14 @@ export function NaturalOperationalCapturePanel({
     <section className="panel p-4">
       <div className="flex flex-col justify-between gap-3 border-b border-line pb-3 sm:flex-row sm:items-start">
         <div>
-          <div className="executive-label">Dairtna Poultry</div>
-          <h2 className="mt-1 text-lg font-semibold text-ink">What happened today?</h2>
+          <div className="executive-label">{t("operations.dairtnaPoultry")}</div>
+          <h2 className="mt-1 text-lg font-semibold text-ink">{t("operations.natural.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Write the field update in plain language. NAWA stores it in the operational timeline for later review and classification.
+            {t("operations.natural.description")}
           </p>
         </div>
         <span className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">
-          natural_capture
+          {t("operations.natural.badge")}
         </span>
       </div>
 
@@ -108,7 +110,7 @@ export function NaturalOperationalCapturePanel({
           <textarea
             className="input min-h-40 resize-none leading-6"
             disabled={disabled}
-            placeholder="Example: Hall 4 had unusual mortality today. The team noticed lower movement and asked veterinary to check before evening."
+            placeholder={t("operations.natural.placeholder")}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
@@ -120,13 +122,13 @@ export function NaturalOperationalCapturePanel({
             type="button"
             onClick={() => setAdvancedOpen((current) => !current)}
           >
-            <span>Advanced details</span>
-            <span className="text-xs text-muted">{advancedOpen ? "Hide" : "Optional"}</span>
+            <span>{t("operations.natural.advancedDetails")}</span>
+            <span className="text-xs text-muted">{advancedOpen ? t("common.hide") : t("common.optional")}</span>
           </button>
           {advancedOpen ? (
             <div className="grid gap-3 border-t border-line p-3 md:grid-cols-3">
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase text-muted">Priority</span>
+                <span className="text-xs font-semibold uppercase text-muted">{t("operations.natural.priority")}</span>
                 <select
                   className="input"
                   disabled={disabled}
@@ -143,19 +145,19 @@ export function NaturalOperationalCapturePanel({
 
               {hasSingleDepartmentScope ? (
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase text-muted">Department context</span>
-                  <div className="input bg-white text-muted">{selectedDepartment?.name ?? "Dairtna Poultry"}</div>
+                  <span className="text-xs font-semibold uppercase text-muted">{t("operations.natural.departmentContext")}</span>
+                  <div className="input bg-white text-muted">{selectedDepartment?.name ?? t("operations.dairtnaPoultry")}</div>
                 </div>
               ) : (
                 <label className="space-y-1.5">
-                  <span className="text-xs font-semibold uppercase text-muted">Optional department context</span>
+                  <span className="text-xs font-semibold uppercase text-muted">{t("operations.natural.optionalDepartmentContext")}</span>
                   <select
                     className="input"
                     disabled={disabled || departments.length === 0}
                     value={departmentId}
                     onChange={(event) => setDepartmentId(event.target.value)}
                   >
-                    <option value="">No department selected</option>
+                    <option value="">{t("operations.natural.noDepartmentSelected")}</option>
                     {departments.map((department) => (
                       <option key={department.id} value={department.id}>
                         {department.name}
@@ -166,8 +168,8 @@ export function NaturalOperationalCapturePanel({
               )}
 
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase text-muted">Attachment</span>
-                <div className="input bg-white text-muted">Attachment placeholder</div>
+                <span className="text-xs font-semibold uppercase text-muted">{t("operations.natural.attachment")}</span>
+                <div className="input bg-white text-muted">{t("operations.natural.attachmentPlaceholder")}</div>
               </div>
             </div>
           ) : null}
@@ -176,15 +178,15 @@ export function NaturalOperationalCapturePanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted">
             {!canSubmit
-              ? "Your current role cannot submit operational forms."
+              ? t("operations.natural.restricted")
               : status === "saved"
-                ? "Sent to the operational timeline."
+                ? t("operations.natural.saved")
                 : status === "error"
-                  ? errorDetail || "Unable to send this note."
-                  : "NAWA will store this as a natural operational note."}
+                  ? errorDetail || t("operations.natural.error")
+                  : t("operations.natural.hint")}
           </div>
           <button className="button-primary sm:w-36" type="submit" disabled={disabled || !note.trim()}>
-            {status === "saving" ? "Sending..." : "Send to NAWA"}
+            {status === "saving" ? t("operations.natural.sending") : t("operations.natural.submit")}
           </button>
         </div>
       </form>

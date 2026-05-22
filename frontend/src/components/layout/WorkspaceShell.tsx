@@ -18,7 +18,7 @@ import {
   DEMO_COMPANY,
   DEMO_DEPARTMENTS,
 } from "@/lib/demo-data";
-import type { Language } from "@/lib/i18n";
+import { translate, type Language } from "@/lib/i18n";
 import type { CompanyIntelligenceProfile, Department } from "@/lib/types";
 
 type ActiveWorkspace =
@@ -409,7 +409,7 @@ export function WorkspaceShell() {
               N
             </div>
             <div>
-              <div className="text-sm font-semibold tracking-wide text-white">Jannat Al-Firdaws</div>
+              <div className="text-sm font-semibold tracking-wide text-white">{t("workspaceShell.companyName")}</div>
               <div className="text-xs text-white/60">{t("aiWorkforcePlatform")}</div>
             </div>
           </div>
@@ -545,9 +545,9 @@ function BrainSidebar({
   return (
     <aside className="command-panel h-fit p-3 xl:sticky xl:top-4">
       <div className="px-2 pb-3">
-        <div className="text-xs font-semibold uppercase text-white/55">Company</div>
-        <div className="mt-1 text-base font-semibold text-white">Jannat Al-Firdaws</div>
-        <div className="mt-1 text-xs leading-5 text-white/55">Company Brain + Operational Intelligence</div>
+        <div className="text-xs font-semibold uppercase text-white/55">{t("workspaceShell.company")}</div>
+        <div className="mt-1 text-base font-semibold text-white">{t("workspaceShell.companyName")}</div>
+        <div className="mt-1 text-xs leading-5 text-white/55">{t("workspaceShell.companyBrainOperationalIntelligence")}</div>
       </div>
 
       <nav className="space-y-1">
@@ -612,7 +612,7 @@ function BrainSidebar({
           <span className={companyProfileActive ? "text-gold" : "text-white/60"}>
             {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
           </span>
-          <span className="block">ERP is one source. NAWA remains the company brain.</span>
+          <span className="block">{t("workspaceShell.erpOneSource")}</span>
         </div>
       </div>
     </aside>
@@ -646,7 +646,7 @@ function CompanyBrainHeader({
             <span className="mt-1 block font-medium text-white">{localizeWorkspaceText(config.scope, language)}</span>
           </div>
           <div className="rounded-md border border-white/10 bg-white/10 px-3 py-2">
-            <span className="block text-white/45">Context</span>
+            <span className="block text-white/45">{t("workspaceShell.context")}</span>
             <span className="mt-1 block font-medium text-white">
               {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
             </span>
@@ -676,7 +676,7 @@ function IntelligencePanel({
   return (
     <section className="panel overflow-hidden">
       <div className="border-b border-line bg-white px-4 py-3">
-        <div className="executive-label">Live Company Intelligence</div>
+        <div className="executive-label">{t("workspaceShell.liveCompanyIntelligence")}</div>
         <h2 className="mt-1 text-base font-semibold text-ink">{localizeWorkspaceText(config.title, language)}</h2>
       </div>
       <div className="space-y-4 bg-white p-4">
@@ -718,9 +718,10 @@ function IntelligencePanel({
 
         <div className="rounded-md border border-line bg-surface p-3 text-xs leading-5 text-muted">
           <span className="font-semibold text-ink">{t("companyContextActive")}: </span>
-          {companyProfileActive ? "Connected to decision context." : "Add profile data in Settings."}
+          {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
           <span className="mt-1 block">
-            Workspace mode: {activeWorkspace.kind === "settings" ? "Settings" : "Company Brain"}
+            {t("workspaceShell.modeLabel")}:{" "}
+            {activeWorkspace.kind === "settings" ? t("workspaceShell.modeSettings") : t("workspaceShell.modeCompanyBrain")}
           </span>
         </div>
       </div>
@@ -1092,6 +1093,63 @@ function localizeDepartmentName(value: string, language: Language): string {
 function localizeWorkspaceText(value: string, language: Language): string {
   if (language === "en") {
     return value;
+  }
+
+  const nawaTranslations: Record<string, string> = {
+    "CEO Brain": "workspaceShell.workspaces.ceo.label",
+    "Company-wide reasoning": "workspaceShell.workspaces.ceo.description",
+    "Dairtna Poultry": "workspaceShell.workspaces.dairtna.label",
+    "Poultry operations": "workspaceShell.workspaces.dairtna.description",
+    "Poultry intelligence across halls, feed, egg production, veterinary, warehouse, sales/distribution, and finance signals.":
+      "workspaceShell.workspaces.dairtna.subtitle",
+    "Jannat Al-Firdaws / Dairtna Poultry": "workspaceShell.workspaces.dairtna.scope",
+    "Caesar Beverage": "workspaceShell.workspaces.caesar.label",
+    "Beverage operations": "workspaceShell.workspaces.caesar.description",
+    "Shared Corporate": "workspaceShell.workspaces.shared.label",
+    "HR, finance, procurement": "workspaceShell.workspaces.shared.description",
+    "Company Memory": "workspaceShell.workspaces.memory.label",
+    "Files, updates, decisions": "workspaceShell.workspaces.memory.description",
+    Reports: "workspaceShell.workspaces.reports.label",
+    "Briefings and summaries": "workspaceShell.workspaces.reports.description",
+    Automations: "workspaceShell.workspaces.automations.label",
+    "Future triggers": "workspaceShell.workspaces.automations.description",
+    Settings: "workspaceShell.workspaces.settings.label",
+    "Company context": "workspaceShell.workspaces.settings.description",
+    "Halls overview": "workspaceShell.dairtnaSignals.hallsOverview",
+    "Hall status, flock pressure, capacity": "workspaceShell.dairtnaSignals.hallsOverviewValue",
+    "Feed signals": "workspaceShell.dairtnaSignals.feedSignals",
+    "Feed withdrawal, silo balance, supplier risk": "workspaceShell.dairtnaSignals.feedSignalsValue",
+    "Egg production": "workspaceShell.dairtnaSignals.eggProduction",
+    "Output direction, yield movement, losses": "workspaceShell.dairtnaSignals.eggProductionValue",
+    Veterinary: "workspaceShell.dairtnaSignals.veterinary",
+    "Mortality, medication, disease alerts": "workspaceShell.dairtnaSignals.veterinaryValue",
+    "Sales/distribution": "workspaceShell.dairtnaSignals.salesDistribution",
+    "Demand, delivery, route readiness": "workspaceShell.dairtnaSignals.salesDistributionValue",
+    Finance: "workspaceShell.dairtnaSignals.finance",
+    "Feed cost, cash, procurement approvals": "workspaceShell.dairtnaSignals.financeValue",
+    "Feed shortage can become production drop and finance pressure in the same cycle.":
+      "workspaceShell.dairtnaInsights.riskFeed",
+    "Hall health issues affect sales availability, logistics planning, and cash expectations.":
+      "workspaceShell.dairtnaInsights.riskHealth",
+    "Production updates without veterinary context can hide root cause.":
+      "workspaceShell.dairtnaInsights.riskProduction",
+    "Arabic natural updates can capture halls, quantities, feed, and production direction.":
+      "workspaceShell.dairtnaInsights.positiveArabic",
+    "Dairtna can run natively before ERP and still feed operational memory.":
+      "workspaceShell.dairtnaInsights.positiveNative",
+    "Ask NAWA to explain today's hall/feed/production chain.":
+      "workspaceShell.dairtnaInsights.actionChain",
+    "Add a hall update with quantities and issue words.":
+      "workspaceShell.dairtnaInsights.actionUpdate",
+    "Generate a Dairtna poultry morning briefing.":
+      "workspaceShell.dairtnaInsights.actionBrief",
+    "Poultry hall SOP": "workspaceShell.dairtnaInsights.fileSop",
+    "Feed consumption sheet": "workspaceShell.dairtnaInsights.fileFeed",
+    "Veterinary notes": "workspaceShell.dairtnaInsights.fileVet",
+  };
+  const nawaKey = nawaTranslations[value];
+  if (nawaKey) {
+    return translate(language, nawaKey);
   }
 
   const translations: Record<string, string> = {

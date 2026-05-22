@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { listOperationalEvents } from "@/lib/api/operational-events";
 import { listSituations } from "@/lib/api/situations";
 import type { OperationalEvent, OperationalSituation } from "@/lib/types";
@@ -14,6 +15,7 @@ type OperationalAwarenessPanelProps = {
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
 export function OperationalAwarenessPanel({ token, refreshKey }: OperationalAwarenessPanelProps) {
+  const { t } = useLanguage();
   const [events, setEvents] = useState<OperationalEvent[]>([]);
   const [situations, setSituations] = useState<OperationalSituation[]>([]);
   const [status, setStatus] = useState<LoadStatus>("idle");
@@ -58,56 +60,59 @@ export function OperationalAwarenessPanel({ token, refreshKey }: OperationalAwar
       ),
     [events],
   );
-  const missingHints = useMemo(() => buildMissingInformationHints(needsClassification), [needsClassification]);
+  const missingHints = useMemo(
+    () => buildMissingInformationHints(needsClassification, t),
+    [needsClassification, t],
+  );
 
   return (
     <section className="panel p-4">
       <div className="flex flex-col justify-between gap-3 border-b border-line pb-3 sm:flex-row sm:items-start">
         <div>
-          <div className="executive-label">Operational awareness</div>
-          <h2 className="mt-1 text-base font-semibold text-ink">What NAWA is absorbing</h2>
+          <div className="executive-label">{t("operations.awareness.label")}</div>
+          <h2 className="mt-1 text-base font-semibold text-ink">{t("operations.awareness.title")}</h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Recent operational signals, classification gaps, and rule-based situations from existing data only.
+            {t("operations.awareness.description")}
           </p>
         </div>
         <span className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted">
-          {status === "loading" ? "refreshing" : "read_only"}
+          {status === "loading" ? t("common.refreshing") : t("common.readOnly")}
         </span>
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <AwarenessSection title="Recent events">
+        <AwarenessSection title={t("operations.awareness.recentEvents")}>
           {events.length === 0 ? (
-            <EmptyLine text={status === "error" ? "Unable to load recent events." : "No recent Dairtna events loaded."} />
+            <EmptyLine text={status === "error" ? t("operations.awareness.unableEvents") : t("operations.awareness.emptyEvents")} />
           ) : (
             events.slice(0, 5).map((event) => <EventLine key={event.id} event={event} />)
           )}
         </AwarenessSection>
 
-        <AwarenessSection title="Needs classification">
+        <AwarenessSection title={t("operations.awareness.needsClassification")}>
           {needsClassification.length === 0 ? (
-            <EmptyLine text="No natural notes waiting for classification." />
+            <EmptyLine text={t("operations.awareness.emptyClassification")} />
           ) : (
             needsClassification.slice(0, 4).map((event) => (
               <div key={event.id} className="rounded-md border border-line bg-surface px-3 py-2">
-                <div className="text-xs font-semibold uppercase text-muted">Needs classification</div>
+                <div className="text-xs font-semibold uppercase text-muted">{t("operations.awareness.needsClassification")}</div>
                 <div className="mt-1 text-sm text-ink">{event.summary}</div>
               </div>
             ))
           )}
         </AwarenessSection>
 
-        <AwarenessSection title="Missing information hints">
+        <AwarenessSection title={t("operations.awareness.missingInformationHints")}>
           {missingHints.length === 0 ? (
-            <EmptyLine text="No obvious missing information from recent natural notes." />
+            <EmptyLine text={t("operations.awareness.emptyHints")} />
           ) : (
             missingHints.slice(0, 5).map((hint) => <EmptyLine key={hint} text={hint} />)
           )}
         </AwarenessSection>
 
-        <AwarenessSection title="Latest situations">
+        <AwarenessSection title={t("operations.awareness.latestSituations")}>
           {situations.length === 0 ? (
-            <EmptyLine text={status === "error" ? "Unable to load situations." : "No active situations loaded."} />
+            <EmptyLine text={status === "error" ? t("operations.awareness.unableSituations") : t("operations.awareness.emptySituations")} />
           ) : (
             situations.map((situation) => (
               <div key={situation.id} className="rounded-md border border-line bg-surface px-3 py-2">
@@ -160,18 +165,18 @@ function filterDairtnaEvents(events: OperationalEvent[]): OperationalEvent[] {
     .slice(0, 8);
 }
 
-function buildMissingInformationHints(events: OperationalEvent[]): string[] {
+function buildMissingInformationHints(events: OperationalEvent[], t: (key: string) => string): string[] {
   const hints: string[] = [];
   for (const event of events.slice(0, 5)) {
     const text = `${event.summary} ${event.title}`.toLowerCase();
     if (!event.department_id) {
-      hints.push(`Department context missing: ${event.title}`);
+      hints.push(`${t("operations.awareness.missingDepartment")}: ${event.title}`);
     }
-    if (!/(hall|قاع|house)\s*\d+/i.test(text)) {
-      hints.push(`Hall or location not captured: ${event.title}`);
+    if (!/(hall|قاعة|house)\s*\d+/i.test(text)) {
+      hints.push(`${t("operations.awareness.missingLocation")}: ${event.title}`);
     }
     if (!/\d/.test(text)) {
-      hints.push(`No quantity or count captured: ${event.title}`);
+      hints.push(`${t("operations.awareness.missingQuantity")}: ${event.title}`);
     }
   }
   return Array.from(new Set(hints));

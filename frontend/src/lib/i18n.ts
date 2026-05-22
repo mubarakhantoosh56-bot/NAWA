@@ -1,244 +1,19 @@
+import { ar } from "@/lib/i18n/dictionaries/ar";
+import { en } from "@/lib/i18n/dictionaries/en";
+
 export type Language = "en" | "ar";
+
+type TranslationValue = string | { [key: string]: TranslationValue };
+type TranslationDictionary = { [key: string]: TranslationValue };
 
 export const LANGUAGE_STORAGE_KEY = "nawa.language";
 
-export const dictionaries = {
-  en: {
-    brandNawa: "NAWA",
-    brandArabic: "نواة",
-    languageArabic: "العربية",
-    languageEnglish: "EN",
-    aiWorkforcePlatform: "Company Brain Platform",
-    enterpriseIntelligence: "Organizational Intelligence",
-    operationalIntelligence: "Live operational awareness",
-    signInTitle: "Sign in to the NAWA enterprise intelligence workspace.",
-    signInSubtitle:
-      "Access CEO and department AI workspaces backed by company knowledge, RBAC, and tenant-scoped backend services.",
-    signInCardExecutive: "Executive command workspace",
-    signInCardDepartments: "Department AI workforce",
-    signInCardDemo: "Investor-ready demo tenant",
-    companyLogin: "Company login",
-    companyLoginHint: "Use the Northstar demo tenant or your local NAWA company credentials.",
-    companySlug: "Company slug",
-    email: "Email",
-    password: "Password",
-    signIn: "Sign in",
-    signingIn: "Signing in...",
-    logout: "Logout",
-    workspace: "Workspace",
-    departments: "Departments",
-    loadingDepartments: "Loading departments...",
-    departmentListUnavailable: "Department list unavailable for this role.",
-    investorDemoDataset: "Investor demo dataset",
-    investorDemoDatasetDetail: "Populated with realistic enterprise workspaces.",
-    role: "Role",
-    permissionsAvailable: "permissions available",
-    liveAiWorkforce: "Live Organizational Awareness",
-    executive: "Executive",
-    scope: "Scope",
-    departmentScoped: "Department-scoped",
-    companyWide: "Company-wide",
-    ceoAi: "CEO AI",
-    ceoAiWorkspace: "Company Brain Workspace",
-    executiveCommand: "Company brain",
-    demoQuickStart: "Demo quick start",
-    quickStartText: "Select a department workspace, review company knowledge, then ask NAWA for operational analysis.",
-    reviewKnowledgeFiles: "Review knowledge files",
-    filesLocked: "Files locked",
-    useSuggestedPrompt: "Use a suggested prompt",
-    executiveSummary: "Executive summary",
-    aiChat: "AI chat",
-    session: "session",
-    savedLocally: "Saved locally",
-    demoHistory: "Demo history",
-    you: "You",
-    emptySummary: "NAWA returned an empty summary.",
-    readingContext: "NAWA is reading context and preparing a tenant-scoped answer...",
-    askPlaceholder: "Ask NAWA for a decision, plan, or department-specific recommendation...",
-    sending: "Sending",
-    send: "Send",
-    demoHint: "Demo hint: prompt cards fill the composer so you can review before sending.",
-    ceoCommandCenter: "CEO command center",
-    departmentWorkspace: "workspace",
-    welcomeCeo: "Welcome to the NAWA executive briefing room",
-    welcomeDepartment: "Start a department-specific briefing",
-    welcomeCeoText:
-      "Ask for priorities, risks, and cross-department decisions. NAWA will keep retrieved company knowledge internal and return the current response contract.",
-    welcomeDepartmentText:
-      "Ask this AI worker for focused recommendations using the active department context and company knowledge.",
-    demoHelper:
-      "Demo helper: choose a prompt, send it, then expand decision logic to show structured reasoning without exposing prompts or tokens.",
-    prompt: "Prompt",
-    parse: "parse",
-    ok: "ok",
-    check: "check",
-    memory: "memory",
-    on: "on",
-    off: "off",
-    events: "events",
-    decisionLogic: "Decision logic",
-    fields: "fields",
-    empty: "empty",
-    companyKnowledge: "Company knowledge",
-    knowledgeFiles: "Knowledge files",
-    refresh: "Refresh",
-    loadingCompanyKnowledge: "Loading company knowledge...",
-    investorKnowledgeBase: "Investor demo knowledge base",
-    investorKnowledgeBaseText: "Showing curated demo files for a realistic executive walkthrough.",
-    companyWideScope: "Company-wide",
-    added: "Added",
-    recently: "recently",
-    locked: "Locked",
-    offLabel: "Off",
-    workspaceUnavailable: "This workspace is not available for your current role.",
-    signInError: "Unable to sign in. Check the backend and try again.",
-    unableLoadDepartments: "Unable to load departments.",
-    unableSendMessage: "Unable to send message.",
-    unableLoadFiles: "Unable to load files.",
-    unableRefreshFiles: "Unable to refresh files.",
-    loadingWorkspace: "Loading NAWA workspace...",
-    settings: "Settings",
-    companyIntelligenceProfile: "Company Intelligence Profile",
-    companyProfileDescription:
-      "Define the organizational context NAWA uses as the company brain across divisions, departments, workflows, people, KPIs, and integrations.",
-    companyContextActive: "Company Context Active",
-    companyContextInactive: "Company Context Inactive",
-    loadingCompanyProfile: "Loading company profile...",
-    profileCompanyName: "Company name",
-    profileIndustry: "Industry",
-    profileBusinessType: "Business type",
-    profileCountryMarket: "Country / market",
-    profileCompanySize: "Company size",
-    profileDepartmentsEnabled: "Departments enabled",
-    profilePrimaryGoals: "Primary goals",
-    profileOperationalChallenges: "Current operational challenges",
-    profileGrowthPriorities: "Growth priorities",
-    profilePreferredLanguage: "Preferred response language",
-    profileSaved: "Profile saved. NAWA will use this context in future responses.",
-    profileSaveError: "Unable to save profile.",
-    profileSaveHint: "Saved profile data feeds Company Brain, department workspaces, memory, and decision context.",
-    saveProfile: "Save profile",
-    saving: "Saving...",
-  },
-  ar: {
-    brandNawa: "NAWA",
-    brandArabic: "نواة",
-    languageArabic: "العربية",
-    languageEnglish: "EN",
-    aiWorkforcePlatform: "منصة فرق الذكاء",
-    enterpriseIntelligence: "استخبارات مؤسسية",
-    operationalIntelligence: "استخبارات تشغيلية",
-    signInTitle: "سجّل الدخول إلى مساحة الاستخبارات المؤسسية في NAWA.",
-    signInSubtitle:
-      "ادخل إلى مساحات CEO AI وفرق الذكاء المدعومة بمعرفة الشركة والصلاحيات وخدمات tenant-scoped.",
-    signInCardExecutive: "مساحة القيادة التنفيذية",
-    signInCardDepartments: "فرق ذكاء للأقسام",
-    signInCardDemo: "بيئة demo جاهزة للعرض",
-    companyLogin: "دخول الشركة",
-    companyLoginHint: "استخدم بيئة Northstar التجريبية أو بيانات شركتك المحلية في NAWA.",
-    companySlug: "معرّف الشركة",
-    email: "البريد الإلكتروني",
-    password: "كلمة المرور",
-    signIn: "تسجيل الدخول",
-    signingIn: "جار تسجيل الدخول...",
-    logout: "خروج",
-    workspace: "مساحة العمل",
-    departments: "الأقسام",
-    loadingDepartments: "جار تحميل الأقسام...",
-    departmentListUnavailable: "قائمة الأقسام غير متاحة لهذا الدور.",
-    investorDemoDataset: "بيانات demo للعرض",
-    investorDemoDatasetDetail: "معبأة بمساحات عمل مؤسسية واقعية.",
-    role: "الدور",
-    permissionsAvailable: "صلاحية متاحة",
-    liveAiWorkforce: "فرق الذكاء النشطة",
-    executive: "تنفيذي",
-    scope: "النطاق",
-    departmentScoped: "نطاق القسم",
-    companyWide: "على مستوى الشركة",
-    ceoAi: "CEO AI",
-    ceoAiWorkspace: "مساحة CEO AI",
-    executiveCommand: "قيادة تنفيذية",
-    demoQuickStart: "بدء demo سريع",
-    quickStartText: "اختر عامل ذكاء، راجع ملفات المعرفة، ثم اسأل سؤال قرار.",
-    reviewKnowledgeFiles: "راجع ملفات المعرفة",
-    filesLocked: "الملفات مقفلة",
-    useSuggestedPrompt: "استخدم prompt مقترح",
-    executiveSummary: "ملخص تنفيذي",
-    aiChat: "محادثة AI",
-    session: "جلسة",
-    savedLocally: "محفوظ محليا",
-    demoHistory: "سجل demo",
-    you: "أنت",
-    emptySummary: "لم تُرجع NAWA ملخصا.",
-    readingContext: "تقرأ NAWA السياق وتجهز إجابة ضمن نطاق الشركة...",
-    askPlaceholder: "اسأل NAWA عن قرار أو خطة أو توصية خاصة بقسم...",
-    sending: "جار الإرسال",
-    send: "إرسال",
-    demoHint: "تلميح demo: بطاقات prompts تملأ خانة الكتابة لتراجعها قبل الإرسال.",
-    ceoCommandCenter: "غرفة قيادة CEO",
-    departmentWorkspace: "مساحة عمل",
-    welcomeCeo: "مرحبا بك في غرفة الإحاطة التنفيذية من NAWA",
-    welcomeDepartment: "ابدأ إحاطة خاصة بالقسم",
-    welcomeCeoText:
-      "اسأل عن الأولويات والمخاطر والقرارات المشتركة بين الأقسام. تحفظ NAWA معرفة الشركة داخليا وتعيد الاستجابة وفق العقد الحالي.",
-    welcomeDepartmentText:
-      "اسأل عامل الذكاء هذا عن توصيات مركزة باستخدام سياق القسم ومعرفة الشركة.",
-    demoHelper:
-      "مساعد demo: اختر prompt، أرسله، ثم افتح منطق القرار لعرض التفكير المنظم دون كشف prompts أو tokens.",
-    prompt: "Prompt",
-    parse: "تحليل",
-    ok: "سليم",
-    check: "مراجعة",
-    memory: "ذاكرة",
-    on: "فعالة",
-    off: "متوقفة",
-    events: "أحداث",
-    decisionLogic: "منطق القرار",
-    fields: "حقول",
-    empty: "فارغ",
-    companyKnowledge: "معرفة الشركة",
-    knowledgeFiles: "ملفات المعرفة",
-    refresh: "تحديث",
-    loadingCompanyKnowledge: "جار تحميل معرفة الشركة...",
-    investorKnowledgeBase: "قاعدة معرفة demo",
-    investorKnowledgeBaseText: "عرض ملفات demo منتقاة لجولة تنفيذية واقعية.",
-    companyWideScope: "على مستوى الشركة",
-    added: "أضيف",
-    recently: "حديثا",
-    locked: "مقفل",
-    offLabel: "متوقف",
-    workspaceUnavailable: "مساحة العمل هذه غير متاحة لدورك الحالي.",
-    signInError: "تعذر تسجيل الدخول. تحقق من backend وحاول مرة أخرى.",
-    unableLoadDepartments: "تعذر تحميل الأقسام.",
-    unableSendMessage: "تعذر إرسال الرسالة.",
-    unableLoadFiles: "تعذر تحميل الملفات.",
-    unableRefreshFiles: "تعذر تحديث الملفات.",
-    loadingWorkspace: "جار تحميل مساحة NAWA...",
-    settings: "الإعدادات",
-    companyIntelligenceProfile: "ملف استخبارات الشركة",
-    companyProfileDescription: "حدد السياق التشغيلي الذي تستخدمه NAWA في إحاطات الإدارة التنفيذية ومساحات الأقسام.",
-    companyContextActive: "سياق الشركة فعال",
-    companyContextInactive: "سياق الشركة غير مكتمل",
-    loadingCompanyProfile: "جار تحميل ملف الشركة...",
-    profileCompanyName: "اسم الشركة",
-    profileIndustry: "القطاع",
-    profileBusinessType: "نوع النشاط",
-    profileCountryMarket: "الدولة / السوق",
-    profileCompanySize: "حجم الشركة",
-    profileDepartmentsEnabled: "الأقسام المفعلة",
-    profilePrimaryGoals: "الأهداف الرئيسية",
-    profileOperationalChallenges: "التحديات التشغيلية الحالية",
-    profileGrowthPriorities: "أولويات النمو",
-    profilePreferredLanguage: "لغة الرد المفضلة",
-    profileSaved: "تم حفظ الملف. ستستخدم NAWA هذا السياق في الردود القادمة.",
-    profileSaveError: "تعذر حفظ الملف.",
-    profileSaveHint: "يتم حقن بيانات الملف المحفوظة في ردود CEO AI والأقسام.",
-    saveProfile: "حفظ الملف",
-    saving: "جار الحفظ...",
-  },
-} as const;
+export const dictionaries: Record<Language, TranslationDictionary> = {
+  en,
+  ar,
+};
 
-export type TranslationKey = keyof typeof dictionaries.en;
+export type TranslationKey = string;
 
 export function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "ar";
@@ -246,4 +21,26 @@ export function isLanguage(value: string | null): value is Language {
 
 export function directionFor(language: Language) {
   return language === "ar" ? "rtl" : "ltr";
+}
+
+export function translate(language: Language, key: TranslationKey): string {
+  return resolveTranslation(dictionaries[language], key) ?? key;
+}
+
+function resolveTranslation(dictionary: TranslationDictionary, key: string): string | null {
+  const direct = dictionary[key as keyof TranslationDictionary];
+  if (typeof direct === "string") {
+    return direct;
+  }
+
+  const parts = key.split(".");
+  let current: TranslationValue | undefined = dictionary;
+  for (const part of parts) {
+    if (!current || typeof current === "string") {
+      return null;
+    }
+    current = current[part];
+  }
+
+  return typeof current === "string" ? current : null;
 }
