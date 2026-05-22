@@ -237,6 +237,41 @@ class OperationalSituationGroupResponse(BaseModel):
     window_end: datetime
 
 
+class EventDraftResponse(BaseModel):
+    """One AI-proposed operational event draft, pending human confirmation."""
+
+    id: UUID
+    company_id: UUID
+    file_id: UUID
+    department_id: UUID | None = None
+    proposed_title: str
+    proposed_category: str
+    proposed_priority: str
+    proposed_summary: str
+    evidence_quote: str | None = None
+    confidence: int
+    needs_clarification: bool
+    clarification_hint: str | None = None
+    status: str
+    confirmed_event_id: UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class EventDraftListResponse(BaseModel):
+    """Pending AI-proposed drafts for one file."""
+
+    file_id: UUID
+    drafts: list[EventDraftResponse]
+
+
+class DraftConfirmResponse(BaseModel):
+    """Returned after a draft is confirmed: the updated draft and the created event."""
+
+    draft: EventDraftResponse
+    event: OperationalEventResponse
+
+
 class IntegrationProviderResponse(BaseModel):
     """MVP integration provider capability descriptor."""
 

@@ -1,5 +1,6 @@
 """Synchronous RAG file ingestion service for MVP text files."""
 
+import asyncio
 import logging
 import shutil
 from pathlib import Path
@@ -10,10 +11,14 @@ import asyncpg
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.file_chunk_repository import FileChunkRepository
 from app.repositories.file_repository import FileRepository
+from app.services.file_operational_analyzer import FileOperationalAnalyzer
 from app.services.unified_data_capture import UnifiedDataCaptureService
 from app.services.rag.embeddings import store_chunk_embeddings
 from app.services.rag.chunking import chunk_text
 from app.services.rag.extractors import SUPPORTED_EXTENSIONS, extract_text
+
+# Holds references to background analysis tasks to prevent GC before completion.
+_background_tasks: set[asyncio.Task] = set()
 
 RowDict = dict[str, object]
 
@@ -36,6 +41,12 @@ class FileIngestionService:
         self.file_chunk_repo = FileChunkRepository(db)
         self.department_repo = DepartmentRepository(db)
         self.capture_service = UnifiedDataCaptureService(db) if hasattr(db, "fetchrow") else None
+        from app.core.config import settings as _settings
+        self.analyzer = (
+            FileOperationalAnalyzer(db, _settings.OPENAI_API_KEY)
+            if _settings.OPENAI_API_KEY
+            else None
+        )
 
     async def ingest_file(
         self,
@@ -142,6 +153,14 @@ class FileIngestionService:
                 department_id=department_id,
                 raw_content=text,
                 status="pending" if not text.strip() else None,
+            )
+            self._schedule_analysis(
+                company_id=company_id,
+                file_id=file_record["id"],
+                department_id=department_id,
+                uploaded_by_user_id=uploaded_by_user_id,
+                text=text,
+                filename=filename,
             )
             return {
                 "file": ready_file or file_record,
@@ -265,6 +284,38 @@ class FileIngestionService:
                     "file_id": str(file_record.get("id") or ""),
                 },
                 exc_info=True,
+            )
+
+    def _schedule_analysis(
+        self,
+        *,
+        company_id: UUID,
+        file_id: object,
+        department_id: UUID | None,
+        uploaded_by_user_id: UUID,
+        text: str,
+        filename: str,
+    ) -> None:
+        """Schedule background operational analysis. Never blocks the upload response."""
+        if self.analyzer is None or not text.strip():
+            return
+        try:
+            task = asyncio.create_task(
+                self.analyzer.analyze_and_store(
+                    company_id=company_id,
+                    file_id=UUID(str(file_id)),
+                    department_id=department_id,
+                    created_by_user_id=uploaded_by_user_id,
+                    extracted_text=text,
+                    filename=filename,
+                )
+            )
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
+        except RuntimeError:
+            logger.warning(
+                "file_analyzer_task_schedule_failed",
+                extra={"company_id": str(company_id), "file_id": str(file_id)},
             )
 
     @staticmethod

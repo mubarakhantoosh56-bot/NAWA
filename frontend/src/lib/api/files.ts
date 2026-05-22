@@ -1,5 +1,5 @@
 import { ApiError, apiRequest, getApiBaseUrl } from "@/lib/api/client";
-import type { CompanyFile, FileListResponse } from "@/lib/types";
+import type { CompanyFile, DraftConfirmResponse, EventDraft, EventDraftListResponse, FileListResponse } from "@/lib/types";
 
 export function listFiles(token: string, departmentId?: string | null): Promise<FileListResponse> {
   const query = new URLSearchParams();
@@ -50,4 +50,29 @@ export async function uploadFile(
   }
 
   return (await response.json()) as CompanyFile;
+}
+
+export function getFileDrafts(token: string, fileId: string): Promise<EventDraftListResponse> {
+  return apiRequest<EventDraftListResponse>(`/files/${fileId}/event-drafts`, { method: "GET" }, { token });
+}
+
+export function confirmDraft(
+  token: string,
+  fileId: string,
+  draftId: string,
+  edits: { title?: string; category?: string; priority?: string; summary?: string } = {},
+): Promise<DraftConfirmResponse> {
+  return apiRequest<DraftConfirmResponse>(
+    `/files/${fileId}/event-drafts/${draftId}/confirm`,
+    { method: "POST" },
+    { token, body: edits },
+  );
+}
+
+export function rejectDraft(token: string, fileId: string, draftId: string): Promise<EventDraft> {
+  return apiRequest<EventDraft>(
+    `/files/${fileId}/event-drafts/${draftId}/reject`,
+    { method: "POST" },
+    { token },
+  );
 }

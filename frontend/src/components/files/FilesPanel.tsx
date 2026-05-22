@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { OperationalFileDraftPanel } from "@/components/operations/OperationalFileDraftPanel";
 import { ApiError } from "@/lib/api/client";
 import { listFiles } from "@/lib/api/files";
 import { DEMO_FILES } from "@/lib/demo-data";
@@ -19,6 +20,7 @@ export function FilesPanel({ token, departments, activeDepartmentId = null }: Fi
   const [files, setFiles] = useState<CompanyFile[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<CompanyFile | null>(null);
 
   const departmentNames = useMemo(() => {
     return departments.reduce<Record<string, string>>((current, department) => {
@@ -123,9 +125,22 @@ export function FilesPanel({ token, departments, activeDepartmentId = null }: Fi
             file={file}
             departmentName={file.department_id ? departmentNames[file.department_id] : null}
             language={language}
+            isSelected={selectedFile?.id === file.id}
+            onSelect={() => setSelectedFile(selectedFile?.id === file.id ? null : file)}
           />
         ))}
       </div>
+
+      {selectedFile ? (
+        <div className="px-4 pb-4">
+          <OperationalFileDraftPanel
+            token={token}
+            fileId={selectedFile.id}
+            filename={selectedFile.filename}
+            onClose={() => setSelectedFile(null)}
+          />
+        </div>
+      ) : null}
     </aside>
   );
 }
@@ -134,34 +149,50 @@ function FileRow({
   file,
   departmentName,
   language,
+  isSelected,
+  onSelect,
 }: {
   file: CompanyFile;
   departmentName: string | null;
   language: "en" | "ar";
+  isSelected: boolean;
+  onSelect: () => void;
 }) {
   const { t } = useLanguage();
+  const isReady = file.status === "ready";
 
   return (
-    <article className="rounded-md border border-line bg-white p-3 shadow-panel transition hover:border-slate-300">
+    <article className={`rounded-md border bg-white p-3 shadow-panel transition ${isSelected ? "border-amber-300" : "border-line hover:border-slate-300"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 gap-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-[11px] font-semibold text-muted">
             DOC
           </span>
           <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-ink" title={file.filename}>
-            {file.filename}
-          </div>
-          <div className="mt-1 text-xs text-muted">
-            {departmentName ? localizeDepartmentName(departmentName, language) : t("companyWideScope")} -{" "}
-            {formatBytes(file.file_size_bytes)}
-          </div>
+            <div className="truncate text-sm font-medium text-ink" title={file.filename}>
+              {file.filename}
+            </div>
+            <div className="mt-1 text-xs text-muted">
+              {departmentName ? localizeDepartmentName(departmentName, language) : t("companyWideScope")} -{" "}
+              {formatBytes(file.file_size_bytes)}
+            </div>
           </div>
         </div>
         <StatusBadge status={file.status} />
       </div>
-      <div className="mt-2 text-xs text-muted">
-        {t("added")} {formatDate(file.created_at, language)}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted">
+          {t("added")} {formatDate(file.created_at, language)}
+        </span>
+        {isReady ? (
+          <button
+            type="button"
+            onClick={onSelect}
+            className="rounded px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-50 hover:text-amber-900"
+          >
+            {isSelected ? t("operations.fileDraft.close") : t("operations.fileDraft.viewProposals")}
+          </button>
+        ) : null}
       </div>
     </article>
   );

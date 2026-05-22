@@ -20,12 +20,44 @@ from fastapi import (
 from app.core.config import settings
 from app.core.dependencies import AuthContext
 from app.core.permissions import has_permission, require_permission
-from app.core.role_permissions import CEO_WORKSPACE_PERMISSION, visible_department_types
-from app.models.response import FileDetailResponse, FileListResponse, FileResponse
+from app.core.role_permissions import (
+    CEO_WORKSPACE_PERMISSION,
+    OPERATIONAL_FORM_READ_PERMISSION,
+    OPERATIONAL_FORM_SUBMIT_PERMISSION,
+    visible_department_types,
+)
+from app.models.request import ConfirmDraftRequest
+from app.models.response import (
+    DraftConfirmResponse,
+    EventDraftListResponse,
+    EventDraftResponse,
+    FileDetailResponse,
+    FileListResponse,
+    FileResponse,
+)
 from app.services.file_ingestion_service import FileIngestionService
+from app.services.operational_event_draft_service import OperationalEventDraftService
 
 router = APIRouter(prefix="/files", tags=["Files"])
 logger = logging.getLogger(__name__)
+
+
+async def get_draft_service(request: Request) -> OperationalEventDraftService:
+    """Return an OperationalEventDraftService backed by the app database pool."""
+    pool = getattr(request.app.state, "auth_db_pool", None)
+    if pool is None:
+        if not settings.DATABASE_URL:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Draft service unavailable",
+            )
+        pool = await asyncpg.create_pool(
+            dsn=settings.DATABASE_URL,
+            min_size=1,
+            max_size=5,
+        )
+        request.app.state.auth_db_pool = pool
+    return OperationalEventDraftService(pool)
 
 
 async def get_file_ingestion_service(request: Request) -> FileIngestionService:
@@ -232,4 +264,95 @@ async def get_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File service unavailable",
+        ) from exc
+
+
+@router.get("/{file_id}/event-drafts", response_model=EventDraftListResponse)
+async def list_file_event_drafts(
+    file_id: UUID,
+    auth_context: AuthContext = Depends(require_permission(OPERATIONAL_FORM_READ_PERMISSION)),
+    draft_service: OperationalEventDraftService = Depends(get_draft_service),
+) -> EventDraftListResponse:
+    """Return pending AI-proposed event drafts for one file (company-scoped)."""
+    try:
+        drafts = await draft_service.list_pending(
+            company_id=UUID(auth_context.company_id),
+            file_id=file_id,
+        )
+        return EventDraftListResponse(file_id=file_id, drafts=drafts)
+    except Exception as exc:
+        logger.error("List event drafts failed", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Draft service unavailable",
+        ) from exc
+
+
+@router.post(
+    "/{file_id}/event-drafts/{draft_id}/confirm",
+    response_model=DraftConfirmResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def confirm_event_draft(
+    file_id: UUID,
+    draft_id: UUID,
+    body: ConfirmDraftRequest,
+    auth_context: AuthContext = Depends(require_permission(OPERATIONAL_FORM_SUBMIT_PERMISSION)),
+    draft_service: OperationalEventDraftService = Depends(get_draft_service),
+) -> DraftConfirmResponse:
+    """Confirm one pending draft. Creates one operational_event with full file provenance."""
+    try:
+        result = await draft_service.confirm(
+            company_id=UUID(auth_context.company_id),
+            file_id=file_id,
+            draft_id=draft_id,
+            confirmed_by_user_id=UUID(auth_context.user_id),
+            user_edits={k: v for k, v in body.model_dump().items() if v is not None},
+        )
+        return DraftConfirmResponse(
+            draft=result["draft"],
+            event=result["event"],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.error("Confirm event draft failed", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Draft service unavailable",
+        ) from exc
+
+
+@router.post(
+    "/{file_id}/event-drafts/{draft_id}/reject",
+    response_model=EventDraftResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def reject_event_draft(
+    file_id: UUID,
+    draft_id: UUID,
+    auth_context: AuthContext = Depends(require_permission(OPERATIONAL_FORM_SUBMIT_PERMISSION)),
+    draft_service: OperationalEventDraftService = Depends(get_draft_service),
+) -> EventDraftResponse:
+    """Reject one pending draft. No operational_event is created."""
+    try:
+        updated_draft = await draft_service.reject(
+            company_id=UUID(auth_context.company_id),
+            file_id=file_id,
+            draft_id=draft_id,
+        )
+        return EventDraftResponse.model_validate(updated_draft)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.error("Reject event draft failed", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Draft service unavailable",
         ) from exc

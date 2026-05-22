@@ -83,6 +83,15 @@ class OperationalInputRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConfirmDraftRequest(BaseModel):
+    """Optional user overrides when confirming an AI-proposed event draft."""
+
+    title: str | None = None
+    category: str | None = None
+    priority: str | None = None
+    summary: str | None = None
+
+
 class OperationalEventCreateRequest(BaseModel):
     """Request body for creating one Live Operational Timeline event."""
 

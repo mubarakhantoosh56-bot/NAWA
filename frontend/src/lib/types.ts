@@ -209,3 +209,32 @@ export type OperationalSituation = {
 export type OperationalSituationListResponse = {
   situations: OperationalSituation[];
 };
+
+export type EventDraft = {
+  id: string;
+  company_id: string;
+  file_id: string;
+  department_id: string | null;
+  proposed_title: string;
+  proposed_category: string;
+  proposed_priority: string;
+  proposed_summary: string;
+  evidence_quote: string | null;
+  confidence: number;
+  needs_clarification: boolean;
+  clarification_hint: string | null;
+  status: "pending" | "confirmed" | "rejected";
+  confirmed_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EventDraftListResponse = {
+  file_id: string;
+  drafts: EventDraft[];
+};
+
+export type DraftConfirmResponse = {
+  draft: EventDraft;
+  event: OperationalEvent;
+};
