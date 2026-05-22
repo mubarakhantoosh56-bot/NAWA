@@ -5,7 +5,7 @@ from pathlib import Path
 
 RowDict = dict[str, object]
 
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".pdf", ".docx"}
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".pdf", ".docx", ".xlsx"}
 SUPPORTED_CONTENT_TYPES = {
     "text/plain",
     "text/markdown",
@@ -13,7 +13,11 @@ SUPPORTED_CONTENT_TYPES = {
     "application/json",
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
+
+MAX_XLSX_SHEETS = 5
+MAX_XLSX_ROWS_PER_SHEET = 300
 
 
 def extract_text(path: str | Path, filename: str, content_type: str) -> RowDict:
@@ -31,6 +35,8 @@ def extract_text(path: str | Path, filename: str, content_type: str) -> RowDict:
         text = _extract_pdf_text(file_path)
     elif extension == ".docx":
         text = _extract_docx_text(file_path)
+    elif extension == ".xlsx":
+        text = _extract_xlsx_text(file_path)
     else:
         raw_text = _read_text_with_fallback(file_path)
         if extension == ".json":
@@ -92,6 +98,33 @@ def _extract_docx_text(path: Path) -> str:
                 cells = [cell.text for cell in row.cells if cell.text]
                 if cells:
                     blocks.append("\t".join(cells))
+        return "\n".join(blocks).strip()
+    except Exception as exc:
+        raise ValueError("file text extraction failed") from exc
+
+
+def _extract_xlsx_text(path: Path) -> str:
+    try:
+        import openpyxl
+
+        workbook = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        blocks: list[str] = []
+        for sheet_name in workbook.sheetnames[:MAX_XLSX_SHEETS]:
+            sheet = workbook[sheet_name]
+            rows_text: list[str] = []
+            row_count = 0
+            for row in sheet.iter_rows(values_only=True):
+                if row_count >= MAX_XLSX_ROWS_PER_SHEET:
+                    break
+                cells = [str(cell).strip() if cell is not None else "" for cell in row]
+                if not any(cells):
+                    continue
+                rows_text.append(" | ".join(cells))
+                row_count += 1
+            if rows_text:
+                blocks.append(f"[Sheet: {sheet_name}]")
+                blocks.extend(rows_text)
+        workbook.close()
         return "\n".join(blocks).strip()
     except Exception as exc:
         raise ValueError("file text extraction failed") from exc

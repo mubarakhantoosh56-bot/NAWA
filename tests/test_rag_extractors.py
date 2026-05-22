@@ -83,3 +83,30 @@ def test_unsupported_file_still_fails_safely(tmp_path: Path):
 
     with pytest.raises(ValueError, match="unsupported file type"):
         extract_text(path, filename="sample.exe", content_type="application/octet-stream")
+
+
+def test_valid_xlsx_extraction(tmp_path: Path):
+    import openpyxl
+
+    path = tmp_path / "sample.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Operations"
+    ws.append(["Hall", "Date", "Mortality"])
+    ws.append(["Hall 4", "2026-05-20", 12])
+    ws.append([None, None, None])  # empty row — should be skipped
+    ws.append(["Hall 2", "2026-05-21", 3])
+    wb.save(str(path))
+
+    result = extract_text(
+        path,
+        filename="sample.xlsx",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    text = result["text"]
+    assert "[Sheet: Operations]" in text
+    assert "Hall 4" in text
+    assert "Hall 2" in text
+    assert "None | None | None" not in text
+    assert result["metadata"]["extension"] == ".xlsx"
