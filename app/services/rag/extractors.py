@@ -1,7 +1,10 @@
 """Text extraction helpers for MVP RAG ingestion."""
 
 import json
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 RowDict = dict[str, object]
 
@@ -14,6 +17,8 @@ SUPPORTED_CONTENT_TYPES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    # Windows Explorer and some browsers report this type for .xlsx files.
+    "application/vnd.ms-excel",
 }
 
 MAX_XLSX_SHEETS = 5
@@ -104,6 +109,8 @@ def _extract_docx_text(path: Path) -> str:
 
 
 def _extract_xlsx_text(path: Path) -> str:
+    import zipfile
+
     try:
         import openpyxl
 
@@ -126,7 +133,16 @@ def _extract_xlsx_text(path: Path) -> str:
                 blocks.extend(rows_text)
         workbook.close()
         return "\n".join(blocks).strip()
+    except zipfile.BadZipFile as exc:
+        raise ValueError(
+            "File is not a valid .xlsx file. "
+            "If this is an older .xls file, open it in Excel and save as .xlsx."
+        ) from exc
     except Exception as exc:
+        logger.warning(
+            "xlsx_extraction_failed",
+            extra={"path": str(path), "error_type": type(exc).__name__, "error": str(exc)},
+        )
         raise ValueError("file text extraction failed") from exc
 
 
