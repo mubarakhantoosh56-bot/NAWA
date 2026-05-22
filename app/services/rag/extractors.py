@@ -109,12 +109,16 @@ def _extract_docx_text(path: Path) -> str:
 
 
 def _extract_xlsx_text(path: Path) -> str:
+    import io
     import zipfile
 
     try:
         import openpyxl
 
-        workbook = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        # Pass BytesIO so openpyxl skips its file-extension check.
+        # Storage paths are extensionless ("source"), which openpyxl rejects
+        # via InvalidFileException when given a string path.
+        workbook = openpyxl.load_workbook(io.BytesIO(path.read_bytes()), read_only=True, data_only=True)
         blocks: list[str] = []
         for sheet_name in workbook.sheetnames[:MAX_XLSX_SHEETS]:
             sheet = workbook[sheet_name]
