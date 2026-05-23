@@ -8,9 +8,11 @@ It is not a chatbot and not a traditional ERP.
 NAWA acts as the operational intelligence layer inside a company, connecting company knowledge, departments, decisions, events, and AI agents into one execution system.
 
 ## Current Stage
-MVP Infrastructure Phase — **Operational Feedback Loop active (Phase 1 complete); Dairtna ingestion surface live at MVP level**.
+MVP Infrastructure Phase — **Operational Feedback Loop active (Phase 1 complete); Dairtna ingestion surface live at MVP level; Phase 2A first executable grounding layer shipped**.
 
 The project has passed the basic chat / memory / company workspace foundation, established the first working layer of live operational intelligence (events captured, structured, grouped into situations end-to-end), and now has a Dairtna-first ingestion UI in place to begin collecting real operational signal. Phase 2A grounding work and ingestion implementation are running in parallel.
+
+The first Phase 2A executable milestone is now in place: uploaded Dairtna XLSX field reports are parsed, interpreted against provisional poultry-domain thresholds, and injected as calibrated operational signals into CEO reasoning — replacing generic FMCG escalation with domain-grounded signal levels. This is Dairtna-only and Phase 1 scope; thresholds are provisional and require field validation.
 
 ## Completed Systems
 - Organizational Intelligence
@@ -32,6 +34,14 @@ The project has passed the basic chat / memory / company workspace foundation, e
 - **Operational awareness panel** — read-only surface over `GET /operational-events` and `GET /situations`: recent events, items needing classification, missing-info hints, latest situations *(Phase 2A — MVP)*
 - **Scoped i18n foundation** — namespaced dictionaries; Dairtna workspace operational UI migrated; AR/EN switching improved; RTL/LTR preserved *(Phase 2A — MVP)*
 - **Local dev stabilization** — Docker Postgres + pgvector on `localhost:5433`, FastAPI on `127.0.0.1:8000`, Next.js on `localhost:3000`, dev origin fix for `127.0.0.1` *(Phase 2A — MVP)*
+- **Dairtna Operational Interpretation Layer — Phase 1** *(Phase 2A — Grounding)*
+  - Stateless mortality interpreter: `app/services/dairtna/interpreter.py` — no DB dependency, stdlib-only, < 1ms
+  - Signal calibration against provisional poultry-domain thresholds: `normal / watch / warning / critical / unknown`
+  - Mortality rate computed from uploaded draft summaries (`deaths / flock_size × 100`)
+  - CEO-response grounding constraints injected before executive reasoning — prevents unsupported escalation for normal-range mortality
+  - `_operational_response_missing_elements` skips "bottleneck" requirement when all signals are within normal range
+  - Dairtna-only, Phase 1 scope; thresholds provisional; requires field validation before treating as authoritative
+  - **Interpretation doctrine** committed: `docs/nawa_brain/DAIRTNA_OPERATIONAL_INTERPRETATION.md`
 
 ## Architecture Evolution
 The operational data flow has evolved into a layered pipeline:
@@ -75,12 +85,21 @@ Phase 2A ingestion surface (Dairtna):
 
 This validates the mechanism and the human-facing ingestion path at MVP level. It does not yet validate operational intelligence quality, which requires real data density and classification of natural-capture entries.
 
+Phase 2A grounding interpreter (Dairtna, Phase 1):
+
+- **Real uploaded Dairtna XLSX reports now produce grounded operational interpretation** — mortality figures from field reports are parsed, rates computed, and classified against provisional thresholds before reaching CEO reasoning.
+- **Mortality rate validation working** — 12 deaths / 77,005 birds → 0.016% → `signal_level: normal`; 18 deaths / 77,023 birds → 0.023% → `signal_level: normal`. Both correctly classified without triggering false escalation.
+- **Generic unsupported escalation reduced** — CEO response no longer frames normal-range mortality as a production bottleneck or financial crisis. "عنق زجاجة" (bottleneck) and "أزمة" (crisis) absent from normal-signal responses.
+- **AI now distinguishes normal-range mortality from operational crisis** — signal level is computed deterministically from threshold, not inferred from generic FMCG logic.
+- *This does not constitute full operational intelligence. Thresholds are provisional, only mortality is implemented, and multi-signal correlation has not started.*
+
 ## Infrastructure State
 - **Docker + pgvector local environment active** — Postgres on `localhost:5433`.
 - **FastAPI backend** on `127.0.0.1:8000`; **Next.js frontend** on `localhost:3000`; dev-origin allowance for `127.0.0.1` in place.
 - **Migrations validated through 010** — schema for events, situations, and supporting tables is in place and reproducible.
 - Backend, repository, and service layers conform to the approved architecture (company_id isolation, async-first, route → service → repository).
 - **Scoped i18n foundation** in the frontend — namespaced dictionaries, Dairtna operational UI migrated, AR/EN switching improved, RTL/LTR preserved.
+- **Dairtna interpreter runtime** — deterministic operational signal blocks computed and injected before executive reasoning on every CEO chat request; no DB dependency in Phase 1; regex + provisional threshold layer operating at < 1ms; `app/services/dairtna/` package in place for future metric expansion.
 
 ## Known Current Limitations
 Honest tracking of what is in motion but not yet production-quality. Not a roadmap — a status list.
@@ -91,6 +110,11 @@ Honest tracking of what is in motion but not yet production-quality. Not a roadm
 4. **No autonomous AI actions yet.** Per the explicit warning below.
 5. **Natural capture is store-only.** Raw notes are saved without enrichment, classification, or entity resolution.
 6. **Structured panels and output panels are Dairtna-first and MVP-level.** No Caesar coverage, no refinement passes.
+7. **Dairtna interpreter thresholds are provisional.** All mortality thresholds (< 0.05% normal, etc.) are based on general poultry industry ranges. They have not been validated against actual Jannat Al-Firdaws field data. Must be reviewed with the Dairtna field manager before treating as authoritative.
+8. **Only mortality rate implemented in Phase 1.** Production percentage, feed consumption, water trend, and egg weight / size distribution are specified in the doctrine doc but not yet wired into the interpreter.
+9. **No historical baseline memory yet.** The interpreter computes signal from a single reading. It cannot compare against the company's own prior readings or detect sustained trends across days.
+10. **No multi-signal correlation yet.** Compound conditions (e.g., mortality `watch` + feed `watch` → veterinary flag) are documented in the doctrine but not implemented. Phase 2B.
+11. **No seasonal or breed-specific calibration.** Thresholds apply uniformly regardless of flock age, breed type, or season. These factors affect expected ranges and will require per-flock configuration in a future phase.
 
 ## Current Priority
 **Phase 2A — Operational Intelligence Grounding** (next).
