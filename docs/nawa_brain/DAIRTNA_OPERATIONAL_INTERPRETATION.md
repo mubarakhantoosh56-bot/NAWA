@@ -54,6 +54,25 @@ Corollaries:
 
 ## 3. Interpretation Signal Levels
 
+> **Vocabulary note — two separate label sets, not interchangeable.**
+>
+> **Event severity labels** (`info / watch / concern / critical`) are attached to raw
+> ingested operational events in the capture pipeline. They describe how a human
+> reporter or the ingestion layer categorized an event at the moment of capture.
+>
+> **Interpreter signal levels** (`normal / watch / warning / critical / unknown`) are
+> produced by this interpreter after domain-calibrated computation against a threshold.
+> They describe what a measurement means for this operation, not how it was filed.
+>
+> These two vocabularies must not be mixed. A raw event tagged `concern` does not
+> produce a `warning` signal unless the computed metric crosses the `warning` threshold.
+> A raw event tagged `info` can produce a `warning` or `critical` signal if the numbers
+> support it. Signal level is always determined by computation, never inherited from the
+> capture label.
+>
+> This interpreter and the signal levels below govern Dairtna operational measurements
+> only. Other divisions may define their own interpreter doctrine independently.
+
 Five levels are defined. Each has a strict behavioral rule for the CEO response layer.
 
 | Level | Meaning | CEO response behavior |
