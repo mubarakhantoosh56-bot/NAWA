@@ -88,35 +88,25 @@ class RoleRepository:
         created_by_user_id: UUID | None = None,
     ) -> RowDict:
         """Create or update a tenant role by slug."""
-        row = await self.db.fetchrow(
-            """
-            INSERT INTO roles (
-                company_id,
-                name,
-                slug,
-                description,
-                permissions,
-                is_system_role,
-                created_by_user_id
+        existing = await self.get_company_role_by_slug(company_id, slug)
+        if existing is not None:
+            updated = await self.update_company_role(
+                company_id=company_id,
+                role_id=existing["id"],  # type: ignore[arg-type]
+                name=name,
+                description=description,
+                permissions=permissions,
+                updated_by_user_id=created_by_user_id,
             )
-            VALUES ($1, $2, $3, $4, $5::jsonb, FALSE, $6)
-            ON CONFLICT (company_id, slug)
-                WHERE deleted_at IS NULL
-            DO UPDATE SET
-                name = EXCLUDED.name,
-                description = EXCLUDED.description,
-                permissions = EXCLUDED.permissions,
-                updated_at = NOW()
-            RETURNING *
-            """,
-            company_id,
-            name,
-            slug,
-            description,
-            json.dumps(permissions or []),
-            created_by_user_id,
+            return updated or existing
+        return await self.create_company_role(
+            company_id=company_id,
+            name=name,
+            slug=slug,
+            description=description,
+            permissions=permissions,
+            created_by_user_id=created_by_user_id,
         )
-        return self._row_to_dict(row)
 
     async def get_company_role_by_id(
         self,
