@@ -9,8 +9,8 @@ import { useLanguage } from "@/components/i18n/LanguageProvider";
 export function LoginForm() {
   const { loginUser, status } = useAuth();
   const { t } = useLanguage();
-  const [companySlug, setCompanySlug] = useState("northstar-commercial");
-  const [email, setEmail] = useState("owner@northstar-demo.local");
+  const [companySlug, setCompanySlug] = useState("jannat-al-firdaws");
+  const [email, setEmail] = useState("owner@jannat-local.dev");
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState<string | null>(null);
 

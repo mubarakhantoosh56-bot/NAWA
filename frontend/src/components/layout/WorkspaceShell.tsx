@@ -129,9 +129,9 @@ const brainWorkspaces: BrainWorkspace[] = [
 
 const divisionConfigs: Record<"ceo" | DivisionKey | "memory" | "reports" | "automations", DivisionConfig> = {
   ceo: {
-    title: "CEO Brain",
+    title: "Executive Command Center",
     subtitle:
-      "Ask NAWA anything: operational analysis, executive reports, SOPs, PPT outlines, avatar briefings, and automation-ready actions.",
+      "Organizational intelligence for Jannat Al-Firdaws — Dairtna Poultry, Caesar Beverage, and Shared Corporate. Cross-division decisions, operational signals, and AI briefings.",
     scope: "Jannat Al-Firdaws",
     signals: [
       { label: "Dairtna Poultry", value: "Feed, halls, production, veterinary, sales", tone: "warn" },
@@ -457,6 +457,38 @@ export function WorkspaceShell() {
               departments={displayDepartments}
               onSaved={setCompanyProfile}
             />
+          ) : activeWorkspace.kind === "division" ? (
+            <DivisionCommandCenter
+              token={token}
+              companyId={me?.company.id}
+              divisionKey={activeWorkspace.divisionKey}
+              activeDepartment={activeDepartment}
+              departments={departments}
+              displayDepartments={displayDepartments}
+              naturalCaptureDepartment={naturalCaptureDepartment}
+              canSubmit={canSubmitInWorkspace}
+              canUpload={Boolean(token && canReadFiles)}
+              canUseCeoWorkspace={canUseCeoWorkspace}
+              workspaceKey={activeWorkspaceKey}
+              chatTitle={chatTitle}
+              awarenessRefreshKey={awarenessRefreshKey}
+              onCaptured={() => setAwarenessRefreshKey((current) => current + 1)}
+            />
+          ) : activeWorkspace.kind === "ceo" ? (
+            <ExecutiveCommandCenter
+              token={token}
+              companyId={me?.company.id}
+              workspaceKey={activeWorkspaceKey}
+              chatTitle={chatTitle}
+              activeDepartment={activeDepartment}
+              displayDepartments={displayDepartments}
+              canSubmit={canSubmitInWorkspace}
+              canUpload={Boolean(token && canReadFiles)}
+              canUseCeoWorkspace={canUseCeoWorkspace}
+              awarenessRefreshKey={awarenessRefreshKey}
+              companyProfileActive={companyProfile.is_active}
+              onNavigateDivision={(divisionKey) => setActiveWorkspace({ kind: "division", divisionKey })}
+            />
           ) : (
             <>
               {token && me ? (
@@ -470,26 +502,6 @@ export function WorkspaceShell() {
                   />
                 </>
               ) : null}
-
-              {activeWorkspace.kind === "division" && activeWorkspace.divisionKey === "dairtna" ? (
-                <>
-                  <NaturalOperationalCapturePanel
-                    token={token || ""}
-                    departments={departments}
-                    defaultDepartment={naturalCaptureDepartment}
-                    canSubmit={canSubmitInWorkspace}
-                    onCaptured={() => setAwarenessRefreshKey((current) => current + 1)}
-                  />
-                  <OperationalAwarenessPanel token={token || ""} refreshKey={awarenessRefreshKey} />
-                  <ManualOperationalEventPanel
-                    token={token || ""}
-                    departments={displayDepartments}
-                    defaultDepartment={activeDepartment}
-                    canSubmit={canSubmitInWorkspace}
-                  />
-                </>
-              ) : null}
-
               <OperationalInputPanel
                 token={token || ""}
                 department={activeDepartment}
@@ -634,7 +646,7 @@ function CompanyBrainHeader({
     <section className="command-panel p-4">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <div className="text-xs font-semibold uppercase text-white/60">{t("liveAiWorkforce")}</div>
+          <div className="text-xs font-semibold uppercase text-white/60">{t("enterpriseIntelligence")}</div>
           <h1 className="mt-1 text-2xl font-semibold text-white">{localizeWorkspaceText(config.title, language)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
             {localizeWorkspaceText(config.subtitle, language)}
@@ -662,6 +674,601 @@ function CompanyBrainHeader({
   );
 }
 
+type CeoSection = "overview" | "divisions" | "events" | "risks" | "files" | "briefings" | "memory";
+
+function ExecutiveCommandCenter({
+  token,
+  companyId,
+  workspaceKey,
+  chatTitle,
+  activeDepartment,
+  displayDepartments,
+  canSubmit,
+  canUpload,
+  canUseCeoWorkspace,
+  awarenessRefreshKey,
+  companyProfileActive,
+  onNavigateDivision,
+}: {
+  token: string | null;
+  companyId: string | undefined;
+  workspaceKey: string;
+  chatTitle: string;
+  activeDepartment: Department | null;
+  displayDepartments: Department[];
+  canSubmit: boolean;
+  canUpload: boolean;
+  canUseCeoWorkspace: boolean;
+  awarenessRefreshKey: number;
+  companyProfileActive: boolean;
+  onNavigateDivision: (key: DivisionKey) => void;
+}) {
+  const [activeSection, setActiveSection] = useState<CeoSection>("overview");
+  const { t } = useLanguage();
+
+  const sections: { key: CeoSection; label: string }[] = [
+    { key: "overview", label: t("workspaceShell.ceoCenter.tabOverview") },
+    { key: "divisions", label: t("workspaceShell.ceoCenter.tabDivisions") },
+    { key: "events", label: t("workspaceShell.ceoCenter.tabEvents") },
+    { key: "risks", label: t("workspaceShell.ceoCenter.tabRisks") },
+    { key: "files", label: t("workspaceShell.ceoCenter.tabFiles") },
+    { key: "briefings", label: t("workspaceShell.ceoCenter.tabBriefings") },
+    { key: "memory", label: t("workspaceShell.ceoCenter.tabMemory") },
+  ];
+
+  return (
+    <section className="panel overflow-hidden">
+      <div className="flex overflow-x-auto border-b border-line bg-white">
+        {sections.map((section) => (
+          <button
+            key={section.key}
+            type="button"
+            onClick={() => setActiveSection(section.key)}
+            className={`whitespace-nowrap px-4 py-3 text-sm font-medium transition ${
+              activeSection === section.key
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-4">
+        {activeSection === "overview" && (
+          <ExecutiveOverviewSection
+            companyProfileActive={companyProfileActive}
+            onNavigateDivision={onNavigateDivision}
+          />
+        )}
+
+        {activeSection === "divisions" && (
+          <ExecutiveDivisionsSection onNavigateDivision={onNavigateDivision} />
+        )}
+
+        {activeSection === "events" && (
+          <OperationalAwarenessPanel token={token || ""} refreshKey={awarenessRefreshKey} />
+        )}
+
+        {activeSection === "risks" && <ExecutiveRisksSection />}
+
+        {activeSection === "files" && (
+          <OperationalInputPanel
+            token={token || ""}
+            department={activeDepartment}
+            departments={displayDepartments}
+            canSubmit={canSubmit}
+            canUpload={canUpload}
+            canAssignDepartment={canUseCeoWorkspace}
+          />
+        )}
+
+        {activeSection === "briefings" &&
+          (token && companyId ? (
+            <ChatPanel
+              token={token}
+              companyId={companyId}
+              workspaceKey={workspaceKey}
+              title={chatTitle}
+              department={activeDepartment}
+            />
+          ) : null)}
+
+        {activeSection === "memory" && (
+          <ExecutiveMemorySection companyProfileActive={companyProfileActive} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ExecutiveOverviewSection({
+  companyProfileActive,
+  onNavigateDivision,
+}: {
+  companyProfileActive: boolean;
+  onNavigateDivision: (key: DivisionKey) => void;
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="mb-2 text-xs font-semibold uppercase text-muted">
+          {t("workspaceShell.ceoCenter.intelligenceStateLabel")}
+        </div>
+        <div className="space-y-2">
+          <IntelligenceStateRow
+            label="Dairtna Poultry"
+            state="provisional"
+            detail={t("workspaceShell.ceoCenter.interpreterStatus")}
+          />
+          <IntelligenceStateRow
+            label="Caesar Beverage"
+            state="not_started"
+            detail={t("workspaceShell.ceoCenter.phaseNotStarted")}
+          />
+          <IntelligenceStateRow
+            label="Shared Corporate"
+            state="not_started"
+            detail={t("workspaceShell.ceoCenter.phaseNotStarted")}
+          />
+          <IntelligenceStateRow
+            label="Multi-signal correlation"
+            state="not_started"
+            detail={t("workspaceShell.ceoCenter.correlationStatus")}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 text-xs font-semibold uppercase text-muted">
+          {t("workspaceShell.ceoCenter.divisionStatusLabel")}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <DivisionStatusCard divisionKey="dairtna" onOpen={() => onNavigateDivision("dairtna")} />
+          <DivisionStatusCard divisionKey="caesar" onOpen={() => onNavigateDivision("caesar")} />
+          <DivisionStatusCard divisionKey="shared" onOpen={() => onNavigateDivision("shared")} />
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 text-xs font-semibold uppercase text-muted">
+          {t("workspaceShell.ceoCenter.traceabilityLabel")}
+        </div>
+        <div className="space-y-2">
+          <TraceabilityCard
+            source="Dairtna XLSX field report"
+            signal="Mortality rate — computed from deaths / flock_size × 100"
+            state="provisional"
+            validation={t("workspaceShell.ceoCenter.thresholdsProvisional")}
+          />
+          <TraceabilityCard
+            source="Not configured"
+            signal="Production %, feed consumption, water trend, egg weight"
+            state="not_started"
+            validation="Phase 1 scope — not implemented"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-md border border-line bg-surface p-3 text-xs leading-5 text-muted">
+        <span className={`font-medium ${companyProfileActive ? "text-emerald-700" : "text-amber-700"}`}>
+          {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
+        </span>
+        <span className="mt-1 block">{t("workspaceShell.erpOneSource")}</span>
+      </div>
+    </div>
+  );
+}
+
+function IntelligenceStateRow({
+  label,
+  state,
+  detail,
+}: {
+  label: string;
+  state: "provisional" | "validated" | "not_started" | "missing_baseline";
+  detail: string;
+}) {
+  const { t } = useLanguage();
+
+  const stateConfig: Record<typeof state, { badge: string; cls: string }> = {
+    provisional: {
+      badge: t("workspaceShell.ceoCenter.provisionalBadge"),
+      cls: "border-amber-200 bg-amber-50 text-amber-700",
+    },
+    validated: {
+      badge: t("workspaceShell.ceoCenter.validatedBadge"),
+      cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    not_started: {
+      badge: t("workspaceShell.ceoCenter.notStartedBadge"),
+      cls: "border-line bg-surface text-muted",
+    },
+    missing_baseline: {
+      badge: t("workspaceShell.ceoCenter.missingBaselineBadge"),
+      cls: "border-line bg-surface text-muted",
+    },
+  };
+
+  const { badge, cls } = stateConfig[state];
+
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-ink">{label}</div>
+        <div className="mt-0.5 text-xs text-muted">{detail}</div>
+      </div>
+      <span className={`shrink-0 rounded border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${cls}`}>
+        {badge}
+      </span>
+    </div>
+  );
+}
+
+function DivisionStatusCard({
+  divisionKey,
+  onOpen,
+}: {
+  divisionKey: DivisionKey;
+  onOpen: () => void;
+}) {
+  const { language, t } = useLanguage();
+  const config = divisionConfigs[divisionKey];
+
+  const stateByDivision: Record<DivisionKey, "provisional" | "not_started"> = {
+    dairtna: "provisional",
+    caesar: "not_started",
+    shared: "not_started",
+  };
+  const state = stateByDivision[divisionKey];
+  const stateLabel =
+    state === "provisional"
+      ? t("workspaceShell.ceoCenter.provisionalBadge")
+      : t("workspaceShell.ceoCenter.notStartedBadge");
+  const stateCls =
+    state === "provisional"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-line bg-surface text-muted";
+
+  return (
+    <div className="rounded-md border border-line bg-white p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-ink">
+            {localizeWorkspaceText(config.title, language)}
+          </div>
+          <div className="mt-0.5 text-xs text-muted">{config.signals.length} signals</div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="shrink-0 rounded border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent hover:bg-accent/15"
+        >
+          {t("workspaceShell.ceoCenter.openDivision")}
+        </button>
+      </div>
+      <div className="mt-2">
+        <span className={`rounded border px-2 py-0.5 text-[11px] font-medium ${stateCls}`}>
+          {stateLabel}
+        </span>
+      </div>
+      <div className="mt-2 space-y-1">
+        {config.signals.slice(0, 2).map((signal) => (
+          <SignalRow key={signal.label} signal={signal} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TraceabilityCard({
+  source,
+  signal,
+  state,
+  validation,
+}: {
+  source: string;
+  signal: string;
+  state: "provisional" | "not_started" | "validated";
+  validation: string;
+}) {
+  const { t } = useLanguage();
+  const borderCls =
+    state === "provisional"
+      ? "border-amber-200 bg-amber-50"
+      : state === "validated"
+        ? "border-emerald-200 bg-emerald-50"
+        : "border-line bg-surface";
+
+  return (
+    <div className={`rounded-md border p-3 text-xs ${borderCls}`}>
+      <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <span className="w-20 shrink-0 font-medium text-muted">{t("workspaceShell.ceoCenter.sourceFile")}</span>
+          <span className="text-ink">{source}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="w-20 shrink-0 font-medium text-muted">{t("workspaceShell.ceoCenter.extractedSignal")}</span>
+          <span className="text-ink">{signal}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="w-20 shrink-0 font-medium text-muted">{t("workspaceShell.ceoCenter.interpretationState")}</span>
+          <span className="text-ink">{state}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="w-20 shrink-0 font-medium text-muted">{t("workspaceShell.ceoCenter.pendingValidation")}</span>
+          <span className="text-ink">{validation}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveDivisionsSection({
+  onNavigateDivision,
+}: {
+  onNavigateDivision: (key: DivisionKey) => void;
+}) {
+  const { language, t } = useLanguage();
+  const divisionKeys: DivisionKey[] = ["dairtna", "caesar", "shared"];
+
+  return (
+    <div className="space-y-4">
+      {divisionKeys.map((key) => {
+        const config = divisionConfigs[key];
+        return (
+          <div key={key} className="rounded-md border border-line bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold text-ink">{localizeWorkspaceText(config.title, language)}</div>
+                <div className="mt-0.5 text-xs text-muted">{localizeWorkspaceText(config.scope, language)}</div>
+                <p className="mt-1 max-w-lg text-xs leading-5 text-muted">
+                  {localizeWorkspaceText(config.subtitle, language)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateDivision(key)}
+                className="shrink-0 rounded border border-accent/30 bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/15"
+              >
+                {t("workspaceShell.ceoCenter.openDivision")}
+              </button>
+            </div>
+            <div className="mt-3 space-y-1">
+              {config.signals.map((signal) => (
+                <SignalRow key={signal.label} signal={signal} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ExecutiveRisksSection() {
+  const { language, t } = useLanguage();
+  const divisionKeys: DivisionKey[] = ["dairtna", "caesar", "shared"];
+
+  return (
+    <div className="space-y-5">
+      {divisionKeys.map((key) => {
+        const config = divisionConfigs[key];
+        return (
+          <div key={key}>
+            <div className="mb-2 text-xs font-semibold uppercase text-muted">
+              {localizeWorkspaceText(config.title, language)}
+            </div>
+            <InsightList items={config.risks} tone="risk" />
+          </div>
+        );
+      })}
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        {t("workspaceShell.ceoCenter.thresholdsProvisional")}
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveMemorySection({ companyProfileActive }: { companyProfileActive: boolean }) {
+  const { t } = useLanguage();
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="mb-2 text-xs font-semibold uppercase text-muted">
+          {t("workspaceShell.ceoCenter.baselineStatus")}
+        </div>
+        <div className="space-y-2">
+          <IntelligenceStateRow
+            label="Dairtna — mortality rate"
+            state="provisional"
+            detail={t("workspaceShell.ceoCenter.interpreterStatus")}
+          />
+          <IntelligenceStateRow
+            label="Dairtna — production %, feed, water, egg weight"
+            state="not_started"
+            detail="Phase 1 scope — not implemented"
+          />
+          <IntelligenceStateRow
+            label="Caesar Beverage — all metrics"
+            state="not_started"
+            detail={t("workspaceShell.ceoCenter.phaseNotStarted")}
+          />
+          <IntelligenceStateRow
+            label="Shared Corporate — all metrics"
+            state="not_started"
+            detail={t("workspaceShell.ceoCenter.phaseNotStarted")}
+          />
+        </div>
+      </div>
+      <div className="rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">
+        {t("workspaceShell.ceoCenter.correlationStatus")}
+      </div>
+      <div className="rounded-md border border-line bg-surface p-3 text-xs leading-5 text-muted">
+        <span className={`font-medium ${companyProfileActive ? "text-emerald-700" : "text-amber-700"}`}>
+          {companyProfileActive ? t("companyContextActive") : t("companyContextInactive")}
+        </span>
+        <span className="mt-1 block">{t("workspaceShell.erpOneSource")}</span>
+      </div>
+    </div>
+  );
+}
+
+type DivisionTab = "overview" | "chat" | "events" | "files" | "insights";
+
+function DivisionCommandCenter({
+  token,
+  companyId,
+  divisionKey,
+  activeDepartment,
+  departments,
+  displayDepartments,
+  naturalCaptureDepartment,
+  canSubmit,
+  canUpload,
+  canUseCeoWorkspace,
+  workspaceKey,
+  chatTitle,
+  awarenessRefreshKey,
+  onCaptured,
+}: {
+  token: string | null;
+  companyId: string | undefined;
+  divisionKey: DivisionKey;
+  activeDepartment: Department | null;
+  departments: Department[];
+  displayDepartments: Department[];
+  naturalCaptureDepartment: Department | null;
+  canSubmit: boolean;
+  canUpload: boolean;
+  canUseCeoWorkspace: boolean;
+  workspaceKey: string;
+  chatTitle: string;
+  awarenessRefreshKey: number;
+  onCaptured: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<DivisionTab>("overview");
+  const { t } = useLanguage();
+
+  const tabs: { key: DivisionTab; label: string }[] = [
+    { key: "overview", label: t("workspaceShell.divisionCenter.tabOverview") },
+    { key: "chat", label: t("workspaceShell.divisionCenter.tabChat") },
+    { key: "events", label: t("workspaceShell.divisionCenter.tabEvents") },
+    { key: "files", label: t("workspaceShell.divisionCenter.tabFiles") },
+    { key: "insights", label: t("workspaceShell.divisionCenter.tabInsights") },
+  ];
+
+  const config = divisionConfigs[divisionKey];
+
+  return (
+    <section className="panel overflow-hidden">
+      <div className="flex border-b border-line bg-white">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-3 text-sm font-medium transition ${
+              activeTab === tab.key
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-4">
+        {activeTab === "overview" && <DivisionOverview config={config} />}
+
+        {activeTab === "chat" &&
+          (token && companyId ? (
+            <ChatPanel
+              token={token}
+              companyId={companyId}
+              workspaceKey={workspaceKey}
+              title={chatTitle}
+              department={activeDepartment}
+            />
+          ) : null)}
+
+        {activeTab === "events" &&
+          (divisionKey === "dairtna" ? (
+            <div className="space-y-4">
+              <NaturalOperationalCapturePanel
+                token={token || ""}
+                departments={departments}
+                defaultDepartment={naturalCaptureDepartment}
+                canSubmit={canSubmit}
+                onCaptured={onCaptured}
+              />
+              <OperationalAwarenessPanel token={token || ""} refreshKey={awarenessRefreshKey} />
+              <ManualOperationalEventPanel
+                token={token || ""}
+                departments={displayDepartments}
+                defaultDepartment={activeDepartment}
+                canSubmit={canSubmit}
+              />
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-muted">
+              {t("workspaceShell.divisionCenter.eventsPlaceholder")}
+            </div>
+          ))}
+
+        {activeTab === "files" && (
+          <OperationalInputPanel
+            token={token || ""}
+            department={activeDepartment}
+            departments={displayDepartments}
+            canSubmit={canSubmit}
+            canUpload={canUpload}
+            canAssignDepartment={canUseCeoWorkspace}
+          />
+        )}
+
+        {activeTab === "insights" && (
+          <div className="py-8 text-center">
+            <div className="text-sm font-medium text-ink">
+              {t("workspaceShell.divisionCenter.insightsPlaceholderTitle")}
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              {t("workspaceShell.divisionCenter.insightsPlaceholderText")}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DivisionOverview({ config }: { config: DivisionConfig }) {
+  const { t } = useLanguage();
+
+  return (
+    <div className="space-y-4">
+      <IntelligenceSection title={t("workspaceShell.liveSignals")}>
+        <div className="space-y-2">
+          {config.signals.map((signal) => (
+            <SignalRow key={signal.label} signal={signal} />
+          ))}
+        </div>
+      </IntelligenceSection>
+      <IntelligenceSection title="Detected risks">
+        <InsightList items={config.risks} tone="risk" />
+      </IntelligenceSection>
+      <IntelligenceSection title="Suggested actions">
+        <InsightList items={config.actions} tone="neutral" />
+      </IntelligenceSection>
+    </div>
+  );
+}
+
 function IntelligencePanel({
   config,
   companyProfileActive,
@@ -686,7 +1293,7 @@ function IntelligencePanel({
           </div>
         </IntelligenceSection>
 
-        <IntelligenceSection title="Live signals">
+        <IntelligenceSection title={t("workspaceShell.liveSignals")}>
           <div className="space-y-2">
             {config.signals.map((signal) => (
               <SignalRow key={signal.label} signal={signal} />
@@ -1096,6 +1703,7 @@ function localizeWorkspaceText(value: string, language: Language): string {
   }
 
   const nawaTranslations: Record<string, string> = {
+    "Executive Command Center": "workspaceShell.ceoCenter.sectionLabel",
     "CEO Brain": "workspaceShell.workspaces.ceo.label",
     "Company-wide reasoning": "workspaceShell.workspaces.ceo.description",
     "Dairtna Poultry": "workspaceShell.workspaces.dairtna.label",
@@ -1160,7 +1768,6 @@ function localizeWorkspaceText(value: string, language: Language): string {
     "HR AI": "HR AI",
     "Department AI": "Department AI",
     Owner: "المالك",
-    "Executive Demo Owner": "مالك demo التنفيذي",
     "Company-wide AI workspace for executive planning, cross-department priorities, and demo-ready NAWA decisions.":
       "مساحة ذكاء على مستوى الشركة للتخطيط التنفيذي والأولويات المشتركة وقرارات NAWA الجاهزة للعرض.",
     "Company Brain workspace for organizational intelligence, live operational awareness, cross-department priorities, and enterprise decisions.":
@@ -1189,8 +1796,6 @@ function localizeWorkspaceText(value: string, language: Language): string {
     "High-intent accounts this month": "حسابات عالية النية هذا الشهر",
     "Improved by 1.4 months": "تحسن بـ 1.4 شهر",
     "Operations proof points outperform": "نقاط إثبات العمليات تتفوق",
-    "Northstar is ready to accelerate, but the next phase should be governed by fulfillment capacity, margin protection, and account-level focus.":
-      "Northstar جاهزة للتسارع، لكن المرحلة التالية يجب أن تُدار بسعة التنفيذ وحماية الهامش وتركيز الحسابات.",
     "Sales should concentrate on expansion accounts with budget authority and low operational drag, then escalate only margin-sensitive deals.":
       "على المبيعات التركيز على حسابات التوسع ذات صلاحية الميزانية والأثر التشغيلي المنخفض، مع تصعيد الصفقات الحساسة للهامش فقط.",
     "Finance can support the growth plan while preserving cash coverage, provided discounting and procurement commitments remain governed.":
@@ -1207,8 +1812,6 @@ function localizeWorkspaceText(value: string, language: Language): string {
     "Demand Generation Brief": "إحاطة توليد الطلب",
     "Revenue growth remains healthy; fulfillment capacity is now the highest leverage decision.":
       "نمو الإيرادات صحي؛ سعة التنفيذ هي الآن قرار الرافعة الأعلى.",
-    "Northstar is shifting from opportunistic growth to governed, repeatable execution.":
-      "تنتقل Northstar من نمو انتهازي إلى تنفيذ محكوم وقابل للتكرار.",
     "Enterprise services and facilities accounts show the best margin-adjusted conversion.":
       "حسابات الخدمات المؤسسية والمرافق تظهر أفضل تحويل معدل بالهامش.",
     "Prioritize 14 accounts with active budget, low delivery complexity, and renewal urgency.":

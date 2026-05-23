@@ -1,10 +1,10 @@
 import type { ChatResponse, CompanyFile, Department } from "@/lib/types";
 
 export const DEMO_COMPANY = {
-  name: "Northstar Commercial Group",
-  slug: "northstar-demo",
-  email: "demo@nawa.ai",
-  role: "Executive Demo Owner",
+  name: "Jannat Al-Firdaws",
+  slug: "jannat-al-firdaws",
+  email: "owner@jannat-local.dev",
+  role: "Owner",
 };
 
 export const DEMO_DEPARTMENTS: Department[] = [
@@ -96,7 +96,7 @@ export const DEMO_KPIS = {
 export const DEMO_REPORTS = {
   ceo: [
     { title: "Executive Operating Brief", detail: "Revenue growth remains healthy; fulfillment capacity is now the highest leverage decision." },
-    { title: "Board Narrative", detail: "Northstar is shifting from opportunistic growth to governed, repeatable execution." },
+    { title: "Board Narrative", detail: "Jannat Al-Firdaws is moving from foundational setup to governed operational intelligence." },
   ],
   sales: [
     { title: "Pipeline Quality Review", detail: "Enterprise services and facilities accounts show the best margin-adjusted conversion." },
@@ -121,7 +121,7 @@ export const DEMO_REPORTS = {
 };
 
 export const DEMO_EXECUTIVE_SUMMARIES = {
-  ceo: "Northstar is ready to accelerate, but the next phase should be governed by fulfillment capacity, margin protection, and account-level focus.",
+  ceo: "Jannat Al-Firdaws is building toward governed operational intelligence at the poultry-field and enterprise level.",
   sales: "Sales should concentrate on expansion accounts with budget authority and low operational drag, then escalate only margin-sensitive deals.",
   production: "Production should protect output reliability first: resolve packaging downtime, reduce wastage, and confirm availability before Sales commits.",
   finance: "Finance can support the growth plan while preserving cash coverage, provided discounting and procurement commitments remain governed.",
@@ -253,7 +253,7 @@ function demoResponse(ceoText: string, logic: Record<string, unknown>): ChatResp
       company_id: "demo-company",
       session_id: "investor-demo",
       context: {
-        dataset: "Northstar Commercial Group investor demo",
+        dataset: "Jannat Al-Firdaws operational demo",
       },
       parse_ok: true,
       memory_injected: true,
