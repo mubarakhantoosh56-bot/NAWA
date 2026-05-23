@@ -23,6 +23,7 @@ from app.services.memory.event_log import log_decision_event, log_decision_event
 from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
 from app.services.rag.retrieval import RetrievalService
+from app.services.dairtna.interpreter import interpret_dairtna_measurements
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +374,7 @@ def _operational_response_missing_elements(
     *,
     parsed: Optional[Dict[str, Any]],
     decision_context: Dict[str, Any],
+    dairtna_signal_block: str = "",
 ) -> List[str]:
     """Return mandatory CEO operational elements missing from executive_summary."""
 
@@ -385,6 +387,16 @@ def _operational_response_missing_elements(
     text = executive_summary.lower()
     if not text.strip():
         return ["root operational bottleneck", "cause/effect chain", "affected departments", "operational impact"]
+
+    # When all Dairtna signals are normal-range, a correct response should NOT
+    # contain bottleneck language — omit the bottleneck check to prevent false
+    # regeneration that would force unsupported escalation.
+    all_signals_normal = (
+        dairtna_signal_block != ""
+        and "signal_level: normal" in dairtna_signal_block
+        and "signal_level: warning" not in dairtna_signal_block
+        and "signal_level: critical" not in dairtna_signal_block
+    )
 
     required_signals = {
         "root operational bottleneck": [
@@ -427,6 +439,8 @@ def _operational_response_missing_elements(
 
     missing: List[str] = []
     for element, signals in required_signals.items():
+        if element == "root operational bottleneck" and all_signals_normal:
+            continue  # Normal-range signals do not require bottleneck language
         if not any(signal in text for signal in signals):
             missing.append(element)
 
@@ -447,13 +461,27 @@ def _build_operational_regeneration_instruction(
     *,
     missing_elements: List[str],
     response_language: str,
+    dairtna_signal_block: str = "",
 ) -> str:
     missing = ", ".join(missing_elements)
+
+    # If Dairtna signals are present, the opening framing must respect them.
+    # A normal-range mortality must never be called a bottleneck.
+    if dairtna_signal_block and "signal_level: normal" in dairtna_signal_block:
+        opening = (
+            "Start the executive_summary with the most significant confirmed operational fact. "
+            "IMPORTANT: The DAIRTNA OPERATIONAL SIGNAL INTERPRETATION block shows signal_level=normal "
+            "for mortality. Do NOT frame that mortality figure as a bottleneck, crisis, or production risk. "
+            "Report it as an observed fact within normal operating range and cite the computed_rate. "
+        )
+    else:
+        opening = "Start the executive_summary with the concrete root operational bottleneck. "
+
     return (
         "Your previous response failed NAWA operational-response enforcement. "
         "Regenerate the FULL valid JSON response once, using executive_summary directly from the Decision Context object. "
         f"Missing mandatory elements: {missing}. "
-        "Start the executive_summary with the concrete root operational bottleneck. "
+        + opening +
         "Then explain the cause/effect chain, affected departments, operational impact, business impact, and one priority executive action. "
         "You MUST cite operational events, KPI direction, detected patterns, and department relationships when present. "
         "If PENDING AI OPERATIONAL PROPOSALS appear in the context, cite each relevant proposal by its specific numbers and dates "
@@ -725,6 +753,53 @@ class AIService:
         )
         return "\n".join(lines)
 
+    async def _load_dairtna_signal_block(
+        self,
+        company_id: str,
+        session_id: str,
+    ) -> str:
+        """Interpret pending drafts through Dairtna domain rules and return a signal block.
+
+        Stateless — no DB writes, no side effects. Returns empty string if no
+        parseable mortality data exists in the pending drafts.
+        """
+        if self.db_pool is None:
+            return ""
+        try:
+            company_uuid = UUID(company_id)
+        except ValueError:
+            return ""
+
+        try:
+            rows = await self.db_pool.fetch(
+                """
+                SELECT proposed_title, proposed_summary
+                FROM operational_event_drafts
+                WHERE company_id = $1 AND status = 'pending'
+                ORDER BY confidence DESC, created_at DESC
+                LIMIT 5
+                """,
+                company_uuid,
+            )
+        except Exception:
+            logger.warning(
+                "dairtna_signal_block_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return ""
+
+        if not rows:
+            return ""
+
+        signal_block = interpret_dairtna_measurements([dict(r) for r in rows])
+        if signal_block:
+            logger.info(
+                "dairtna_signal_block_injected",
+                extra={"company_id": company_id, "session_id": session_id},
+            )
+        return signal_block
+
     async def _load_rag_knowledge_block(
         self,
         company_id: str,
@@ -972,6 +1047,10 @@ class AIService:
                 company_id=company_id,
                 session_id=session_id,
             )
+            dairtna_signal_block = await self._load_dairtna_signal_block(
+                company_id=company_id,
+                session_id=session_id,
+            )
 
             decision_context = build_decision_context(
                 context=context,
@@ -1007,6 +1086,9 @@ class AIService:
 
             if rag_knowledge_block:
                 messages.append({"role": "system", "content": rag_knowledge_block})
+
+            if dairtna_signal_block:
+                messages.append({"role": "system", "content": dairtna_signal_block})
 
             if pending_drafts_block:
                 messages.append({"role": "system", "content": pending_drafts_block})
@@ -1094,6 +1176,7 @@ class AIService:
             missing_operational_elements = _operational_response_missing_elements(
                 parsed=parsed,
                 decision_context=decision_context,
+                dairtna_signal_block=dairtna_signal_block,
             )
             if missing_operational_elements:
                 logger.warning(
@@ -1111,6 +1194,7 @@ class AIService:
                         "content": _build_operational_regeneration_instruction(
                             missing_elements=missing_operational_elements,
                             response_language=response_language,
+                            dairtna_signal_block=dairtna_signal_block,
                         ),
                     },
                 ]
@@ -1133,6 +1217,7 @@ class AIService:
                 regenerated_missing = _operational_response_missing_elements(
                     parsed=regenerated_parsed,
                     decision_context=decision_context,
+                    dairtna_signal_block=dairtna_signal_block,
                 )
                 if not regenerated_missing:
                     answer_text = regenerated_answer_text
