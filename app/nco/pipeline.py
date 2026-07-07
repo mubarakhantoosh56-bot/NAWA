@@ -27,6 +27,7 @@ from app.services.memory.repository import MemoryRepository
 
 MVP_OPTIONAL_MISSING_EVIDENCE_TYPES = frozenset(
     {
+        "feed_consumption",
         "vet_reports",
         "temperature_ventilation",
     }
