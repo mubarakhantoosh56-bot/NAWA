@@ -7,10 +7,10 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { FilesPanel } from "@/components/files/FilesPanel";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { CompanyInputsPanel } from "@/components/operations/CompanyInputsPanel";
 import { ManualOperationalEventPanel } from "@/components/operations/ManualOperationalEventPanel";
 import { NaturalOperationalCapturePanel } from "@/components/operations/NaturalOperationalCapturePanel";
 import { OperationalAwarenessPanel } from "@/components/operations/OperationalAwarenessPanel";
-import { OperationalInputPanel } from "@/components/operations/OperationalInputPanel";
 import { ApiError } from "@/lib/api/client";
 import { getCompanyIntelligenceProfile, updateCompanyIntelligenceProfile } from "@/lib/api/company-profile";
 import { listDepartments } from "@/lib/api/departments";
@@ -30,7 +30,7 @@ type ActiveWorkspace =
       divisionKey: DivisionKey;
     }
   | {
-      kind: "memory" | "reports" | "automations" | "settings";
+      kind: "inputs" | "memory" | "reports" | "automations" | "settings";
     };
 
 type DivisionKey = "dairtna" | "caesar" | "shared";
@@ -50,7 +50,7 @@ type BrainWorkspace =
       description: string;
     }
   | {
-      kind: "memory" | "reports" | "automations" | "settings";
+      kind: "inputs" | "memory" | "reports" | "automations" | "settings";
       label: string;
       badge: string;
       description: string;
@@ -102,6 +102,12 @@ const brainWorkspaces: BrainWorkspace[] = [
     description: "HR, finance, procurement",
   },
   {
+    kind: "inputs",
+    label: "Company Inputs",
+    badge: "IN",
+    description: "Excel, PDF, text updates",
+  },
+  {
     kind: "memory",
     label: "Company Memory",
     badge: "MEM",
@@ -127,7 +133,7 @@ const brainWorkspaces: BrainWorkspace[] = [
   },
 ];
 
-const divisionConfigs: Record<"ceo" | DivisionKey | "memory" | "reports" | "automations", DivisionConfig> = {
+const divisionConfigs: Record<"ceo" | DivisionKey | "inputs" | "memory" | "reports" | "automations", DivisionConfig> = {
   ceo: {
     title: "Executive Command Center",
     subtitle:
@@ -237,6 +243,21 @@ const divisionConfigs: Record<"ceo" | DivisionKey | "memory" | "reports" | "auto
     ],
     relatedFiles: ["HR attendance summary", "Procurement approvals", "Asset register"],
   },
+  inputs: {
+    title: "Company Inputs",
+    subtitle:
+      "One entry point for Excel, PDF, and operational text updates. NAWA classifies each input and routes it through the existing runtime.",
+    scope: "Company-wide intake",
+    signals: [
+      { label: "Excel", value: "Operational reports and daily sheets", tone: "good" },
+      { label: "PDF", value: "Documents and policies", tone: "neutral" },
+      { label: "Text", value: "Operational updates from teams", tone: "warn" },
+    ],
+    risks: ["Low-confidence inputs wait for clarification instead of being guessed."],
+    positives: ["Users submit company information without choosing internal systems."],
+    actions: ["Upload a report or add today's operational update."],
+    relatedFiles: ["Daily report", "Policy document", "Field update"],
+  },
   memory: {
     title: "Company Memory",
     subtitle: "Operational memory from chats, files, manual updates, forms, future ERP inputs, and automations.",
@@ -304,13 +325,14 @@ export function WorkspaceShell() {
     "idle",
   );
   const [departmentError, setDepartmentError] = useState<string | null>(null);
-  const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "ceo" });
+  const [activeWorkspace, setActiveWorkspace] = useState<ActiveWorkspace>({ kind: "inputs" });
   const [companyProfile, setCompanyProfile] = useState<CompanyIntelligenceProfile>(emptyCompanyProfile);
   const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [awarenessRefreshKey, setAwarenessRefreshKey] = useState(0);
 
   const canReadDepartments = hasPermission(permissions, "departments.read");
   const canReadFiles = hasPermission(permissions, "files.read");
+  const canUploadFiles = hasPermission(permissions, "files.upload");
   const canSubmitOperationalForms = hasPermission(permissions, "operational.forms.submit");
   const canUseCeoWorkspace = hasPermission(permissions, "workspace.ceo");
 
@@ -467,7 +489,7 @@ export function WorkspaceShell() {
               displayDepartments={displayDepartments}
               naturalCaptureDepartment={naturalCaptureDepartment}
               canSubmit={canSubmitInWorkspace}
-              canUpload={Boolean(token && canReadFiles)}
+              canUpload={Boolean(token && canUploadFiles)}
               canUseCeoWorkspace={canUseCeoWorkspace}
               workspaceKey={activeWorkspaceKey}
               chatTitle={chatTitle}
@@ -483,11 +505,21 @@ export function WorkspaceShell() {
               activeDepartment={activeDepartment}
               displayDepartments={displayDepartments}
               canSubmit={canSubmitInWorkspace}
-              canUpload={Boolean(token && canReadFiles)}
+              canUpload={Boolean(token && canUploadFiles)}
               canUseCeoWorkspace={canUseCeoWorkspace}
               awarenessRefreshKey={awarenessRefreshKey}
               companyProfileActive={companyProfile.is_active}
               onNavigateDivision={(divisionKey) => setActiveWorkspace({ kind: "division", divisionKey })}
+            />
+          ) : activeWorkspace.kind === "inputs" ? (
+            <CompanyInputsPanel
+              token={token || ""}
+              department={activeDepartment}
+              departments={displayDepartments}
+              canSubmit={canSubmitInWorkspace}
+              canUpload={Boolean(token && canUploadFiles)}
+              canAssignDepartment={canUseCeoWorkspace}
+              onCaptured={() => setAwarenessRefreshKey((current) => current + 1)}
             />
           ) : (
             <>
@@ -502,14 +534,6 @@ export function WorkspaceShell() {
                   />
                 </>
               ) : null}
-              <OperationalInputPanel
-                token={token || ""}
-                department={activeDepartment}
-                departments={displayDepartments}
-                canSubmit={canSubmitInWorkspace}
-                canUpload={Boolean(token && canReadFiles)}
-                canAssignDepartment={canUseCeoWorkspace}
-              />
             </>
           )}
         </section>
@@ -754,13 +778,14 @@ function ExecutiveCommandCenter({
         {activeSection === "risks" && <ExecutiveRisksSection />}
 
         {activeSection === "files" && (
-          <OperationalInputPanel
+          <CompanyInputsPanel
             token={token || ""}
             department={activeDepartment}
             departments={displayDepartments}
             canSubmit={canSubmit}
             canUpload={canUpload}
             canAssignDepartment={canUseCeoWorkspace}
+            onCaptured={() => undefined}
           />
         )}
 
@@ -1222,13 +1247,14 @@ function DivisionCommandCenter({
           ))}
 
         {activeTab === "files" && (
-          <OperationalInputPanel
+          <CompanyInputsPanel
             token={token || ""}
             department={activeDepartment}
             departments={displayDepartments}
             canSubmit={canSubmit}
             canUpload={canUpload}
             canAssignDepartment={canUseCeoWorkspace}
+            onCaptured={onCaptured}
           />
         )}
 
@@ -1715,6 +1741,8 @@ function localizeWorkspaceText(value: string, language: Language): string {
     "Beverage operations": "workspaceShell.workspaces.caesar.description",
     "Shared Corporate": "workspaceShell.workspaces.shared.label",
     "HR, finance, procurement": "workspaceShell.workspaces.shared.description",
+    "Company Inputs": "workspaceShell.workspaces.inputs.label",
+    "Excel, PDF, text updates": "workspaceShell.workspaces.inputs.description",
     "Company Memory": "workspaceShell.workspaces.memory.label",
     "Files, updates, decisions": "workspaceShell.workspaces.memory.description",
     Reports: "workspaceShell.workspaces.reports.label",

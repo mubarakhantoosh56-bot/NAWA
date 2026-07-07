@@ -3,6 +3,7 @@
 import logging
 import tempfile
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -35,6 +36,8 @@ from app.models.response import (
     FileListResponse,
     FileResponse,
 )
+from app.nco import NCOLiteOrchestrator
+from app.repositories.company_repository import CompanyRepository
 from app.services.file_ingestion_service import FileIngestionService
 from app.services.operational_event_draft_service import OperationalEventDraftService
 
@@ -87,13 +90,15 @@ async def upload_file(
     file_service: FileIngestionService = Depends(get_file_ingestion_service),
 ) -> FileResponse:
     """Upload and synchronously ingest one MVP text-like file."""
+    temp_path: Path | None = None
     try:
         await _validate_file_department_scope(
             file_service=file_service,
             auth_context=auth_context,
             department_id=department_id,
         )
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        upload_suffix = Path(file.filename or "").suffix
+        with tempfile.NamedTemporaryFile(delete=False, suffix=upload_suffix) as temp_file:
             temp_path = Path(temp_file.name)
             while True:
                 chunk = await file.read(1024 * 1024)
@@ -101,17 +106,14 @@ async def upload_file(
                     break
                 temp_file.write(chunk)
 
-        try:
-            result = await file_service.ingest_file(
-                company_id=UUID(auth_context.company_id),
-                uploaded_by_user_id=UUID(auth_context.user_id),
-                source_path=temp_path,
-                filename=file.filename or "upload",
-                content_type=file.content_type or "",
-                department_id=department_id,
-            )
-        finally:
-            temp_path.unlink(missing_ok=True)
+        result = await file_service.ingest_file(
+            company_id=UUID(auth_context.company_id),
+            uploaded_by_user_id=UUID(auth_context.user_id),
+            source_path=temp_path,
+            filename=file.filename or "upload",
+            content_type=file.content_type or "",
+            department_id=department_id,
+        )
 
         file_record = result["file"]
         if file_record.get("status") == "failed":
@@ -119,6 +121,25 @@ async def upload_file(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(result.get("error") or "file ingestion failed"),
             )
+        nco_metadata = await _run_nco_lite_after_upload_if_applicable(
+            file_service=file_service,
+            auth_context=auth_context,
+            department_id=department_id,
+            file_record=file_record,
+            source_path=temp_path,
+            filename=file.filename or "upload",
+        )
+        if nco_metadata is not None:
+            metadata = file_record.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            file_record = {
+                **file_record,
+                "metadata": {
+                    **metadata,
+                    "nco_lite": nco_metadata,
+                },
+            }
         return FileResponse.model_validate(file_record)
     except HTTPException:
         raise
@@ -134,6 +155,9 @@ async def upload_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File service unavailable",
         ) from exc
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 @router.get("", response_model=FileListResponse)
@@ -231,6 +255,160 @@ async def _resolve_readable_department_ids(
             detail="Invalid department access",
         )
     return visible_ids
+
+
+async def _run_nco_lite_after_upload_if_applicable(
+    *,
+    file_service: FileIngestionService,
+    auth_context: AuthContext,
+    department_id: UUID | None,
+    file_record: dict[str, object],
+    source_path: Path,
+    filename: str,
+) -> dict[str, object] | None:
+    if Path(filename).suffix.lower() != ".xlsx":
+        return None
+
+    company_id = UUID(auth_context.company_id)
+    company = await CompanyRepository(file_service.db).get_by_id(company_id)
+    department = None
+    if department_id is not None:
+        department = await file_service.department_repo.get_by_id(
+            company_id=company_id,
+            department_id=department_id,
+        )
+
+    if not _is_jannat_company(company):
+        return None
+    if not _is_dairtna_poultry_daily_report(filename=filename, department=department):
+        return None
+
+    try:
+        orchestrator = NCOLiteOrchestrator()
+        result = await orchestrator.run_upload_completed(
+            source_path=source_path,
+            company_id=str(company_id),
+            department_id=str(department_id) if department_id else None,
+            user_id=auth_context.user_id,
+            original_filename=filename,
+            mime_type=str(file_record.get("content_type") or ""),
+            session_id=f"upload:{file_record.get('id')}",
+            store_memory=False,
+        )
+        return _summarize_nco_result(result.to_dict())
+    except Exception as exc:
+        logger.warning(
+            "nco_lite_upload_integration_failed",
+            extra={
+                "company_id": str(company_id),
+                "file_id": str(file_record.get("id") or ""),
+                "error_type": type(exc).__name__,
+            },
+            exc_info=True,
+        )
+        return {
+            "nco_status": "failed",
+            "error": str(exc) or type(exc).__name__,
+        }
+
+
+def _is_jannat_company(company: dict[str, object] | None) -> bool:
+    if company is None:
+        return False
+    haystack = _normalized_match_text(
+        company.get("slug"),
+        company.get("name"),
+    )
+    return (
+        "jannat" in haystack
+        and "firdaws" in haystack
+    ) or "الفردوس" in haystack
+
+
+def _is_dairtna_poultry_daily_report(
+    *,
+    filename: str,
+    department: dict[str, object] | None,
+) -> bool:
+    filename_text = _normalized_match_text(filename)
+    scope_text = _normalized_match_text(
+        filename,
+        department.get("slug") if department else None,
+        department.get("name") if department else None,
+        department.get("department_type") if department else None,
+    )
+    has_dairtna_scope = any(
+        token in scope_text
+        for token in ("dairtna", "deirtna", "ديرتنا", "poultry", "دواجن")
+    )
+    has_daily_report_marker = any(
+        token in filename_text
+        for token in ("daily", "technical", "report", "تقرير", "التقرير", "يومي", "اليومي")
+    )
+    return has_dairtna_scope and has_daily_report_marker
+
+
+def _normalized_match_text(*values: object) -> str:
+    return " ".join(
+        str(value or "").strip().lower().replace("_", " ").replace("-", " ")
+        for value in values
+    )
+
+
+def _summarize_nco_result(result: dict[str, Any]) -> dict[str, object]:
+    oie = result.get("oie") if isinstance(result.get("oie"), dict) else {}
+    oce = result.get("oce") if isinstance(result.get("oce"), dict) else {}
+    executive = (
+        result.get("executive") if isinstance(result.get("executive"), dict) else {}
+    )
+    briefs = executive.get("ceo_briefs") if isinstance(executive, dict) else []
+    if not isinstance(briefs, list):
+        briefs = []
+
+    summary: dict[str, object] = {
+        "nco_status": str(result.get("status") or "unknown"),
+        "context_ready_for_reasoning": bool(
+            oce.get("context_ready_for_reasoning")
+        ) if isinstance(oce, dict) else False,
+        "record_count": _count_from_step(result.get("kae"), "record_count"),
+        "metric_count": _count_from_step(oie, "metric_count"),
+        "event_count": _count_from_step(oie, "event_count"),
+        "signal_count": _count_from_step(oie, "signal_count"),
+        "situation_count": _count_from_step(oie, "situation_count"),
+        "context_count": _count_from_step(oce, "context_count"),
+        "ceo_brief_count": len(briefs),
+    }
+    classification = result.get("classification")
+    if isinstance(classification, dict):
+        summary["classification"] = classification
+    evidence_policy = result.get("evidence_policy")
+    if isinstance(evidence_policy, dict):
+        summary["evidence_policy"] = evidence_policy
+
+    missing_evidence = result.get("missing_evidence")
+    if isinstance(missing_evidence, list) and missing_evidence:
+        summary["missing_evidence_count"] = len(missing_evidence)
+        summary["missing_evidence"] = missing_evidence
+
+    if briefs:
+        summary["briefs"] = [
+            {
+                "headline": brief.get("headline"),
+                "severity": brief.get("severity"),
+                "summary": brief.get("what_happened"),
+                "confidence": brief.get("confidence"),
+            }
+            for brief in briefs[:5]
+            if isinstance(brief, dict)
+        ]
+    return summary
+
+
+def _count_from_step(step: object, key: str) -> int:
+    if not isinstance(step, dict):
+        return 0
+    value = step.get(key)
+    return value if isinstance(value, int) else 0
 
 
 @router.get("/{file_id}", response_model=FileDetailResponse)
