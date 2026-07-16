@@ -393,12 +393,27 @@ def _summarize_nco_result(result: dict[str, Any]) -> dict[str, object]:
     if briefs:
         summary["briefs"] = [
             {
+                "brief_id": f"CEO-BRIEF-{index}",
                 "headline": brief.get("headline"),
                 "severity": brief.get("severity"),
                 "summary": brief.get("what_happened"),
+                "business_impact": brief.get("why_it_matters"),
+                "recommended_actions": brief.get("recommended_next_actions"),
+                "evidence_summary": brief.get("evidence_summary"),
                 "confidence": brief.get("confidence"),
+                # PDS-001 §4/§5 structured Executive Decision Brief sections.
+                "executive_priority": brief.get("executive_priority"),
+                "what_changed": brief.get("what_changed"),
+                "facts": brief.get("facts"),
+                "executive_assessment": brief.get("executive_assessment"),
+                "business_impact_detail": brief.get("business_impact"),
+                "executive_actions": brief.get("executive_actions"),
+                "confidence_explanation": brief.get("confidence_explanation"),
+                "missing_evidence_detail": brief.get("missing_evidence"),
+                "recommended_company_inputs": brief.get("recommended_company_inputs"),
+                "executive_attention": brief.get("executive_attention"),
             }
-            for brief in briefs[:5]
+            for index, brief in enumerate(briefs[:5], start=1)
             if isinstance(brief, dict)
         ]
     return summary

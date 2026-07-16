@@ -30,7 +30,46 @@ type RuntimeResult = {
   confidenceReason: string | null;
   runtimeStatus: RuntimeState;
   missingEvidence: string[];
-  briefSummary: string | null;
+  ceoBrief: CEOBriefPresentation | null;
+};
+
+type ExecutiveActionPresentation = {
+  action: string;
+  priority: unknown;
+  reason: unknown;
+  expectedOutcome: unknown;
+  evidenceRefs: string[];
+};
+
+type BusinessImpactPresentation = {
+  operational: string;
+  financial: string;
+  strategic: unknown;
+};
+
+type ExecutiveAttentionPresentation = {
+  immediate: string[];
+  monitor: string[];
+};
+
+type CEOBriefPresentation = {
+  briefId: string;
+  headline: string;
+  executivePriority: unknown;
+  executiveSummary: string;
+  whatChanged: string[];
+  facts: string[];
+  executiveAssessment: unknown;
+  businessImpact: string;
+  businessImpactDetail: BusinessImpactPresentation | null;
+  executiveActions: ExecutiveActionPresentation[];
+  recommendedActions: string[];
+  confidenceLevel: string;
+  confidencePercentage: string | null;
+  confidenceExplanation: string;
+  missingEvidence: string[];
+  recommendedCompanyInputs: string[];
+  executiveAttention: ExecutiveAttentionPresentation | null;
 };
 
 export function CompanyInputsPanel({
@@ -288,11 +327,224 @@ function RuntimeResultPanel({ status, result }: { status: RuntimeState; result: 
         </div>
       ) : null}
 
-      {result.briefSummary ? (
-        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+      {result.ceoBrief ? (
+        <CEOBriefPanel brief={result.ceoBrief} />
+      ) : null}
+    </div>
+  );
+}
+
+function CEOBriefPanel({ brief }: { brief: CEOBriefPresentation }) {
+  const { t } = useLanguage();
+  const confidence = brief.confidencePercentage
+    ? `${brief.confidenceLevel} (${brief.confidencePercentage})`
+    : brief.confidenceLevel;
+  const confidenceBody = brief.confidenceExplanation
+    ? `${confidence} — ${brief.confidenceExplanation}`
+    : confidence;
+
+  return (
+    <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <div className="text-xs font-semibold uppercase text-emerald-800">{t("companyInputs.ceoBrief")}</div>
-          <p className="mt-1 text-sm leading-6 text-emerald-900">{result.briefSummary}</p>
+          <h3 className="mt-1 text-sm font-semibold text-emerald-950">{brief.headline}</h3>
         </div>
+        <span className="w-fit rounded border border-emerald-200 bg-white px-2 py-1 text-xs font-medium text-emerald-900">
+          {t("companyInputs.briefId")}: {brief.briefId}
+        </span>
+      </div>
+
+      {/* PDS-001 §4/§5 Executive Decision Brief structure, in authoritative order. */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <PendingSection title={t("companyInputs.executivePriority")} value={brief.executivePriority} />
+        <BriefSection title={t("companyInputs.executiveSummary")} body={brief.executiveSummary} />
+        <BriefSection title={t("companyInputs.whatChanged")} items={brief.whatChanged} empty={t("companyInputs.noWhatChanged")} />
+        <BriefSection title={t("companyInputs.factsTruthLayer")} items={brief.facts} empty={t("companyInputs.noFacts")} />
+        <PendingSection title={t("companyInputs.executiveAssessment")} value={brief.executiveAssessment} />
+        <BusinessImpactSection detail={brief.businessImpactDetail} legacyBody={brief.businessImpact} />
+        <ExecutiveActionsSection actions={brief.executiveActions} legacyItems={brief.recommendedActions} />
+        <BriefSection title={t("companyInputs.confidenceLevel")} body={confidenceBody} />
+        <BriefSection title={t("companyInputs.missingEvidence")} items={brief.missingEvidence} empty={t("companyInputs.noMissingEvidence")} />
+        <BriefSection
+          title={t("companyInputs.recommendedCompanyInputs")}
+          items={brief.recommendedCompanyInputs}
+          empty={t("companyInputs.noRecommendedCompanyInputs")}
+        />
+        <ExecutiveAttentionSection attention={brief.executiveAttention} />
+      </div>
+    </div>
+  );
+}
+
+function pendingNote(value: unknown): string | null {
+  const record = asRecord(value);
+  return record.status === "pending_executive_language" ? String(record.note || "") : null;
+}
+
+function PendingOrText({ value }: { value: unknown }) {
+  const { t } = useLanguage();
+  const note = pendingNote(value);
+  if (note !== null) {
+    return <span className="italic text-amber-700">{t("companyInputs.pendingExecutiveLanguage")}</span>;
+  }
+  return <>{typeof value === "string" ? value : ""}</>;
+}
+
+function PendingSection({ title, value }: { title: string; value: unknown }) {
+  const { t } = useLanguage();
+  const note = pendingNote(value);
+  if (note === null) {
+    return <BriefSection title={title} body={typeof value === "string" ? value : ""} />;
+  }
+  return (
+    <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/60 p-3">
+      <div className="text-xs font-semibold uppercase text-amber-800">{title}</div>
+      <p className="mt-1 text-sm italic leading-6 text-amber-900">{t("companyInputs.pendingExecutiveLanguage")}</p>
+    </div>
+  );
+}
+
+function BusinessImpactSection({
+  detail,
+  legacyBody,
+}: {
+  detail: BusinessImpactPresentation | null;
+  legacyBody: string;
+}) {
+  const { t } = useLanguage();
+  if (!detail) {
+    return <BriefSection title={t("companyInputs.businessImpact")} body={legacyBody} />;
+  }
+  return (
+    <div className="rounded-md border border-emerald-100 bg-white p-3">
+      <div className="text-xs font-semibold uppercase text-emerald-800">{t("companyInputs.businessImpact")}</div>
+      <div className="mt-2 space-y-2 text-sm leading-6 text-emerald-950">
+        <div>
+          <span className="font-semibold">{t("companyInputs.businessImpactOperational")}: </span>
+          {detail.operational}
+        </div>
+        <div>
+          <span className="font-semibold">{t("companyInputs.businessImpactFinancial")}: </span>
+          {detail.financial || t("companyInputs.businessImpactFinancialUnknown")}
+        </div>
+        <div>
+          <span className="font-semibold">{t("companyInputs.businessImpactStrategic")}: </span>
+          <PendingOrText value={detail.strategic} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveActionsSection({
+  actions,
+  legacyItems,
+}: {
+  actions: ExecutiveActionPresentation[];
+  legacyItems: string[];
+}) {
+  const { t } = useLanguage();
+  if (actions.length === 0) {
+    return <BriefSection title={t("companyInputs.recommendedExecutiveActions")} items={legacyItems} />;
+  }
+  return (
+    <div className="rounded-md border border-emerald-100 bg-white p-3 lg:col-span-2">
+      <div className="text-xs font-semibold uppercase text-emerald-800">{t("companyInputs.recommendedExecutiveActions")}</div>
+      <ul className="mt-2 space-y-2">
+        {actions.map((action, index) => (
+          <li
+            key={`${action.action}-${index}`}
+            className="rounded border border-emerald-100 bg-emerald-50/40 p-2 text-sm text-emerald-950"
+          >
+            <div className="font-medium">{action.action}</div>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-900">
+              <span>
+                {t("companyInputs.executiveActionPriority")}: <PendingOrText value={action.priority} />
+              </span>
+              <span>
+                {t("companyInputs.executiveActionReason")}: <PendingOrText value={action.reason} />
+              </span>
+              <span>
+                {t("companyInputs.executiveActionExpectedOutcome")}: <PendingOrText value={action.expectedOutcome} />
+              </span>
+            </div>
+            {action.evidenceRefs.length > 0 ? (
+              <div className="mt-1 text-xs text-emerald-800">
+                {t("companyInputs.executiveActionEvidence")}: {action.evidenceRefs.join(", ")}
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ExecutiveAttentionSection({ attention }: { attention: ExecutiveAttentionPresentation | null }) {
+  const { t } = useLanguage();
+  if (!attention) {
+    return null;
+  }
+  return (
+    <div className="rounded-md border border-emerald-100 bg-white p-3">
+      <div className="text-xs font-semibold uppercase text-emerald-800">{t("companyInputs.executiveAttention")}</div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div>
+          <div className="text-xs font-semibold text-emerald-700">{t("companyInputs.executiveAttentionImmediate")}</div>
+          {attention.immediate.length > 0 ? (
+            <ul className="mt-1 space-y-1 text-sm text-emerald-950">
+              {attention.immediate.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-emerald-900">—</p>
+          )}
+        </div>
+        <div>
+          <div className="text-xs font-semibold text-emerald-700">{t("companyInputs.executiveAttentionMonitor")}</div>
+          {attention.monitor.length > 0 ? (
+            <ul className="mt-1 space-y-1 text-sm text-emerald-950">
+              {attention.monitor.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-emerald-900">—</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BriefSection({
+  title,
+  body,
+  items,
+  empty,
+}: {
+  title: string;
+  body?: string;
+  items?: string[];
+  empty?: string;
+}) {
+  const cleanedItems = items?.filter(Boolean) ?? [];
+
+  return (
+    <div className="rounded-md border border-emerald-100 bg-white p-3">
+      <div className="text-xs font-semibold uppercase text-emerald-800">{title}</div>
+      {body ? <p className="mt-1 text-sm leading-6 text-emerald-950">{body}</p> : null}
+      {cleanedItems.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-sm leading-6 text-emerald-950">
+          {cleanedItems.map((item, index) => (
+            <li key={`${title}-${index}`}>{item}</li>
+          ))}
+        </ul>
+      ) : null}
+      {!body && cleanedItems.length === 0 ? (
+        <p className="mt-1 text-sm leading-6 text-emerald-900">{empty}</p>
       ) : null}
     </div>
   );
@@ -320,7 +572,9 @@ function resultFromFile(
   const evidencePolicy = asRecord(runtime.evidence_policy);
   const runtimeStatus = mapRuntimeStatus(String(runtime.nco_status || uploaded.status || "completed"));
   const pipeline = businessPipelineLabel(String(classification.probable_pipeline || ""), uploaded.filename, t);
-  const briefSummary = firstBriefSummary(runtime);
+  const confidencePercentage = confidencePercentageLabel(classification.confidence);
+  const evidence = missingEvidence(runtime, t);
+  const companyInputs = recommendedCompanyInputs(evidence, t);
 
   return {
     sourceLabel: uploaded.filename,
@@ -332,8 +586,8 @@ function resultFromFile(
       : confidenceLabel(classification.confidence, t),
     confidenceReason: String(evidencePolicy.confidence_reduction_reason || "").trim() || null,
     runtimeStatus,
-    missingEvidence: missingEvidence(runtime, t),
-    briefSummary,
+    missingEvidence: evidence,
+    ceoBrief: firstCEOBrief(runtime, confidencePercentage, evidence, companyInputs, t),
   };
 }
 
@@ -353,7 +607,7 @@ function resultFromText(
     confidenceReason: null,
     runtimeStatus: "completed",
     missingEvidence: [],
-    briefSummary: response.summary || null,
+    ceoBrief: null,
   };
 }
 
@@ -416,6 +670,13 @@ function confidenceLabel(value: unknown, t: (key: string) => string): string {
   return t("companyInputs.confidencePending");
 }
 
+function confidencePercentageLabel(value: unknown): string | null {
+  if (typeof value !== "number") {
+    return null;
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
 function policyConfidenceLabel(value: string, t: (key: string) => string): string {
   if (value === "reduced") {
     return t("companyInputs.confidenceReduced");
@@ -468,13 +729,103 @@ function evidenceLabel(value: unknown, t: (key: string) => string): string {
   return String(record.description || record.reason || record.evidence_type || t("companyInputs.missingEvidenceGeneric"));
 }
 
-function firstBriefSummary(runtime: Record<string, unknown>): string | null {
+function firstCEOBrief(
+  runtime: Record<string, unknown>,
+  confidencePercentage: string | null,
+  evidence: string[],
+  companyInputs: string[],
+  t: (key: string) => string,
+): CEOBriefPresentation | null {
   const briefs = runtime.briefs;
   if (!Array.isArray(briefs)) {
     return null;
   }
   const first = asRecord(briefs[0]);
-  return String(first.summary || first.headline || "").trim() || null;
+  const headline = String(first.headline || "").trim();
+  const executiveSummary = String(first.summary || headline).trim();
+  if (!executiveSummary) {
+    return null;
+  }
+
+  const backendCompanyInputs = stringArray(first.recommended_company_inputs);
+
+  return {
+    briefId: String(first.brief_id || "CEO-BRIEF-1"),
+    headline: headline || t("companyInputs.ceoBrief"),
+    executivePriority: first.executive_priority,
+    executiveSummary,
+    whatChanged: statementList(first.what_changed),
+    facts: statementList(first.facts),
+    executiveAssessment: first.executive_assessment,
+    businessImpact: String(first.business_impact || t("companyInputs.notAvailableFromRuntime")),
+    businessImpactDetail: businessImpactDetail(first.business_impact_detail),
+    executiveActions: executiveActionsList(first.executive_actions),
+    recommendedActions: stringArray(first.recommended_actions),
+    confidenceLevel: policyConfidenceLabel(String(first.confidence || ""), t),
+    confidencePercentage,
+    confidenceExplanation: String(first.confidence_explanation || "").trim(),
+    missingEvidence: evidence,
+    recommendedCompanyInputs: backendCompanyInputs.length > 0 ? backendCompanyInputs : companyInputs,
+    executiveAttention: executiveAttentionDetail(first.executive_attention),
+  };
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 5)
+    : [];
+}
+
+function statementList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((item) => String(asRecord(item).statement || "").trim()).filter(Boolean)
+    : [];
+}
+
+function businessImpactDetail(value: unknown): BusinessImpactPresentation | null {
+  const record = asRecord(value);
+  if (!record.operational && !record.financial && !record.strategic) {
+    return null;
+  }
+  return {
+    operational: String(record.operational || ""),
+    financial: String(record.financial || ""),
+    strategic: record.strategic,
+  };
+}
+
+function executiveActionsList(value: unknown): ExecutiveActionPresentation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        action: String(record.action || "").trim(),
+        priority: record.priority,
+        reason: record.reason,
+        expectedOutcome: record.expected_outcome,
+        evidenceRefs: Array.isArray(record.evidence_refs) ? record.evidence_refs.map((ref) => String(ref)) : [],
+      };
+    })
+    .filter((action) => action.action);
+}
+
+function executiveAttentionDetail(value: unknown): ExecutiveAttentionPresentation | null {
+  const record = asRecord(value);
+  const immediate = Array.isArray(record.immediate) ? record.immediate.map((item) => String(item)) : [];
+  const monitor = Array.isArray(record.monitor) ? record.monitor.map((item) => String(item)) : [];
+  if (immediate.length === 0 && monitor.length === 0) {
+    return null;
+  }
+  return { immediate, monitor };
+}
+
+function recommendedCompanyInputs(evidence: string[], t: (key: string) => string): string[] {
+  return evidence.length > 0
+    ? evidence.map((item) => `${t("companyInputs.provideInputPrefix")} ${item}`)
+    : [];
 }
 
 function localizeDepartmentName(value: string, language: "en" | "ar"): string {

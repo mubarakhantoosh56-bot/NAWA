@@ -348,15 +348,25 @@ class NCOLitePipeline:
         brief: CEOBrief,
         evidence_policy: EvidencePolicyOutput,
     ) -> CEOBrief:
-        next_actions = list(brief.recommended_next_actions)
-        for input_name in evidence_policy.recommended_company_inputs:
-            action = f"Add Company Input: {input_name}"
-            if action not in next_actions:
-                next_actions.append(action)
+        missing_evidence_detail = [
+            {
+                **item,
+                "why_it_matters": {
+                    "status": "pending_executive_language",
+                    "note": (
+                        "Why this evidence matters pending Aboura's Missing "
+                        "Evidence language (PDS-001 §5.9)."
+                    ),
+                },
+            }
+            for item in evidence_policy.missing_evidence
+        ]
         return replace(
             brief,
             confidence=evidence_policy.confidence,
-            recommended_next_actions=next_actions,
+            confidence_explanation=evidence_policy.confidence_reduction_reason,
+            recommended_company_inputs=list(evidence_policy.recommended_company_inputs),
+            missing_evidence=missing_evidence_detail,
             evidence_summary=[
                 *brief.evidence_summary,
                 {

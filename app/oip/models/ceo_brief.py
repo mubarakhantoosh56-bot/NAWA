@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
 @dataclass(frozen=True)
 class CEOBrief:
-    """Short executive brief generated from one operational situation."""
+    """Short executive brief generated from one operational situation.
+
+    Fields below the original seven are additive, PDS-001 (Executive Decision
+    Brief v1) section slots. Sections with no honest upstream source data use
+    the ``{"status": "pending_executive_language", ...}`` sentinel rather than
+    fabricated text; see ENG-EX1-002 execution plan for the per-section
+    rationale.
+    """
 
     headline: str
     severity: str
@@ -17,6 +24,17 @@ class CEOBrief:
     evidence_summary: list[dict[str, Any]]
     recommended_next_actions: list[str]
     confidence: str = "initial"
+
+    executive_priority: dict[str, Any] = field(default_factory=dict)
+    what_changed: list[dict[str, Any]] = field(default_factory=list)
+    facts: list[dict[str, Any]] = field(default_factory=list)
+    executive_assessment: dict[str, Any] = field(default_factory=dict)
+    business_impact: dict[str, Any] = field(default_factory=dict)
+    executive_actions: list[dict[str, Any]] = field(default_factory=list)
+    confidence_explanation: str = ""
+    missing_evidence: list[dict[str, Any]] = field(default_factory=list)
+    recommended_company_inputs: list[str] = field(default_factory=list)
+    executive_attention: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-friendly dictionary representation."""
