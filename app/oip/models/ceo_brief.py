@@ -36,6 +36,13 @@ class CEOBrief:
     recommended_company_inputs: list[str] = field(default_factory=list)
     executive_attention: dict[str, Any] = field(default_factory=dict)
 
+    # ENG-EX1-003: additive, category-level statement traceability. Each entry
+    # is {"field", "source_type", "source_ref", "trace_status"}. Accepted
+    # source_type values: oie_signal / oce_context / synthesis. Accepted
+    # trace_status values: traced / coarse / pending. Row/file-level lineage
+    # is out of scope (deferred to Backlog) and is never fabricated here.
+    statement_trace: list[dict[str, Any]] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-friendly dictionary representation."""
         return asdict(self)

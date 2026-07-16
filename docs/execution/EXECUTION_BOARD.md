@@ -3,7 +3,7 @@
 **Purpose:** Live dashboard of execution across Project NAWA. Single source of truth for what is running, who owns it, and what is blocking.
 **Maintained by:** COWORK (Chief of Staff / PMO).
 **Update cadence:** Progress signals as they arrive; formal update at every Sprint boundary and any blocker escalation.
-**Last updated:** 2026-07-16.
+**Last updated:** 2026-07-16 (ENG-EX1-003 accepted).
 
 ---
 
@@ -37,7 +37,7 @@
 | 3 | Executive Assessment (Executive Thinking) | P0 | Aboura | Design front-load Days 1–3 |
 | 4 | Business Impact — three dimensions | P0 | Aboura | Design front-load Days 1–3 |
 | 5 | Executive Actions Taxonomy & Quality | P0 | Aboura | Design front-load Days 1–3 |
-| 6 | Statement Traceability Discipline | P1 | Engineering | Available after ENG-EX1-000 |
+| 6 | Statement Traceability Discipline | P1 | Engineering | Completed — Founder-accepted 2026-07-16 (ENG-EX1-003); category-level only, row/file lineage deferred to Backlog |
 | 7 | Confidence Explanation Upgrade | P1 | Aboura + Engineering | Pending Aboura design |
 
 ## Deliverables
@@ -111,5 +111,5 @@ None currently.
 | 2026-07-08 (Day 1) | Sprint EX-1 activated. ENG-EX1-000 (Baseline Capture) in progress. Aboura design front-load begins. |
 | Days 1–3 | Aboura design front-load: Executive Brief Experience, Executive Assessment, Business Impact Framework, Executive Actions Taxonomy, Executive Brief Design Principles. Engineering runs ENG-EX1-000 → ENG-EX1-001 → begins ENG-EX1-002. |
 | Mid-Sprint (~Day 5–6) | Informal Founder draft review on real Jannat data. First end-to-end brief under 8-section structure available. |
-| Days 8–10 | Aboura Deliverables 2, 3, 5 land. Engineering wires Aboura's language into Executive Brief v2 Foundation. ENG-EX1-003 (Traceability Instrumentation) proceeds. |
+| Days 8–10 | Aboura Deliverables 2, 3, 5 land. Engineering wires Aboura's language into Executive Brief v2 Foundation. ENG-EX1-003 (Traceability Instrumentation) completed 2026-07-16, ahead of this milestone. |
 | Sprint Exit (~2026-07-22) | Founder Acceptance Test on real Jannat data. Executive Report filed with six KPIs plus Documentation Debt supporting metric per EBD-002 §16. |

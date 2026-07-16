@@ -361,12 +361,57 @@ class NCOLitePipeline:
             }
             for item in evidence_policy.missing_evidence
         ]
+        # ENG-EX1-003: category-level statement traceability for the
+        # evidence-policy-derived fields this function owns. Accepted
+        # vocabulary only (oce_context / traced-coarse-pending); row/file
+        # lineage is out of scope here and is never fabricated.
+        evidence_policy_trace: list[dict[str, Any]] = [
+            {
+                "field": "confidence",
+                "source_type": "oce_context",
+                "source_ref": {"evidence_policy": evidence_policy.policy_name},
+                "trace_status": "traced",
+            },
+            {
+                "field": "confidence_explanation",
+                "source_type": "oce_context",
+                "source_ref": {"evidence_policy": evidence_policy.policy_name},
+                "trace_status": "traced",
+            },
+        ]
+        for index, item in enumerate(evidence_policy.missing_evidence):
+            evidence_policy_trace.append(
+                {
+                    "field": f"missing_evidence[{index}]",
+                    "source_type": "oce_context",
+                    "source_ref": {
+                        "source": item.get("source"),
+                        "evidence_type": item.get("type"),
+                    },
+                    "trace_status": "traced",
+                }
+            )
+        for index in range(len(evidence_policy.recommended_company_inputs)):
+            related_evidence = (
+                evidence_policy.missing_evidence[index]
+                if index < len(evidence_policy.missing_evidence)
+                else {}
+            )
+            evidence_policy_trace.append(
+                {
+                    "field": f"recommended_company_inputs[{index}]",
+                    "source_type": "oce_context",
+                    "source_ref": {"evidence_type": related_evidence.get("type")},
+                    "trace_status": "traced",
+                }
+            )
         return replace(
             brief,
             confidence=evidence_policy.confidence,
             confidence_explanation=evidence_policy.confidence_reduction_reason,
             recommended_company_inputs=list(evidence_policy.recommended_company_inputs),
             missing_evidence=missing_evidence_detail,
+            statement_trace=[*brief.statement_trace, *evidence_policy_trace],
             evidence_summary=[
                 *brief.evidence_summary,
                 {

@@ -412,6 +412,8 @@ def _summarize_nco_result(result: dict[str, Any]) -> dict[str, object]:
                 "missing_evidence_detail": brief.get("missing_evidence"),
                 "recommended_company_inputs": brief.get("recommended_company_inputs"),
                 "executive_attention": brief.get("executive_attention"),
+                # ENG-EX1-003 category-level statement traceability.
+                "statement_trace": brief.get("statement_trace"),
             }
             for index, brief in enumerate(briefs[:5], start=1)
             if isinstance(brief, dict)
