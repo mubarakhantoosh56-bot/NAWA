@@ -35,9 +35,13 @@ type RuntimeResult = {
 
 type ExecutiveActionPresentation = {
   action: string;
-  priority: unknown;
+  // Priority is Business Logic, not Executive Language — null means no
+  // priority-assignment rule has been approved yet. Never the
+  // pending_executive_language sentinel; render distinctly from it.
+  priority: string | null;
   reason: unknown;
   expectedOutcome: unknown;
+  owner: string;
   evidenceRefs: string[];
 };
 
@@ -45,6 +49,19 @@ type BusinessImpactPresentation = {
   operational: string;
   financial: string;
   strategic: unknown;
+};
+
+type ExecutivePriorityPresentation = {
+  attentionLevel: unknown;
+  situation: unknown;
+  businessRisk: unknown;
+  executiveTrigger: unknown;
+};
+
+type ExecutiveAssessmentPresentation = {
+  executiveInterpretation: unknown;
+  businessMeaning: unknown;
+  executiveRecommendationContext: unknown;
 };
 
 type ExecutiveAttentionPresentation = {
@@ -55,11 +72,11 @@ type ExecutiveAttentionPresentation = {
 type CEOBriefPresentation = {
   briefId: string;
   headline: string;
-  executivePriority: unknown;
+  executivePriority: ExecutivePriorityPresentation | null;
   executiveSummary: string;
   whatChanged: string[];
   facts: string[];
-  executiveAssessment: unknown;
+  executiveAssessment: ExecutiveAssessmentPresentation | null;
   businessImpact: string;
   businessImpactDetail: BusinessImpactPresentation | null;
   executiveActions: ExecutiveActionPresentation[];
@@ -357,11 +374,17 @@ function CEOBriefPanel({ brief }: { brief: CEOBriefPresentation }) {
 
       {/* PDS-001 §4/§5 Executive Decision Brief structure, in authoritative order. */}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <PendingSection title={t("companyInputs.executivePriority")} value={brief.executivePriority} />
+        <StructuredBriefSection
+          title={t("companyInputs.executivePriority")}
+          fields={executivePriorityFields(brief.executivePriority, t)}
+        />
         <BriefSection title={t("companyInputs.executiveSummary")} body={brief.executiveSummary} />
         <BriefSection title={t("companyInputs.whatChanged")} items={brief.whatChanged} empty={t("companyInputs.noWhatChanged")} />
         <BriefSection title={t("companyInputs.factsTruthLayer")} items={brief.facts} empty={t("companyInputs.noFacts")} />
-        <PendingSection title={t("companyInputs.executiveAssessment")} value={brief.executiveAssessment} />
+        <StructuredBriefSection
+          title={t("companyInputs.executiveAssessment")}
+          fields={executiveAssessmentFields(brief.executiveAssessment, t)}
+        />
         <BusinessImpactSection detail={brief.businessImpactDetail} legacyBody={brief.businessImpact} />
         <ExecutiveActionsSection actions={brief.executiveActions} legacyItems={brief.recommendedActions} />
         <BriefSection title={t("companyInputs.confidenceLevel")} body={confidenceBody} />
@@ -378,6 +401,12 @@ function CEOBriefPanel({ brief }: { brief: CEOBriefPresentation }) {
 }
 
 function pendingNote(value: unknown): string | null {
+  // Hotfix: some fields (e.g. executive_actions[i].reason/expected_outcome)
+  // carry the sentinel as a bare string rather than {status, note} — never
+  // let the raw literal reach an executive-facing screen.
+  if (value === "pending_executive_language") {
+    return "";
+  }
   const record = asRecord(value);
   return record.status === "pending_executive_language" ? String(record.note || "") : null;
 }
@@ -391,18 +420,68 @@ function PendingOrText({ value }: { value: unknown }) {
   return <>{typeof value === "string" ? value : ""}</>;
 }
 
-function PendingSection({ title, value }: { title: string; value: unknown }) {
+// Priority is Business Logic, not Executive Language (Founder decision,
+// Executive Language Completion) — rendered distinctly from the amber
+// "Pending executive language" treatment used by PendingOrText.
+function PriorityValue({ value }: { value: string | null }) {
   const { t } = useLanguage();
-  const note = pendingNote(value);
-  if (note === null) {
-    return <BriefSection title={title} body={typeof value === "string" ? value : ""} />;
+  if (value === null) {
+    return <span className="text-emerald-700/70">{t("companyInputs.priorityNotYetDetermined")}</span>;
   }
+  return <>{value}</>;
+}
+
+type StructuredField = { label: string; value: unknown };
+
+// Renders a title plus a list of independently-resolved sub-fields, each of
+// which may be pending, completed, or (across the whole section) a mix of
+// both — unlike the single-value PendingSection it replaces.
+function StructuredBriefSection({ title, fields }: { title: string; fields: StructuredField[] }) {
   return (
-    <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/60 p-3">
-      <div className="text-xs font-semibold uppercase text-amber-800">{title}</div>
-      <p className="mt-1 text-sm italic leading-6 text-amber-900">{t("companyInputs.pendingExecutiveLanguage")}</p>
+    <div className="rounded-md border border-emerald-100 bg-white p-3">
+      <div className="text-xs font-semibold uppercase text-emerald-800">{title}</div>
+      <div className="mt-2 space-y-2 text-sm leading-6 text-emerald-950">
+        {fields.map((field) => (
+          <div key={field.label}>
+            <span className="font-semibold">{field.label}: </span>
+            <PendingOrText value={field.value} />
+          </div>
+        ))}
+      </div>
     </div>
   );
+}
+
+function executivePriorityFields(
+  value: ExecutivePriorityPresentation | null,
+  t: (key: string) => string,
+): StructuredField[] {
+  if (!value) {
+    return [];
+  }
+  return [
+    { label: t("companyInputs.executivePriorityAttentionLevel"), value: value.attentionLevel },
+    { label: t("companyInputs.executivePrioritySituation"), value: value.situation },
+    { label: t("companyInputs.executivePriorityBusinessRisk"), value: value.businessRisk },
+    { label: t("companyInputs.executivePriorityTrigger"), value: value.executiveTrigger },
+  ];
+}
+
+function executiveAssessmentFields(
+  value: ExecutiveAssessmentPresentation | null,
+  t: (key: string) => string,
+): StructuredField[] {
+  if (!value) {
+    return [];
+  }
+  return [
+    { label: t("companyInputs.executiveAssessmentInterpretation"), value: value.executiveInterpretation },
+    { label: t("companyInputs.executiveAssessmentBusinessMeaning"), value: value.businessMeaning },
+    {
+      label: t("companyInputs.executiveAssessmentRecommendationContext"),
+      value: value.executiveRecommendationContext,
+    },
+  ];
 }
 
 function BusinessImpactSection({
@@ -460,13 +539,16 @@ function ExecutiveActionsSection({
             <div className="font-medium">{action.action}</div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-900">
               <span>
-                {t("companyInputs.executiveActionPriority")}: <PendingOrText value={action.priority} />
+                {t("companyInputs.executiveActionPriority")}: <PriorityValue value={action.priority} />
               </span>
               <span>
                 {t("companyInputs.executiveActionReason")}: <PendingOrText value={action.reason} />
               </span>
               <span>
                 {t("companyInputs.executiveActionExpectedOutcome")}: <PendingOrText value={action.expectedOutcome} />
+              </span>
+              <span>
+                {t("companyInputs.executiveActionOwner")}: {action.owner}
               </span>
             </div>
             {action.evidenceRefs.length > 0 ? (
@@ -752,11 +834,11 @@ function firstCEOBrief(
   return {
     briefId: String(first.brief_id || "CEO-BRIEF-1"),
     headline: headline || t("companyInputs.ceoBrief"),
-    executivePriority: first.executive_priority,
+    executivePriority: executivePriorityDetail(first.executive_priority),
     executiveSummary,
     whatChanged: statementList(first.what_changed),
     facts: statementList(first.facts),
-    executiveAssessment: first.executive_assessment,
+    executiveAssessment: executiveAssessmentDetail(first.executive_assessment),
     businessImpact: String(first.business_impact || t("companyInputs.notAvailableFromRuntime")),
     businessImpactDetail: businessImpactDetail(first.business_impact_detail),
     executiveActions: executiveActionsList(first.executive_actions),
@@ -782,6 +864,40 @@ function statementList(value: unknown): string[] {
     : [];
 }
 
+function executivePriorityDetail(value: unknown): ExecutivePriorityPresentation | null {
+  const record = asRecord(value);
+  if (
+    record.attention_level === undefined &&
+    record.situation === undefined &&
+    record.business_risk === undefined &&
+    record.executive_trigger === undefined
+  ) {
+    return null;
+  }
+  return {
+    attentionLevel: record.attention_level,
+    situation: record.situation,
+    businessRisk: record.business_risk,
+    executiveTrigger: record.executive_trigger,
+  };
+}
+
+function executiveAssessmentDetail(value: unknown): ExecutiveAssessmentPresentation | null {
+  const record = asRecord(value);
+  if (
+    record.executive_interpretation === undefined &&
+    record.business_meaning === undefined &&
+    record.executive_recommendation_context === undefined
+  ) {
+    return null;
+  }
+  return {
+    executiveInterpretation: record.executive_interpretation,
+    businessMeaning: record.business_meaning,
+    executiveRecommendationContext: record.executive_recommendation_context,
+  };
+}
+
 function businessImpactDetail(value: unknown): BusinessImpactPresentation | null {
   const record = asRecord(value);
   if (!record.operational && !record.financial && !record.strategic) {
@@ -803,9 +919,12 @@ function executiveActionsList(value: unknown): ExecutiveActionPresentation[] {
       const record = asRecord(item);
       return {
         action: String(record.action || "").trim(),
-        priority: record.priority,
+        // Business Logic, not Executive Language — null (or any non-string)
+        // means no priority-assignment rule has been approved yet.
+        priority: typeof record.priority === "string" ? record.priority : null,
         reason: record.reason,
         expectedOutcome: record.expected_outcome,
+        owner: String(record.owner || "").trim(),
         evidenceRefs: Array.isArray(record.evidence_refs) ? record.evidence_refs.map((ref) => String(ref)) : [],
       };
     })

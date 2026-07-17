@@ -20,6 +20,17 @@ TRACE_STATUS_TRACED = "traced"
 TRACE_STATUS_COARSE = "coarse"
 TRACE_STATUS_PENDING = "pending"
 
+# Executive Language Completion (Founder-approved). Executive Action
+# priority is Business Logic, not Executive Language, and must never use
+# the pending_executive_language sentinel — see _executive_actions().
+EXECUTIVE_ACTION_PRIORITY_VALUES = ("Critical", "High", "Medium", "Low")
+
+# No accountable-role data source exists anywhere upstream today
+# (OperationalSituation/OIE/OCE carry no role or department-assignment
+# concept). Never invented. Owner may be determined in future versions
+# through Company Brain role mapping.
+EXECUTIVE_ACTION_OWNER_NOT_YET_ASSIGNED = "Accountable role not yet assigned."
+
 
 class CEOBriefService:
     """Convert operational situations into short CEO-facing briefs."""
@@ -47,13 +58,29 @@ class CEOBriefService:
             statement_trace=self._statement_trace(situation),
         )
 
+    def _pending(self, note: str) -> dict[str, Any]:
+        return {"status": PENDING_EXECUTIVE_LANGUAGE, "note": note}
+
     def _executive_priority(self, situation: OperationalSituation) -> dict[str, Any]:
+        # PDS-001 §5.1 structure: four named elements. No approved rule maps
+        # situation.severity to an Attention Level value yet, so all four
+        # stay pending rather than guessing a mapping.
         return {
-            "status": PENDING_EXECUTIVE_LANGUAGE,
-            "known_facts": {"severity": situation.severity},
-            "note": (
-                "Executive Priority urgency framing pending Aboura's Executive "
+            "attention_level": self._pending(
+                "Executive Priority attention level pending Aboura's Executive "
                 "Brief Design Principles (PDS-001 §5.1)."
+            ),
+            "situation": self._pending(
+                "Executive Priority situation framing pending Aboura's Executive "
+                "Brief Design Principles (PDS-001 §5.1)."
+            ),
+            "business_risk": self._pending(
+                "Executive Priority business risk framing pending Aboura's "
+                "Executive Brief Design Principles (PDS-001 §5.1)."
+            ),
+            "executive_trigger": self._pending(
+                "Executive Priority executive trigger framing pending Aboura's "
+                "Executive Brief Design Principles (PDS-001 §5.1)."
             ),
         }
 
@@ -77,25 +104,33 @@ class CEOBriefService:
         }
 
     def _executive_assessment(self, situation: OperationalSituation) -> dict[str, Any]:
+        # PDS-001 §5.2 structure: three named elements.
         return {
-            "status": PENDING_EXECUTIVE_LANGUAGE,
-            "note": (
-                "Executive Assessment (Executive Thinking) prioritization pending "
-                "Aboura's design (PDS-001 §5.5)."
+            "executive_interpretation": self._pending(
+                "Executive Assessment interpretation pending Aboura's design "
+                "(PDS-001 §5.2)."
+            ),
+            "business_meaning": self._pending(
+                "Executive Assessment business meaning pending Aboura's design "
+                "(PDS-001 §5.2)."
+            ),
+            "executive_recommendation_context": self._pending(
+                "Executive Assessment recommendation context pending Aboura's "
+                "design (PDS-001 §5.2)."
             ),
         }
 
     def _business_impact(self, situation: OperationalSituation) -> dict[str, Any]:
         return {
             "operational": self._why_it_matters(situation),
-            "financial": "Unknown",
-            "strategic": {
-                "status": PENDING_EXECUTIVE_LANGUAGE,
-                "note": (
-                    "Strategic impact framing pending Aboura's Business Impact "
-                    "Framework instantiation (PDS-001 §5.6)."
-                ),
-            },
+            "financial": (
+                "Financial impact cannot currently be quantified because the "
+                "required cost and revenue inputs are unavailable."
+            ),
+            "strategic": self._pending(
+                "Strategic impact framing pending Aboura's Business Impact "
+                "Framework instantiation (PDS-001 §5.3)."
+            ),
         }
 
     def _executive_actions(self, situation: OperationalSituation) -> list[dict[str, Any]]:
@@ -103,9 +138,15 @@ class CEOBriefService:
         return [
             {
                 "action": check,
-                "priority": PENDING_EXECUTIVE_LANGUAGE,
+                # Priority is Business Logic, not Executive Language
+                # (Founder decision, Executive Language Completion) — never
+                # the pending_executive_language sentinel. None means no
+                # priority-assignment rule has been approved yet. Accepted
+                # vocabulary once assigned: EXECUTIVE_ACTION_PRIORITY_VALUES.
+                "priority": None,
                 "reason": PENDING_EXECUTIVE_LANGUAGE,
                 "expected_outcome": PENDING_EXECUTIVE_LANGUAGE,
+                "owner": EXECUTIVE_ACTION_OWNER_NOT_YET_ASSIGNED,
                 "evidence_refs": evidence_refs,
             }
             for check in situation.recommended_next_checks
@@ -187,13 +228,43 @@ class CEOBriefService:
                 "trace_status": TRACE_STATUS_COARSE,
             },
             {
-                "field": "executive_priority",
+                "field": "executive_priority.attention_level",
                 "source_type": SOURCE_TYPE_SYNTHESIS,
                 "source_ref": None,
                 "trace_status": TRACE_STATUS_PENDING,
             },
             {
-                "field": "executive_assessment",
+                "field": "executive_priority.situation",
+                "source_type": SOURCE_TYPE_SYNTHESIS,
+                "source_ref": None,
+                "trace_status": TRACE_STATUS_PENDING,
+            },
+            {
+                "field": "executive_priority.business_risk",
+                "source_type": SOURCE_TYPE_SYNTHESIS,
+                "source_ref": None,
+                "trace_status": TRACE_STATUS_PENDING,
+            },
+            {
+                "field": "executive_priority.executive_trigger",
+                "source_type": SOURCE_TYPE_SYNTHESIS,
+                "source_ref": None,
+                "trace_status": TRACE_STATUS_PENDING,
+            },
+            {
+                "field": "executive_assessment.executive_interpretation",
+                "source_type": SOURCE_TYPE_SYNTHESIS,
+                "source_ref": None,
+                "trace_status": TRACE_STATUS_PENDING,
+            },
+            {
+                "field": "executive_assessment.business_meaning",
+                "source_type": SOURCE_TYPE_SYNTHESIS,
+                "source_ref": None,
+                "trace_status": TRACE_STATUS_PENDING,
+            },
+            {
+                "field": "executive_assessment.executive_recommendation_context",
                 "source_type": SOURCE_TYPE_SYNTHESIS,
                 "source_ref": None,
                 "trace_status": TRACE_STATUS_PENDING,
@@ -268,12 +339,45 @@ class CEOBriefService:
             )
             trace.append(
                 {
-                    "field": f"executive_actions[{index}].priority_reason_outcome",
+                    "field": f"executive_actions[{index}].priority",
                     "source_type": SOURCE_TYPE_SYNTHESIS,
+                    # Priority is Business Logic, not Executive Language — no
+                    # priority-assignment rule has been approved yet. Distinct
+                    # from the executive-language-pending fields below.
                     "source_ref": {
-                        "pending_fields": ["priority", "reason", "expected_outcome"],
+                        "reason": "no priority-assignment business rule approved yet",
                     },
                     "trace_status": TRACE_STATUS_PENDING,
+                }
+            )
+            trace.append(
+                {
+                    "field": f"executive_actions[{index}].reason",
+                    "source_type": SOURCE_TYPE_SYNTHESIS,
+                    "source_ref": None,
+                    "trace_status": TRACE_STATUS_PENDING,
+                }
+            )
+            trace.append(
+                {
+                    "field": f"executive_actions[{index}].expected_outcome",
+                    "source_type": SOURCE_TYPE_SYNTHESIS,
+                    "source_ref": None,
+                    "trace_status": TRACE_STATUS_PENDING,
+                }
+            )
+            trace.append(
+                {
+                    "field": f"executive_actions[{index}].owner",
+                    "source_type": SOURCE_TYPE_SYNTHESIS,
+                    "source_ref": {
+                        "reason": (
+                            "no accountable-role data source available; owner "
+                            "may be determined in future versions through "
+                            "Company Brain role mapping"
+                        ),
+                    },
+                    "trace_status": TRACE_STATUS_COARSE,
                 }
             )
 
