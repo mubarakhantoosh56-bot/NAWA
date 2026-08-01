@@ -1,14 +1,16 @@
 # Executive Board Decision #003 — Architecture Freeze v1.0
 
-**Status:** Ratified by Founder as Executive Board Decision #003. Tier 1 active; Tier 2 pending EBD-004.
-**Version:** 1.0
+**Status:** Ratified by Founder as Executive Board Decision #003. Tier 1 active; Tier 2 active per EBD-004.
+**Document version:** 1.1
+**Architecture Freeze version:** v1.0
 **Category:** Governance (architectural constraints applied under authority granted by EBD-002).
+**Subordinate to:** NAWA Reasoning Constitution v1.0 (ratified 2026-07-31). Where this decision conflicts with a Constitutional article, the Constitution prevails and this decision is amended.
 **Scope:** The NAWA runtime architecture as it exists at the time of ratification — the nine Runtime Components, their order, the runtime philosophy that governs them, and the Company Input Principle they serve. Applies to all NAWA implementation work during the Runtime Validation Phase and until formally unfrozen by subsequent EBD.
 **Non-scope:** Contract-level detail of each Runtime Component (deferred to EBD-004 Engine Definitions, which activates Tier 2 of this freeze); documentation format (EBD-001); role authority (EBD-002); product direction; legal/financial governance.
 **Owner:** Founder & CEO (Mubarak).
 **Approval authority:** Founder & CEO.
 **Effective date:** 2026-07-03.
-**Last updated:** 2026-07-03.
+**Last updated:** 2026-08-01.
 **Supersedes:** No prior architecture freeze; establishes Freeze v1.0.
 
 ---
@@ -753,6 +755,7 @@ Change Type column entries grouped by classification: Stable (Tier 1 or Tier 2),
 | 1.0 | 2026-07-03 | Initial draft submitted for Executive Board review. Three-tier freeze model (Runtime Architecture, Contract, Implementation Freedom). Contract First Principle added as a NAWA principle. Nine Runtime Components named. Stable/Flexible classification. | CTO (draft); Founder (ratification pending) | EBD-003 |
 | 1.0-a1 | 2026-07-03 | Pre-ratification amendment set. (a) Runtime Independence Principle added as new §4 — every Runtime Component must be independently replaceable while contract remains intact. (b) Evolution Over Reinvention Principle added as new §5 — NAWA evolves by improving existing components rather than adding new ones during MVP. (c) Classification extended from Stable/Flexible to Stable/Configurable/Flexible; Configurable defined at §14.2 as tunable within governing policy (thresholds, feature flags, model selection, etc.). (d) Evolution Without Violation section added as new §15 — six mechanisms by which NAWA evolves inside the freeze without triggering unfreeze. (e) §18.4 boundary case updated: backward-compatible contract additions permitted without unfreeze once Tier 2 activates; only breaking contract changes require unfreeze. (f) OIE wording updated at §10 and §19: "OIE was first validated through the Jannat Al-Firdaws (Dairtna) MVP" rather than "originated from Dairtna." (g) Downstream renumbering to accommodate new §4, §5, §15: old §4-§8 → new §6-§10; old §9-§12 → new §11-§14; old §13-§18 → new §16-§21. Cross-references updated. Final Principles and Glossary expanded to include new principles. Appendix A restructured into A.1-A.5 by classification. Version stays at 1.0 (pre-ratification amendment). | Founder direction; CTO amendment | EBD-003 additional amendments |
 | 1.0 | 2026-07-03 | **Ratified** by Founder as Executive Board Decision #003. Tier 1 immediately active. Tier 2 pending EBD-004. Tier 3 permanently non-frozen. | Founder | EBD-003 |
+| 1.1 | 2026-08-01 | Constitutional Governance Alignment per EBD-006. Added Constitutional supremacy declaration to header block. Version field split into Document version and Architecture Freeze version. Status corrected — Tier 2 active per EBD-004, no longer pending. **Architecture Freeze remains v1.0. No freeze element modified.** | Founder & CEO | EBD-006 |
 
 ---
 

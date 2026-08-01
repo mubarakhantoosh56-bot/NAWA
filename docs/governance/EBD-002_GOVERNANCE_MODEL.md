@@ -1,14 +1,15 @@
 # Executive Board Decision #002 — NAWA Governance Model
 
 **Status:** Ratified by Founder as Executive Board Decision #002.
-**Version:** 1.0
+**Version:** 1.1
 **Category:** Governance
+**Subordinate to:** NAWA Reasoning Constitution v1.0 (ratified 2026-07-31). Where this decision conflicts with a Constitutional article, the Constitution prevails and this decision is amended.
 **Scope:** All governance activity in the NAWA project — authority, decision-making, meetings, roles, escalation, and the enforcement of foundational principles (Architecture Freeze, Product First, Dogfooding, Constructive Challenge).
 **Non-scope:** Documentation format (see `docs/governance/NAWA_DOCUMENTATION_STANDARD_v1.md`); architectural constraints (see forthcoming `EBD-003_ARCHITECTURE_FREEZE_v1.md`); engine definitions (see forthcoming `EBD-004_ENGINE_DEFINITIONS.md`); legal and financial governance outside NAWA project execution.
 **Owner:** Founder & CEO (Mubarak).
 **Approval authority:** Founder & CEO.
 **Effective date:** 2026-07-03.
-**Last updated:** 2026-07-03.
+**Last updated:** 2026-08-01.
 **Supersedes:** No prior governance document; establishes the model.
 
 ---
@@ -1011,6 +1012,7 @@ Founder ratification date:
 | 1.0-a1 | 2026-07-03 | Pre-ratification amendment: (a) Board reduced from four to three seats; LSE role removed as a Board seat. (b) AI Engineering Team introduced (§4.4) as a distinct executing body containing Claude Code and Codex as peer Senior AI Software Engineers, with an extensibility clause allowing future engineers to join without governance amendment. (c) CTO clarified as having no execution authority — architecture, documentation, and technical direction only; no production code implementation. (d) Approval matrix, meeting participation, cross-functional matrices, KPI ownership, glossary, and templates updated. Version stays at 1.0 (pre-ratification amendment). | Founder direction; CTO amendment | EBD-002 additional amendment |
 | 1.0-a2 | 2026-07-03 | Pre-ratification amendment set two: (a) CTO explicitly excluded from performing engineering peer review; substitution rule now: another approved AI engineer designated by CTO, or Founder — never CTO. Preserves architecture-implementation review separation. (b) AI Engineering Team declared technology-agnostic — not tied to any specific AI system, model family, or provider; future members from any provider accommodated without governance redesign. (c) Principle of Constructive Challenge added as new §15 with enforcement mechanisms at review, ratification, and retrospective time. (d) Executive KPIs expanded from five to six: Knowledge Continuity (§16.2) and Decision Quality (§16.6) added; ordering aligned to Founder specification; Documentation Debt demoted to supporting metric alongside the six KPIs. (e) Downstream renumbering: KPIs §15 → §16; Amendment Process §16 → §17; Final Principles §17 → §18. Executive Report format updated. Version stays at 1.0. | Founder direction (final pre-ratification amendments); CTO amendment | EBD-002 additional amendments |
 | 1.0 | 2026-07-03 | **Ratified** by Founder as Executive Board Decision #002. Effective immediately. | Founder | EBD-002 |
+| 1.1 | 2026-08-01 | Constitutional Governance Alignment per EBD-006. Added Constitutional supremacy declaration to header block. No article, principle, KPI, approval-matrix, or role change. | Founder & CEO | EBD-006 |
 
 ---
 

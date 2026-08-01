@@ -1,14 +1,15 @@
 # Executive Board Decision #004 — Engine Definitions (MVP Edition)
 
 **Status:** Ratified by Founder as Executive Board Decision #004 (MVP Edition). Tier 2 of the Architecture Freeze v1.0 activates at MVP scope on this ratification.
-**Version:** 1.0-MVP
+**Version:** 1.1-MVP
 **Category:** Governance (contracts applied under authority granted by EBD-002 and EBD-003).
+**Subordinate to:** NAWA Reasoning Constitution v1.0 (ratified 2026-07-31). Where this decision conflicts with a Constitutional article, the Constitution prevails and this decision is amended.
 **Scope:** MVP-scope contracts for the nine Runtime Components — Mission, Inputs, Outputs, Never Does — sufficient to activate Tier 2 of the Architecture Freeze v1.0 for the Runtime Validation Phase.
 **Non-scope:** Advanced contract detail (protocols, error handling, retry semantics, orchestration mechanics, schema-level specifications) deferred to post-Runtime-Validation Tier 2 expansion (EBD-004-v2 or successor); implementation (Tier 3 per EBD-003); role authority (EBD-002); documentation format (EBD-001).
 **Owner:** Founder & CEO (Mubarak).
 **Approval authority:** Founder & CEO.
 **Effective date:** 2026-07-03.
-**Last updated:** 2026-07-03.
+**Last updated:** 2026-08-01.
 **Supersedes:** No prior engine definitions; establishes MVP Tier 2 contracts.
 
 ---
@@ -353,6 +354,7 @@ Per EBD-002 §12.5. Founder-authorized, recorded post hoc.
 | 1.0-MVP | 2026-07-03 | Initial draft submitted for Executive Board review. Four fields per component (Mission, Inputs, Outputs, Never Does). MVP-scope only; post-Runtime-Validation expansion deferred. | CTO (draft); Founder (ratification pending) | EBD-004 MVP Edition |
 | 1.0-MVP-a1 | 2026-07-03 | Pre-ratification amendment set. Founder-specified missions applied to the four components flagged as uncertain in the CTO briefing: (a) **NCO Lite** — reframed as runtime coordinator that enforces runtime rules; explicitly not a business logic engine. (b) **KAE** — reframed as transformer from unstructured CompanyInputs into validated organizational knowledge; produces the **Truth Layer**. (c) **OCE** — reframed as builder of Organizational Context by combining operational intelligence, evidence, history, and current state; explicitly not a reasoning or recommendation component. (d) **NCE Lite** — reframed as the **only** Runtime Component responsible for cognitive reasoning; consumes Truth Layer + Company Brain + Organizational Context; produces hypotheses, recommendations, and confidence. Consistency edits: Executive Intelligence Mission and Inputs updated to reference NCE Lite's new output surface (hypotheses/recommendations/confidence rather than correlation); OME Foundation Inputs updated to reference reasoning context rather than correlation context. Glossary expanded with **Truth Layer**, **Cognitive reasoning**, **Company Brain (runtime alias)**, **Organizational Context**, **Runtime rules**. Version stays at 1.0-MVP. | Founder direction; CTO amendment | EBD-004 MVP Edition amendments |
 | 1.0-MVP | 2026-07-03 | **Ratified** by Founder as Executive Board Decision #004 (MVP Edition). Tier 2 of the Architecture Freeze v1.0 activates at MVP scope. | Founder | EBD-004 MVP Edition |
+| 1.1-MVP | 2026-08-01 | Constitutional Governance Alignment per EBD-006. Added Constitutional supremacy declaration to header block. No contract, Mission, Inputs, Outputs, Never Does, or invariant change. | Founder & CEO | EBD-006 |
 
 ---
 

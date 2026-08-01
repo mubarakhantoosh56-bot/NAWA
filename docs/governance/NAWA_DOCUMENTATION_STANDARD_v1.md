@@ -1,12 +1,13 @@
 # NAWA Documentation Standard — v1
 
-**Status:** Ratified as Executive Board Decision #001. Constitutional.
-**Version:** 1.0
+**Status:** Ratified as Executive Board Decision #001.
+**Version:** 1.1
+**Subordinate to:** NAWA Reasoning Constitution v1.0 (ratified 2026-07-31). Where this Standard conflicts with a Constitutional article, the Constitution prevails and this Standard is amended.
 **Phase:** Runtime Validation Phase.
 **Scope:** All NAWA project documentation. Applies to every document produced under any NAWA repository, workspace, or brain.
 **Owner:** Founder & CEO (Mubarak), with the CTO (Claude Cowork) as steward.
 **Effective date:** 2026-07-03.
-**Last updated:** 2026-07-03.
+**Last updated:** 2026-08-01.
 
 ---
 
@@ -103,7 +104,7 @@ NAWA recognizes ten documentation categories. Every document belongs to exactly 
 - **Purpose:** Implementation-facing specifications, interface contracts, service designs, testing standards.
 - **Examples:** Repository layer contract, engine implementation spec, API surface documentation, testing conventions.
 - **Location:** `docs/technical/`
-- **Primary owner:** CTO, with authorship by Lead Software Engineer (Codex) or delegated engineers.
+- **Primary owner:** CTO, with authorship by the AI Engineering Team or delegated engineers.
 - **Approval authority:** CTO.
 
 ### 3.6 Runtime Documents
@@ -111,7 +112,7 @@ NAWA recognizes ten documentation categories. Every document belongs to exactly 
 - **Purpose:** Describe the live runtime — what is deployed, what is executing, what is being validated, what is instrumented.
 - **Examples:** Runtime validation reports, per-engine live-state summaries, current active runtime pipeline description, real-data validation results.
 - **Location:** `docs/runtime/`
-- **Primary owner:** CTO, with contributions from Lead Software Engineer.
+- **Primary owner:** CTO, with contributions from the AI Engineering Team.
 - **Approval authority:** CTO.
 
 ### 3.7 Meeting Documents
@@ -155,6 +156,7 @@ Every question about "which document is authoritative for X" has exactly one ans
 
 | Domain | Authoritative Document | Location |
 |---|---|---|
+| **Permanent reasoning philosophy — identity, reasoning foundations, reasoning process, decision discipline, authority, organizational memory and learning** | NAWA Reasoning Constitution v1.0 — **supreme authority over every row below** | `docs/governance/NAWA_REASONING_CONSTITUTION_v1.md` |
 | **Architecture (as-designed)** | Architecture Freeze v1.0 spec | `docs/architecture/ARCHITECTURE_FREEZE_v1.md` (to be created if not present) |
 | **Current execution state** | `CURRENT_STATE.md` | Repository root |
 | **Runtime pipeline (as-executing)** | `docs/runtime/RUNTIME_PIPELINE_CURRENT.md` (to be created) | `docs/runtime/` |
@@ -190,7 +192,7 @@ Every document has exactly one **primary owner**. Ownership is not authorship �
 | **Founder & CEO (Mubarak)** | Governance, Product vision, Company Brain (domain truth), Current State (at Sprint boundary), Architecture direction | All Executive Board Decisions, any decision changing product direction or organizational structure | Ratification of governance and product direction |
 | **Chief Product & AI Strategy (Aboura)** | Product Documents, Roadmap, Product Decisions | Governance decisions affecting product, Architecture decisions affecting UX, Company Brain updates affecting user experience | Product execution documents |
 | **Chief Technology & Architecture Officer (Claude Cowork)** | Architecture Documents, Technical Documents, Runtime Documents, Decision Logs, Current State, Agent Instructions, COWORK v2.0 | All Company Brain documents, all Architecture Decisions, all Executive Board Decisions affecting execution | Architecture reviews, technical documentation, decision recording, continuous documentation health |
-| **Lead Software Engineer (Codex)** | Implementation-close technical documents (module contracts, service designs authored during implementation) | Architecture Documents affecting their work | Implementation, test authorship, code-close documentation |
+| **AI Engineering Team** | Implementation-close technical documents (module contracts, service designs authored during implementation) | Architecture Documents affecting their work | Implementation, test authorship, code-close documentation |
 | **Future Team Members (Engineers)** | Their own technical designs, ADRs they author, module documentation | Peer review of adjacent technical documents | Implementation, testing, technical documentation authorship, participation in Executive Board Decisions when their scope is affected |
 
 ### 5.1 Delegation
@@ -444,7 +446,7 @@ The Executive Board convenes to ratify decisions that touch governance, product 
 - Founder & CEO (Mubarak) — decision authority.
 - Chief Product & AI Strategy (Aboura) — product review authority.
 - Chief Technology & Architecture Officer (Claude Cowork) — architecture and documentation review authority.
-- Lead Software Engineer (Codex) — execution review authority; participates when the decision affects implementation.
+- AI Engineering Team — execution review authority; participates when the decision affects implementation.
 
 ### 12.2 Executive Board Decision (EBD) format
 
@@ -578,6 +580,7 @@ Items complete when checked. This checklist is closed and archived when all item
 | Version | Date | Change | Authority | Reference |
 |---|---|---|---|---|
 | 1.0 | 2026-07-03 | Initial ratification as Executive Board Decision #001. | Founder | `docs/decisions/EBD-001-documentation-standard.md` (to be filed) |
+| 1.1 | 2026-08-01 | Constitutional Governance Alignment per EBD-006. Removed "Constitutional" from Status line — superseded by NAWA Reasoning Constitution v1.0. Added Constitutional supremacy declaration. Added the Constitution as supreme authority in §4 Source of Truth Rules. Corrected stale Codex-specific engineering-role references to "AI Engineering Team" at §3.5, §3.6, §5, §12.1 (DEBT-01). Constitutional Documents category (§3) deferred — would trigger MAJOR per §12.5. | Founder & CEO | EBD-006 |
 
 ---
 
