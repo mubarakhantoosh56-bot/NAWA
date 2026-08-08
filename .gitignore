@@ -8,3 +8,15 @@ logs/
 frontend/.next/
 frontend/node_modules/
 frontend/tsconfig.tsbuildinfo
+
+# Runtime tenant-uploaded file storage -- local/generated, never committed.
+storage/
+
+# Reviewer/agent scratch workspace clones -- never committed.
+_codex_efr_005/
+
+# data_sources/: real company operational/financial files stay local-only.
+# Only directory-structure placeholders (.gitkeep) are tracked.
+data_sources/**
+!data_sources/**/
+!data_sources/**/.gitkeep

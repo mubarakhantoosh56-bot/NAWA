@@ -1,5 +1,7 @@
 ﻿# NAWA Architecture Rules
 
+**Scope of authority:** this document is the canonical **Engineering Implementation Architecture** — folder structure, layering, and coding-level rules for building NAWA. For the canonical **NAWA Cognitive/System Architecture** — the product-level engine model (KAE, OIE, OCE, Reasoning, Executive Intelligence, OME) and how NAWA reasons about a company — see [`docs/architecture/`](docs/architecture/). The two are complementary: this file governs *how code is structured*; `docs/architecture/` governs *what the system cognitively does*. Neither supersedes the other.
+
 These are non-negotiable architectural constraints. Violations undermine security, performance, or maintainability.
 
 ## Folder Structure
