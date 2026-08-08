@@ -1,0 +1,2228 @@
+{
+  "classification": null,
+  "company_input": null,
+  "evidence_policy": {
+    "allowed_to_continue": true,
+    "confidence": "reduced",
+    "confidence_reduction_reason": "Confidence is reduced because optional evidence is missing: vet_reports, temperature_ventilation. The brief uses only available validated evidence.",
+    "missing_evidence": [
+      {
+        "date_range": {
+          "end": "2026-05-13",
+          "start": "2026-05-11"
+        },
+        "description": "Request context for Vet reports.",
+        "source": "local_oce_request",
+        "status": "missing",
+        "type": "vet_reports"
+      },
+      {
+        "date_range": {
+          "end": "2026-05-13",
+          "start": "2026-05-11"
+        },
+        "description": "Request context for Temperature / ventilation.",
+        "source": "local_oce_request",
+        "status": "missing",
+        "type": "temperature_ventilation"
+      }
+    ],
+    "policy_name": "jannat_mvp_evidence_policy",
+    "recommended_company_inputs": [
+      "Veterinary report for the affected poultry hall and date range",
+      "Temperature and ventilation readings for the affected hall and date range"
+    ]
+  },
+  "executive": {
+    "ceo_brief_count": 1,
+    "ceo_briefs": [
+      {
+        "business_impact": {
+          "financial": "Unknown",
+          "operational": "A sustained poultry production drop can affect output planning, daily yield expectations, and the operating assumptions behind feed, water, veterinary, and hall-condition decisions.",
+          "strategic": {
+            "note": "Strategic impact framing pending Aboura's Business Impact Framework instantiation (PDS-001 §5.6).",
+            "status": "pending_executive_language"
+          }
+        },
+        "confidence": "reduced",
+        "confidence_explanation": "Confidence is reduced because optional evidence is missing: vet_reports, temperature_ventilation. The brief uses only available validated evidence.",
+        "evidence_summary": [
+          {
+            "date": "2026-05-13",
+            "end_date": "2026-05-13",
+            "signal_type": "production_declining_trend",
+            "start_date": "2026-05-11"
+          },
+          {
+            "date": "2026-05-11",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null
+          },
+          {
+            "date": "2026-05-12",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null
+          },
+          {
+            "date": "2026-05-13",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null
+          },
+          {
+            "confidence_reduction_reason": "Confidence is reduced because optional evidence is missing: vet_reports, temperature_ventilation. The brief uses only available validated evidence.",
+            "evidence_policy": "jannat_mvp_evidence_policy",
+            "missing_evidence": [
+              {
+                "date_range": {
+                  "end": "2026-05-13",
+                  "start": "2026-05-11"
+                },
+                "description": "Request context for Vet reports.",
+                "source": "local_oce_request",
+                "status": "missing",
+                "type": "vet_reports"
+              },
+              {
+                "date_range": {
+                  "end": "2026-05-13",
+                  "start": "2026-05-11"
+                },
+                "description": "Request context for Temperature / ventilation.",
+                "source": "local_oce_request",
+                "status": "missing",
+                "type": "temperature_ventilation"
+              }
+            ]
+          }
+        ],
+        "executive_actions": [
+          {
+            "action": "review feed consumption",
+            "evidence_refs": [
+              "production_declining_trend",
+              "production_below_standard",
+              "production_below_standard",
+              "production_below_standard"
+            ],
+            "expected_outcome": "pending_executive_language",
+            "priority": "pending_executive_language",
+            "reason": "pending_executive_language"
+          },
+          {
+            "action": "review water consumption",
+            "evidence_refs": [
+              "production_declining_trend",
+              "production_below_standard",
+              "production_below_standard",
+              "production_below_standard"
+            ],
+            "expected_outcome": "pending_executive_language",
+            "priority": "pending_executive_language",
+            "reason": "pending_executive_language"
+          },
+          {
+            "action": "review mortality trend",
+            "evidence_refs": [
+              "production_declining_trend",
+              "production_below_standard",
+              "production_below_standard",
+              "production_below_standard"
+            ],
+            "expected_outcome": "pending_executive_language",
+            "priority": "pending_executive_language",
+            "reason": "pending_executive_language"
+          },
+          {
+            "action": "review vet notes",
+            "evidence_refs": [
+              "production_declining_trend",
+              "production_below_standard",
+              "production_below_standard",
+              "production_below_standard"
+            ],
+            "expected_outcome": "pending_executive_language",
+            "priority": "pending_executive_language",
+            "reason": "pending_executive_language"
+          },
+          {
+            "action": "review temperature/ventilation conditions",
+            "evidence_refs": [
+              "production_declining_trend",
+              "production_below_standard",
+              "production_below_standard",
+              "production_below_standard"
+            ],
+            "expected_outcome": "pending_executive_language",
+            "priority": "pending_executive_language",
+            "reason": "pending_executive_language"
+          }
+        ],
+        "executive_assessment": {
+          "note": "Executive Assessment (Executive Thinking) prioritization pending Aboura's design (PDS-001 §5.5).",
+          "status": "pending_executive_language"
+        },
+        "executive_attention": {
+          "immediate": [
+            "Production decline detected in poultry hall"
+          ],
+          "monitor": []
+        },
+        "executive_priority": {
+          "known_facts": {
+            "severity": "warning"
+          },
+          "note": "Executive Priority urgency framing pending Aboura's Executive Brief Design Principles (PDS-001 §5.1).",
+          "status": "pending_executive_language"
+        },
+        "facts": [
+          {
+            "date": "2026-05-13",
+            "end_date": "2026-05-13",
+            "signal_type": "production_declining_trend",
+            "start_date": "2026-05-11",
+            "statement": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points."
+          },
+          {
+            "date": "2026-05-11",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null,
+            "statement": "Daily production rate 91.20% is below standard 93.40% by 2.20 points."
+          },
+          {
+            "date": "2026-05-12",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null,
+            "statement": "Daily production rate 90.70% is below standard 93.40% by 2.70 points."
+          },
+          {
+            "date": "2026-05-13",
+            "end_date": null,
+            "signal_type": "production_below_standard",
+            "start_date": null,
+            "statement": "Daily production rate 89.60% is below standard 93.40% by 3.80 points."
+          }
+        ],
+        "headline": "Production decline detected in poultry hall",
+        "missing_evidence": [
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Request context for Vet reports.",
+            "source": "local_oce_request",
+            "status": "missing",
+            "type": "vet_reports",
+            "why_it_matters": {
+              "note": "Why this evidence matters pending Aboura's Missing Evidence language (PDS-001 §5.9).",
+              "status": "pending_executive_language"
+            }
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Request context for Temperature / ventilation.",
+            "source": "local_oce_request",
+            "status": "missing",
+            "type": "temperature_ventilation",
+            "why_it_matters": {
+              "note": "Why this evidence matters pending Aboura's Missing Evidence language (PDS-001 §5.9).",
+              "status": "pending_executive_language"
+            }
+          }
+        ],
+        "recommended_company_inputs": [
+          "Veterinary report for the affected poultry hall and date range",
+          "Temperature and ventilation readings for the affected hall and date range"
+        ],
+        "recommended_next_actions": [
+          "review feed consumption",
+          "review water consumption",
+          "review mortality trend",
+          "review vet notes",
+          "review temperature/ventilation conditions"
+        ],
+        "severity": "warning",
+        "what_changed": [
+          {
+            "date": "2026-05-13",
+            "end_date": "2026-05-13",
+            "signal_type": "production_declining_trend",
+            "start_date": "2026-05-11",
+            "statement": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points."
+          }
+        ],
+        "what_happened": "Production declined from 2026-05-11 to 2026-05-13. 3 daily production readings in that range were below the standard rate. Trend evidence: Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+        "why_it_matters": "A sustained poultry production drop can affect output planning, daily yield expectations, and the operating assumptions behind feed, water, veterinary, and hall-condition decisions."
+      }
+    ]
+  },
+  "kae": {
+    "record_count": 9,
+    "records": [
+      {
+        "age_day": 175,
+        "age_week": 26,
+        "bird_balance": 77037,
+        "box_production": 195,
+        "broken_eggs": 12,
+        "daily_mortality": 14,
+        "daily_production_rate": 91.2,
+        "daily_tray_production": 2342,
+        "date": "2026-05-11",
+        "day_name": "الإثنين",
+        "dirty_eggs": 9,
+        "raw_values": {
+          "L": 0,
+          "M": 2266,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2342,
+          "الإنتاج بالصندوق": 195,
+          "التاريخ": "11/05/2026",
+          "العلف المستلم": 12000,
+          "العلف المستهلك": 8080,
+          "العلف للطير الواحد": 105,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 175,
+          "الماء المستهلك": 22000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 14,
+          "اليوم": "الإثنين",
+          "خشن XXL": 0,
+          "رصيد الطيور": 77037,
+          "صفارين XXXL": 55,
+          "كسر": 12,
+          "متسخ": 9,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "91.2%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 56.2
+        },
+        "row_number": 4,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 22000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 176,
+        "age_week": 26,
+        "bird_balance": 77023,
+        "box_production": 194,
+        "broken_eggs": 12,
+        "daily_mortality": 18,
+        "daily_production_rate": 90.7,
+        "daily_tray_production": 2328,
+        "date": "2026-05-12",
+        "day_name": "الثلاثاء",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2251,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2328,
+          "الإنتاج بالصندوق": 194,
+          "التاريخ": "12/05/2026",
+          "العلف المستلم": 8000,
+          "العلف المستهلك": 7850,
+          "العلف للطير الواحد": 102,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 176,
+          "الماء المستهلك": 21000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 18,
+          "اليوم": "الثلاثاء",
+          "خشن XXL": 0,
+          "رصيد الطيور": 77023,
+          "صفارين XXXL": 53,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "90.7%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 56.1
+        },
+        "row_number": 5,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 21000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 177,
+        "age_week": 26,
+        "bird_balance": 77005,
+        "box_production": 192,
+        "broken_eggs": 12,
+        "daily_mortality": 12,
+        "daily_production_rate": 89.6,
+        "daily_tray_production": 2301,
+        "date": "2026-05-13",
+        "day_name": "الأربعاء",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2229,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2301,
+          "الإنتاج بالصندوق": 192,
+          "التاريخ": "13/05/2026",
+          "العلف المستلم": 8000,
+          "العلف المستهلك": 7950,
+          "العلف للطير الواحد": 103,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 177,
+          "الماء المستهلك": 22000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 12,
+          "اليوم": "الأربعاء",
+          "خشن XXL": 0,
+          "رصيد الطيور": 77005,
+          "صفارين XXXL": 48,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "89.6%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 56.1
+        },
+        "row_number": 6,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 22000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 178,
+        "age_week": 26,
+        "bird_balance": 76993,
+        "box_production": 193,
+        "broken_eggs": 12,
+        "daily_mortality": 10,
+        "daily_production_rate": 90.4,
+        "daily_tray_production": 2319,
+        "date": "2026-05-14",
+        "day_name": "الخميس",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2250,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2319,
+          "الإنتاج بالصندوق": 193,
+          "التاريخ": "14/05/2026",
+          "العلف المستلم": 12000,
+          "العلف المستهلك": 8110,
+          "العلف للطير الواحد": 105,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 178,
+          "الماء المستهلك": 22000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 10,
+          "اليوم": "الخميس",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76993,
+          "صفارين XXXL": 45,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "90.4%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 56
+        },
+        "row_number": 7,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 22000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 179,
+        "age_week": 26,
+        "bird_balance": 76983,
+        "box_production": 191,
+        "broken_eggs": 12,
+        "daily_mortality": 15,
+        "daily_production_rate": 89.3,
+        "daily_tray_production": 2291,
+        "date": "2026-05-15",
+        "day_name": "الجمعة",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2222,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2291,
+          "الإنتاج بالصندوق": 191,
+          "التاريخ": "15/05/2026",
+          "العلف المستلم": 0,
+          "العلف المستهلك": 8430,
+          "العلف للطير الواحد": 110,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 179,
+          "الماء المستهلك": 23000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 15,
+          "اليوم": "الجمعة",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76983,
+          "صفارين XXXL": 45,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "89.3%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 56.2
+        },
+        "row_number": 8,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 23000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 180,
+        "age_week": 26,
+        "bird_balance": 76968,
+        "box_production": 193,
+        "broken_eggs": 12,
+        "daily_mortality": 10,
+        "daily_production_rate": 90.1,
+        "daily_tray_production": 2312,
+        "date": "2026-05-16",
+        "day_name": "السبت",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2244,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2312,
+          "الإنتاج بالصندوق": 193,
+          "التاريخ": "16/05/2026",
+          "العلف المستلم": 8000,
+          "العلف المستهلك": 8270,
+          "العلف للطير الواحد": 107,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 180,
+          "الماء المستهلك": 27000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 10,
+          "اليوم": "السبت",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76968,
+          "صفارين XXXL": 44,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "90.1%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 55.6
+        },
+        "row_number": 9,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 27000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 181,
+        "age_week": 26,
+        "bird_balance": 76958,
+        "box_production": 192,
+        "broken_eggs": 12,
+        "daily_mortality": 9,
+        "daily_production_rate": 89.8,
+        "daily_tray_production": 2303,
+        "date": "2026-05-17",
+        "day_name": "الأحد",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2237,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2303,
+          "الإنتاج بالصندوق": 192,
+          "التاريخ": "17/05/2026",
+          "العلف المستلم": 12000,
+          "العلف المستهلك": 8400,
+          "العلف للطير الواحد": 109,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 181,
+          "الماء المستهلك": 28000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 9,
+          "اليوم": "الأحد",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76958,
+          "صفارين XXXL": 42,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "89.8%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 55.3
+        },
+        "row_number": 10,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 28000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 182,
+        "age_week": 26,
+        "bird_balance": 76949,
+        "box_production": 193,
+        "broken_eggs": 12,
+        "daily_mortality": 7,
+        "daily_production_rate": 90.2,
+        "daily_tray_production": 2313,
+        "date": "2026-05-18",
+        "day_name": "الإثنين",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2251,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2313,
+          "الإنتاج بالصندوق": 193,
+          "التاريخ": "18/05/2026",
+          "العلف المستلم": 12000,
+          "العلف المستهلك": 8500,
+          "العلف للطير الواحد": 110,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 182,
+          "الماء المستهلك": 30000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 7,
+          "اليوم": "الإثنين",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76949,
+          "صفارين XXXL": 38,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "90.2%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 55.1
+        },
+        "row_number": 11,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 30000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      },
+      {
+        "age_day": 183,
+        "age_week": 26,
+        "bird_balance": 76942,
+        "box_production": 195,
+        "broken_eggs": 12,
+        "daily_mortality": 6,
+        "daily_production_rate": 91.3,
+        "daily_tray_production": 2342,
+        "date": "2026-05-19",
+        "day_name": "الثلاثاء",
+        "dirty_eggs": 12,
+        "raw_values": {
+          "L": 0,
+          "M": 2268,
+          "S": 0,
+          "XL": 0,
+          "الأشر": 0,
+          "الإنتاج اليومي بالطبق": 2342,
+          "الإنتاج بالصندوق": 195,
+          "التاريخ": "19/05/2026",
+          "العلف المستلم": 8000,
+          "العلف المستهلك": 8090,
+          "العلف للطير الواحد": 105,
+          "العمر بالأسبوع": 26,
+          "العمر باليوم": 183,
+          "الماء المستهلك": 30000,
+          "الهلاكات الأسبوعية": 81,
+          "الهلاكات اليومية": 6,
+          "اليوم": "الثلاثاء",
+          "خشن XXL": 0,
+          "رصيد الطيور": 76942,
+          "صفارين XXXL": 50,
+          "كسر": 12,
+          "متسخ": 12,
+          "نسبة الإنتاج القياسية %": "93.40%",
+          "نسبة الإنتاج اليومية": "91.3%",
+          "نسبة الهلاكات الأسبوعية": "0.11%",
+          "وزن البيضة (غرام)": 54.9
+        },
+        "row_number": 12,
+        "sheet_name": "التقرير الفني اليومي",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "standard_production_rate": 93.4,
+        "unknown_marker_field": 0,
+        "water_consumption": 30000,
+        "weekly_mortality": 81,
+        "weekly_mortality_rate": 0.11
+      }
+    ],
+    "source_path": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx"
+  },
+  "missing_evidence": [
+    {
+      "date_range": {
+        "end": "2026-05-13",
+        "start": "2026-05-11"
+      },
+      "description": "Request context for Vet reports.",
+      "source": "local_oce_request",
+      "status": "missing",
+      "type": "vet_reports"
+    },
+    {
+      "date_range": {
+        "end": "2026-05-13",
+        "start": "2026-05-11"
+      },
+      "description": "Request context for Temperature / ventilation.",
+      "source": "local_oce_request",
+      "status": "missing",
+      "type": "temperature_ventilation"
+    }
+  ],
+  "nce": {
+    "context_count": 1,
+    "message": "NCE Lite gate passed. No AI reasoning is performed by NCO Lite.",
+    "status": "ready"
+  },
+  "oce": {
+    "blocking_missing_evidence": [],
+    "context_count": 1,
+    "context_ready_for_reasoning": false,
+    "contexts": [
+      {
+        "available_evidence": [
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Generated situation: poultry_production_drop",
+            "source": "oip.situation",
+            "status": "available",
+            "type": "situation"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Production declining trend signal is available.",
+            "source": "oip.signals",
+            "status": "available",
+            "type": "production_trend"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Daily mortality metrics are available for the situation window.",
+            "source": "oip.metrics",
+            "status": "available",
+            "type": "mortality_trend"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Daily poultry report events are available for the situation window.",
+            "source": "oip.events",
+            "status": "available",
+            "type": "daily_report"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Water consumption metrics are available from parsed daily poultry records.",
+            "source": "oip.metrics",
+            "status": "available",
+            "type": "water_consumption"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Company decision rules document is available for context.",
+            "source": "knowledge/dairtna/DAIRTNA_DECISION_RULES.md",
+            "status": "available",
+            "type": "company_decision_rules"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Dairtna operational semantics document is available for context.",
+            "source": "knowledge/dairtna/DAIRTNA_OPERATIONAL_SEMANTICS.md",
+            "status": "available",
+            "type": "operational_semantics"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Feed mill inventory workbook is available and readable. Sheets: تسجيل الوارد, الوارد AUTO, يومي العلف, رصيد الجاروشة, تركيبة علف, أسعار المواد, Sheet1. Detected columns/material labels: الصنف, الذرة, الصويا, حجر كلس, D.C.P, بريمكس, النخالة, مثيونين, ملح, كولين كلورايد, صودا, ثريونين. Non-empty row count: 512. Feed/material-related rows detected: 20.",
+            "source": "data_sources/jannat_al_firdaws/2026_06/feed_mill/جرد الجاروشة.xlsx",
+            "status": "available",
+            "type": "feed_mill_inventory"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-19",
+              "start": "2026-05-11"
+            },
+            "description": "Production history is available from parsed daily poultry records.",
+            "source": "oip.parsed_poultry_records",
+            "status": "available",
+            "type": "previous_production_history"
+          }
+        ],
+        "company": "Jannat Al-Firdaws",
+        "context_ready_for_reasoning": false,
+        "context_type": "poultry_production_drop",
+        "department": "Dairtna Poultry",
+        "missing_evidence": [
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Request context for Vet reports.",
+            "source": "local_oce_request",
+            "status": "missing",
+            "type": "vet_reports"
+          },
+          {
+            "date_range": {
+              "end": "2026-05-13",
+              "start": "2026-05-11"
+            },
+            "description": "Request context for Temperature / ventilation.",
+            "source": "local_oce_request",
+            "status": "missing",
+            "type": "temperature_ventilation"
+          }
+        ],
+        "recommended_next_data": [
+          "Request context for Vet reports.",
+          "Request context for Temperature / ventilation."
+        ],
+        "related_entities": [
+          "poultry_hall"
+        ],
+        "related_events": [
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "event_type": "poultry_daily_report",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "summary": "Poultry daily report: date=2026-05-11, day=الإثنين, bird_balance=77037, daily_mortality=14, daily_tray_production=2342, daily_production_rate=91.2, standard_production_rate=93.4, water_consumption=22000"
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "event_type": "poultry_daily_report",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "summary": "Poultry daily report: date=2026-05-12, day=الثلاثاء, bird_balance=77023, daily_mortality=18, daily_tray_production=2328, daily_production_rate=90.7, standard_production_rate=93.4, water_consumption=21000"
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "event_type": "poultry_daily_report",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "summary": "Poultry daily report: date=2026-05-13, day=الأربعاء, bird_balance=77005, daily_mortality=12, daily_tray_production=2301, daily_production_rate=89.6, standard_production_rate=93.4, water_consumption=22000"
+          }
+        ],
+        "related_metrics": [
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "bird_balance",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 77037
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_mortality",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 14
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "weekly_mortality_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 0.11
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_tray_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 2342
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "box_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 195
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 91.2
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "standard_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 93.4
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "broken_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 12
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "dirty_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 9
+          },
+          {
+            "date": "2026-05-11",
+            "entity_type": "poultry_hall",
+            "metric_name": "water_consumption",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "value": 22000
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "bird_balance",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 77023
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_mortality",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 18
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "weekly_mortality_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 0.11
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_tray_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 2328
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "box_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 194
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 90.7
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "standard_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 93.4
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "broken_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 12
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "dirty_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 12
+          },
+          {
+            "date": "2026-05-12",
+            "entity_type": "poultry_hall",
+            "metric_name": "water_consumption",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "value": 21000
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "bird_balance",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 77005
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_mortality",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 12
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "weekly_mortality_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 0.11
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_tray_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 2301
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "box_production",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 192
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "daily_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 89.6
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "standard_production_rate",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 93.4
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "broken_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 12
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "dirty_eggs",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 12
+          },
+          {
+            "date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "metric_name": "water_consumption",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "value": 22000
+          }
+        ],
+        "related_signals": [
+          {
+            "date": "2026-05-11",
+            "end_date": null,
+            "entity_type": "poultry_hall",
+            "message": "Daily production rate 91.20% is below standard 93.40% by 2.20 points.",
+            "severity": "watch",
+            "signal_type": "production_below_standard",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 4,
+            "start_date": null
+          },
+          {
+            "date": "2026-05-12",
+            "end_date": null,
+            "entity_type": "poultry_hall",
+            "message": "Daily production rate 90.70% is below standard 93.40% by 2.70 points.",
+            "severity": "watch",
+            "signal_type": "production_below_standard",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 5,
+            "start_date": null
+          },
+          {
+            "date": "2026-05-13",
+            "end_date": null,
+            "entity_type": "poultry_hall",
+            "message": "Daily production rate 89.60% is below standard 93.40% by 3.80 points.",
+            "severity": "watch",
+            "signal_type": "production_below_standard",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "start_date": null
+          },
+          {
+            "date": "2026-05-13",
+            "end_date": "2026-05-13",
+            "entity_type": "poultry_hall",
+            "message": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+            "severity": "warning",
+            "signal_type": "production_declining_trend",
+            "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+            "source_row_number": 6,
+            "start_date": "2026-05-11"
+          }
+        ],
+        "situation": {
+          "end_date": "2026-05-13",
+          "entity_type": "poultry_hall",
+          "evidence": [
+            {
+              "date": "2026-05-13",
+              "end_date": "2026-05-13",
+              "message": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+              "signal_type": "production_declining_trend",
+              "start_date": "2026-05-11"
+            },
+            {
+              "date": "2026-05-11",
+              "end_date": null,
+              "message": "Daily production rate 91.20% is below standard 93.40% by 2.20 points.",
+              "signal_type": "production_below_standard",
+              "start_date": null
+            },
+            {
+              "date": "2026-05-12",
+              "end_date": null,
+              "message": "Daily production rate 90.70% is below standard 93.40% by 2.70 points.",
+              "signal_type": "production_below_standard",
+              "start_date": null
+            },
+            {
+              "date": "2026-05-13",
+              "end_date": null,
+              "message": "Daily production rate 89.60% is below standard 93.40% by 3.80 points.",
+              "signal_type": "production_below_standard",
+              "start_date": null
+            }
+          ],
+          "recommended_next_checks": [
+            "review feed consumption",
+            "review water consumption",
+            "review mortality trend",
+            "review vet notes",
+            "review temperature/ventilation conditions"
+          ],
+          "severity": "warning",
+          "situation_type": "poultry_production_drop",
+          "start_date": "2026-05-11",
+          "summary": "Production declined from 2026-05-11 to 2026-05-13. 3 daily production readings in that range were below the standard rate. Trend evidence: Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+          "title": "Production decline detected in poultry hall"
+        },
+        "time_window": {
+          "end": "2026-05-13",
+          "start": "2026-05-11"
+        }
+      }
+    ],
+    "missing_evidence": [
+      {
+        "date_range": {
+          "end": "2026-05-13",
+          "start": "2026-05-11"
+        },
+        "description": "Request context for Vet reports.",
+        "source": "local_oce_request",
+        "status": "missing",
+        "type": "vet_reports"
+      },
+      {
+        "date_range": {
+          "end": "2026-05-13",
+          "start": "2026-05-11"
+        },
+        "description": "Request context for Temperature / ventilation.",
+        "source": "local_oce_request",
+        "status": "missing",
+        "type": "temperature_ventilation"
+      }
+    ],
+    "mvp_evidence_policy_allows_reasoning": true
+  },
+  "oie": {
+    "event_count": 9,
+    "events": [
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "summary": "Poultry daily report: date=2026-05-11, day=الإثنين, bird_balance=77037, daily_mortality=14, daily_tray_production=2342, daily_production_rate=91.2, standard_production_rate=93.4, water_consumption=22000"
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "summary": "Poultry daily report: date=2026-05-12, day=الثلاثاء, bird_balance=77023, daily_mortality=18, daily_tray_production=2328, daily_production_rate=90.7, standard_production_rate=93.4, water_consumption=21000"
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "summary": "Poultry daily report: date=2026-05-13, day=الأربعاء, bird_balance=77005, daily_mortality=12, daily_tray_production=2301, daily_production_rate=89.6, standard_production_rate=93.4, water_consumption=22000"
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "summary": "Poultry daily report: date=2026-05-14, day=الخميس, bird_balance=76993, daily_mortality=10, daily_tray_production=2319, daily_production_rate=90.4, standard_production_rate=93.4, water_consumption=22000"
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "summary": "Poultry daily report: date=2026-05-15, day=الجمعة, bird_balance=76983, daily_mortality=15, daily_tray_production=2291, daily_production_rate=89.3, standard_production_rate=93.4, water_consumption=23000"
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "summary": "Poultry daily report: date=2026-05-16, day=السبت, bird_balance=76968, daily_mortality=10, daily_tray_production=2312, daily_production_rate=90.1, standard_production_rate=93.4, water_consumption=27000"
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "summary": "Poultry daily report: date=2026-05-17, day=الأحد, bird_balance=76958, daily_mortality=9, daily_tray_production=2303, daily_production_rate=89.8, standard_production_rate=93.4, water_consumption=28000"
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "summary": "Poultry daily report: date=2026-05-18, day=الإثنين, bird_balance=76949, daily_mortality=7, daily_tray_production=2313, daily_production_rate=90.2, standard_production_rate=93.4, water_consumption=30000"
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "event_type": "poultry_daily_report",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "summary": "Poultry daily report: date=2026-05-19, day=الثلاثاء, bird_balance=76942, daily_mortality=6, daily_tray_production=2342, daily_production_rate=91.3, standard_production_rate=93.4, water_consumption=30000"
+      }
+    ],
+    "metric_count": 90,
+    "metrics": [
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 77037
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 14
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 2342
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 195
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 91.2
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 12
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 9
+      },
+      {
+        "date": "2026-05-11",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "value": 22000
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 77023
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 18
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 2328
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 194
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 90.7
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 12
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 12
+      },
+      {
+        "date": "2026-05-12",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "value": 21000
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 77005
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 12
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 2301
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 192
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 89.6
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 12
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 12
+      },
+      {
+        "date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "value": 22000
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 76993
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 10
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 2319
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 193
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 90.4
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 12
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 12
+      },
+      {
+        "date": "2026-05-14",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "value": 22000
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 76983
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 15
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 2291
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 191
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 89.3
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 12
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 12
+      },
+      {
+        "date": "2026-05-15",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "value": 23000
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 76968
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 10
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 2312
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 193
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 90.1
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 12
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 12
+      },
+      {
+        "date": "2026-05-16",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "value": 27000
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 76958
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 9
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 2303
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 192
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 89.8
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 12
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 12
+      },
+      {
+        "date": "2026-05-17",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "value": 28000
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 76949
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 7
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 2313
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 193
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 90.2
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 12
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 12
+      },
+      {
+        "date": "2026-05-18",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "value": 30000
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "bird_balance",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 76942
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_mortality",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 6
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "weekly_mortality_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 0.11
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_tray_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 2342
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "box_production",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 195
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "daily_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 91.3
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "standard_production_rate",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 93.4
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "broken_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 12
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "dirty_eggs",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 12
+      },
+      {
+        "date": "2026-05-19",
+        "entity_type": "poultry_hall",
+        "metric_name": "water_consumption",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "value": 30000
+      }
+    ],
+    "signal_count": 10,
+    "signals": [
+      {
+        "date": "2026-05-11",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 91.20% is below standard 93.40% by 2.20 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 4,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-12",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 90.70% is below standard 93.40% by 2.70 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 5,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-13",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 89.60% is below standard 93.40% by 3.80 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-14",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 90.40% is below standard 93.40% by 3.00 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 7,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-15",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 89.30% is below standard 93.40% by 4.10 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 8,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-16",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 90.10% is below standard 93.40% by 3.30 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 9,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-17",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 89.80% is below standard 93.40% by 3.60 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 10,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-18",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 90.20% is below standard 93.40% by 3.20 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 11,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-19",
+        "end_date": null,
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate 91.30% is below standard 93.40% by 2.10 points.",
+        "severity": "watch",
+        "signal_type": "production_below_standard",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 12,
+        "start_date": null
+      },
+      {
+        "date": "2026-05-13",
+        "end_date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "message": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+        "severity": "warning",
+        "signal_type": "production_declining_trend",
+        "source_file": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+        "source_row_number": 6,
+        "start_date": "2026-05-11"
+      }
+    ],
+    "situation_count": 1,
+    "situations": [
+      {
+        "end_date": "2026-05-13",
+        "entity_type": "poultry_hall",
+        "evidence": [
+          {
+            "date": "2026-05-13",
+            "end_date": "2026-05-13",
+            "message": "Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+            "signal_type": "production_declining_trend",
+            "start_date": "2026-05-11"
+          },
+          {
+            "date": "2026-05-11",
+            "end_date": null,
+            "message": "Daily production rate 91.20% is below standard 93.40% by 2.20 points.",
+            "signal_type": "production_below_standard",
+            "start_date": null
+          },
+          {
+            "date": "2026-05-12",
+            "end_date": null,
+            "message": "Daily production rate 90.70% is below standard 93.40% by 2.70 points.",
+            "signal_type": "production_below_standard",
+            "start_date": null
+          },
+          {
+            "date": "2026-05-13",
+            "end_date": null,
+            "message": "Daily production rate 89.60% is below standard 93.40% by 3.80 points.",
+            "signal_type": "production_below_standard",
+            "start_date": null
+          }
+        ],
+        "recommended_next_checks": [
+          "review feed consumption",
+          "review water consumption",
+          "review mortality trend",
+          "review vet notes",
+          "review temperature/ventilation conditions"
+        ],
+        "severity": "warning",
+        "situation_type": "poultry_production_drop",
+        "start_date": "2026-05-11",
+        "summary": "Production declined from 2026-05-11 to 2026-05-13. 3 daily production readings in that range were below the standard rate. Trend evidence: Daily production rate declined across 3 consecutive records from 2026-05-11 to 2026-05-13, dropping 1.60 percentage points.",
+        "title": "Production decline detected in poultry hall"
+      }
+    ]
+  },
+  "ome": null,
+  "source_path": "data_sources/jannat_al_firdaws/2026_06/poultry_operations/التقرير_الفني_اليومي_حقول_ديرتنا.xlsx",
+  "status": "completed"
+}
