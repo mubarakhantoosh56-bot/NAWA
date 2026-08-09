@@ -12,11 +12,14 @@ from app.oce.models.operational_context import OperationalContext
 from app.oce.services.operational_context_service import OperationalContextService
 from app.oip.loaders.excel_loader import ExcelLoader
 from app.oip.models.derived_artifacts import PoultryDerivedArtifacts
+from app.oip.models.feed_mill_inventory_record import FeedMillInventoryRecord
 from app.oip.models.operational_record import PoultryOperationalRecord
 from app.oip.services.ceo_brief_service import CEOBriefService
 from app.oip.services.poultry_derivation_service import PoultryDerivationService
 from app.oip.services.poultry_situation_service import PoultrySituationService
+from app.oip.translators.feed_mill_inventory_translator import FeedMillInventoryTranslator
 from app.oip.translators.poultry_report_translator import PoultryReportTranslator
+from app.oip.validators.feed_mill_inventory_validator import FeedMillInventoryValidator
 from app.oip.validators.poultry_validator import PoultryValidator
 
 DEFAULT_SOURCE_DIR = (
@@ -26,6 +29,12 @@ DEFAULT_SOURCE_DIR = (
     / "poultry_operations"
 )
 DEFAULT_DAILY_TECHNICAL_REPORT = "التقرير_الفني_اليومي_حقول_ديرتنا.xlsx"
+DEFAULT_FEED_MILL_SOURCE_DIR = (
+    Path("data_sources")
+    / "jannat_al_firdaws"
+    / "2026_06"
+    / "feed_mill"
+)
 
 
 @dataclass(frozen=True)
@@ -49,6 +58,8 @@ class OperationalPipelineService:
         situation_service: PoultrySituationService | None = None,
         ceo_brief_service: CEOBriefService | None = None,
         operational_context_service: OperationalContextService | None = None,
+        feed_mill_translator: FeedMillInventoryTranslator | None = None,
+        feed_mill_validator: FeedMillInventoryValidator | None = None,
     ) -> None:
         self.loader = loader or ExcelLoader()
         self.translator = translator or PoultryReportTranslator()
@@ -59,6 +70,8 @@ class OperationalPipelineService:
         self.operational_context_service = (
             operational_context_service or OperationalContextService()
         )
+        self.feed_mill_translator = feed_mill_translator or FeedMillInventoryTranslator()
+        self.feed_mill_validator = feed_mill_validator or FeedMillInventoryValidator()
 
     def parse_poultry_daily_report(
         self,
@@ -99,6 +112,35 @@ class OperationalPipelineService:
             artifacts=artifacts,
             operational_contexts=operational_contexts,
         )
+
+    def detect_poultry_report_shape(self, path: str | Path | None = None) -> str | None:
+        """Return the detected report shape for a workbook, or None if unsupported."""
+        report_path = Path(path) if path is not None else DEFAULT_SOURCE_DIR / DEFAULT_DAILY_TECHNICAL_REPORT
+        sheets = self.loader.load(report_path)
+        return self.translator.detect_shape(sheets)
+
+    def parse_feed_mill_inventory(
+        self,
+        path: str | Path | None = None,
+    ) -> list[FeedMillInventoryRecord]:
+        """Parse and validate the local feed mill raw-material inventory snapshot."""
+        report_path = Path(path) if path is not None else self._default_feed_mill_path()
+        sheets = self.loader.load(report_path)
+        records = self.feed_mill_translator.translate(sheets, report_path)
+        self.feed_mill_validator.validate_or_raise(records)
+        return records
+
+    def _default_feed_mill_path(self) -> Path:
+        if not DEFAULT_FEED_MILL_SOURCE_DIR.exists():
+            raise FileNotFoundError(
+                f"Feed mill source directory not found: {DEFAULT_FEED_MILL_SOURCE_DIR}"
+            )
+        candidates = sorted(DEFAULT_FEED_MILL_SOURCE_DIR.glob("*.xlsx"))
+        if not candidates:
+            raise FileNotFoundError(
+                f"No .xlsx workbook found in {DEFAULT_FEED_MILL_SOURCE_DIR}"
+            )
+        return candidates[0]
 
     async def parse_poultry_daily_report_async(
         self,

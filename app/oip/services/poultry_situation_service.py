@@ -69,6 +69,8 @@ class PoultrySituationService:
                     recommended_next_checks=RECOMMENDED_PRODUCTION_DROP_CHECKS,
                     start_date=start_date,
                     end_date=end_date,
+                    entity_type=trend_signal.entity_type,
+                    entity_reference=trend_signal.entity_reference,
                 )
             )
         return situations
@@ -103,6 +105,10 @@ class PoultrySituationService:
         )
 
     def _evidence(self, signals: list[OperationalSignal]) -> list[dict[str, Any]]:
+        # Bounded provenance per evidence item (Codex Round 1 Finding 4): the
+        # source of an evidence-backed claim must stay recoverable downstream
+        # without duplicating whole workbooks/raw payloads into the
+        # situation itself.
         evidence: list[dict[str, Any]] = []
         for signal in signals:
             evidence.append(
@@ -112,6 +118,14 @@ class PoultrySituationService:
                     "start_date": signal.start_date.isoformat() if signal.start_date else None,
                     "end_date": signal.end_date.isoformat() if signal.end_date else None,
                     "message": signal.message,
+                    "source_file": signal.source_file,
+                    "sheet_name": signal.sheet_name,
+                    "source_row_number": signal.source_row_number,
+                    "report_shape": signal.report_shape,
+                    "entity_type": signal.entity_type,
+                    "entity_reference": signal.entity_reference,
+                    "source_label": signal.source_label,
+                    "raw_source_value": signal.raw_source_value,
                 }
             )
         return evidence

@@ -15,7 +15,7 @@ from app.oip.models.operational_situation import OperationalSituation
 
 COMPANY_NAME = "Jannat Al-Firdaws"
 DEPARTMENT_NAME = "Dairtna Poultry"
-POULTRY_HALL_ENTITY = "poultry_hall"
+UNRESOLVED_ENTITY = "unresolved"
 DECISION_RULES_PATH = Path("knowledge/dairtna/DAIRTNA_DECISION_RULES.md")
 OPERATIONAL_SEMANTICS_PATH = Path("knowledge/dairtna/DAIRTNA_OPERATIONAL_SEMANTICS.md")
 REQUIRED_CONTEXT_ITEMS = (
@@ -67,7 +67,7 @@ class PoultryContextCollector:
             situation=situation.to_dict(),
             company=COMPANY_NAME,
             department=DEPARTMENT_NAME,
-            related_entities=[POULTRY_HALL_ENTITY],
+            related_entities=self._related_entities(situation),
             time_window=(start_date, end_date),
             related_metrics=[metric.to_dict() for metric in related_metrics],
             related_events=[event.to_dict() for event in related_events],
@@ -141,12 +141,29 @@ class PoultryContextCollector:
         if water_evidence is not None:
             available.append(water_evidence)
 
+        # "Feed consumption" evidence for poultry halls/fields is answered by
+        # the field_feed_consumption metric (feed_consumed), never by the
+        # feed mill's raw-material data. The two stages are kept distinct per
+        # the Founder Business Semantics Ruling - M3.
+        feed_consumption_evidence = self._feed_consumption_evidence(
+            situation, metrics, start_date, end_date
+        )
+        if feed_consumption_evidence is not None:
+            available.append(feed_consumption_evidence)
+
         available.extend(self._knowledge_evidence(start_date, end_date))
         feed_mill_evidence = self.feed_mill_collector.collect_evidence(
             date_range=(start_date, end_date),
         )
         if feed_mill_evidence is not None:
             available.append(feed_mill_evidence)
+        raw_material_inventory_evidence = (
+            self.feed_mill_collector.collect_raw_material_inventory_evidence(
+                date_range=(start_date, end_date),
+            )
+        )
+        if raw_material_inventory_evidence is not None:
+            available.append(raw_material_inventory_evidence)
         production_history_evidence = self._production_history_evidence(records)
         if production_history_evidence is not None:
             available.append(production_history_evidence)
@@ -154,7 +171,7 @@ class PoultryContextCollector:
             self._missing_operational_reports(
                 start_date,
                 end_date,
-                include_feed=feed_mill_evidence is None,
+                include_feed=feed_consumption_evidence is None,
                 include_water=water_evidence is None,
                 include_previous_history=production_history_evidence is None,
             )
@@ -231,6 +248,53 @@ class PoultryContextCollector:
             description="Water consumption metrics are available from parsed daily poultry records.",
             date_range=(start_date, end_date),
         )
+
+    def _feed_consumption_evidence(
+        self,
+        situation: OperationalSituation,
+        metrics: list[OperationalMetric],
+        start_date: date | None,
+        end_date: date | None,
+    ) -> Evidence | None:
+        """Return feed_consumption evidence only when it is scoped to the
+        situation's own entity (Codex Round 1 Finding 6).
+
+        Company-wide aggregate feed data must never satisfy a hall-specific
+        evidence requirement, and one hall's feed data must never satisfy
+        another hall's requirement. A situation whose own entity is
+        unresolved cannot claim entity-scoped feed evidence either - that
+        would be guessing an allocation that the source does not support.
+        """
+        if situation.entity_type is None:
+            return None
+        feed_metrics = [
+            metric
+            for metric in metrics
+            if metric.metric_name == "feed_consumed"
+            and metric.value is not None
+            and metric.entity_type == situation.entity_type
+            and metric.entity_reference == situation.entity_reference
+        ]
+        if not feed_metrics:
+            return None
+        return Evidence(
+            source="oip.metrics",
+            type="feed_consumption",
+            status="available",
+            description=(
+                "Feed consumption metrics (field_feed_consumption) are available "
+                "for this situation's own entity scope "
+                f"({situation.entity_type}: {situation.entity_reference})."
+            ),
+            date_range=(start_date, end_date),
+        )
+
+    def _related_entities(self, situation: OperationalSituation) -> list[str]:
+        if situation.entity_type is None:
+            return [UNRESOLVED_ENTITY]
+        if situation.entity_reference is None:
+            return [situation.entity_type]
+        return [f"{situation.entity_type}:{situation.entity_reference}"]
 
     def _production_history_evidence(
         self,

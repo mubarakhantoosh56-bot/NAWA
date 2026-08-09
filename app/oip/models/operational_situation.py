@@ -19,7 +19,8 @@ class OperationalSituation:
     recommended_next_checks: list[str]
     start_date: date | None
     end_date: date | None
-    entity_type: str = "poultry_hall"
+    entity_type: str | None = None
+    entity_reference: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-friendly dictionary representation."""

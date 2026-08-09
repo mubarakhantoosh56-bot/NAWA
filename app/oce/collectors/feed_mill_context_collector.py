@@ -10,15 +10,18 @@ from typing import Any
 from openpyxl import load_workbook
 
 from app.oce.models.evidence import Evidence
+from app.oip.loaders.excel_loader import ExcelLoader
+from app.oip.translators.feed_mill_inventory_translator import FeedMillInventoryTranslator
 
-REQUESTED_FEED_MILL_PATH = (
+# Resolution is directory-glob based (shape-based rule: filename is never
+# authoritative). There is exactly one feed mill workbook in the pilot data
+# source today, so this also stays correct if it is ever renamed.
+FEED_MILL_DIR = (
     Path("data_sources")
     / "jannat_al_firdaws"
     / "2026_06"
     / "feed_mill"
-    / "جرد_المواد_بالجاروشة.xlsx"
 )
-FEED_MILL_DIR = REQUESTED_FEED_MILL_PATH.parent
 FEED_MATERIAL_TERMS = (
     "علف",
     "ذرة",
@@ -51,6 +54,14 @@ class FeedMillWorkbookSummary:
 class FeedMillContextCollector:
     """Collect local feed mill workbook evidence for operational context."""
 
+    def __init__(
+        self,
+        loader: ExcelLoader | None = None,
+        inventory_translator: FeedMillInventoryTranslator | None = None,
+    ) -> None:
+        self.loader = loader or ExcelLoader()
+        self.inventory_translator = inventory_translator or FeedMillInventoryTranslator()
+
     def collect_evidence(
         self,
         date_range: tuple[Any, Any],
@@ -80,9 +91,53 @@ class FeedMillContextCollector:
             date_range=date_range,
         )
 
+    def collect_raw_material_inventory_evidence(
+        self,
+        date_range: tuple[Any, Any],
+    ) -> Evidence | None:
+        """Return structured raw_material_inventory evidence when the approved
+        feed mill inventory snapshot shape/block is present in the workbook.
+
+        This is distinct from ``collect_evidence`` (descriptive, whole-workbook
+        readability) and from any poultry hall feed_received/feed_consumed
+        evidence - the feed mill and poultry halls are different process
+        stages per the Founder Business Semantics Ruling - M3.
+        """
+        workbook_path = self._resolve_workbook_path()
+        if workbook_path is None:
+            return None
+
+        try:
+            sheets = self.loader.load(workbook_path)
+            records = self.inventory_translator.translate(sheets, workbook_path)
+        except Exception:
+            return None
+
+        if not records:
+            return None
+
+        materials_with_inventory = sum(
+            1 for record in records if record.raw_material_inventory is not None
+        )
+        materials_with_coverage = sum(
+            1 for record in records if record.source_reported_days_coverage is not None
+        )
+        description = (
+            "Feed mill raw material inventory snapshot is available "
+            f"({len(records)} materials detected; "
+            f"{materials_with_inventory} with a reported inventory balance, "
+            f"{materials_with_coverage} with a source-reported days-of-coverage figure). "
+            "No quantities are included in this description."
+        )
+        return Evidence(
+            source=workbook_path.as_posix(),
+            type="raw_material_inventory",
+            status="available",
+            description=description,
+            date_range=date_range,
+        )
+
     def _resolve_workbook_path(self) -> Path | None:
-        if REQUESTED_FEED_MILL_PATH.exists():
-            return REQUESTED_FEED_MILL_PATH
         if not FEED_MILL_DIR.exists():
             return None
         candidates = sorted(FEED_MILL_DIR.glob("*.xlsx"))

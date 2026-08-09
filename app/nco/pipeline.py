@@ -33,6 +33,12 @@ MVP_OPTIONAL_MISSING_EVIDENCE_TYPES = frozenset(
     }
 )
 
+# KAE structured-ingestion truth states (Codex Round 1 Finding 5). A matched
+# shape detector alone is never reported as successful structured ingestion.
+KAE_STATE_SUPPORTED_WITH_DATA = "supported_with_data"
+KAE_STATE_RECOGNIZED_NO_RECORDS = "recognized_but_no_structured_records"
+KAE_STATE_UNSUPPORTED_OR_AMBIGUOUS = "unsupported_or_ambiguous"
+
 
 @dataclass(frozen=True)
 class KAEOutput:
@@ -40,11 +46,28 @@ class KAEOutput:
 
     source_path: str
     records: list[PoultryOperationalRecord]
+    report_shape: str | None = None
+    ingestion_state: str = KAE_STATE_UNSUPPORTED_OR_AMBIGUOUS
+
+    @property
+    def structured_ingestion_supported(self) -> bool:
+        """True only for the supported_with_data state.
+
+        Kept for backward compatibility; ``ingestion_state`` is the
+        authoritative truth signal and distinguishes a recognized shape with
+        zero parsed rows from a genuinely unsupported/ambiguous shape - a
+        matched shape detector alone is never reported as successful
+        structured ingestion.
+        """
+        return self.ingestion_state == KAE_STATE_SUPPORTED_WITH_DATA
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "source_path": self.source_path,
             "record_count": len(self.records),
+            "report_shape": self.report_shape,
+            "ingestion_state": self.ingestion_state,
+            "structured_ingestion_supported": self.structured_ingestion_supported,
             "records": [record.to_dict() for record in self.records],
         }
 
@@ -239,12 +262,34 @@ class NCOLitePipeline:
         self.memory_repository = memory_repository
 
     def run_kae(self, source_path: str | Path) -> KAEOutput:
-        """Run the existing file load/translation/validation path."""
+        """Run the existing file load/translation/validation path.
+
+        Known limitation (Codex Round 2, non-blocking for M3): a recognized
+        shape whose rows fail PoultryValidator's rules (e.g. missing date or
+        non-positive bird_balance) raises PoultryValidationError here rather
+        than returning a KAEOutput - validation failure is a fourth,
+        exception-shaped state distinct from the three ingestion_state
+        values below. This is intentionally not folded into
+        ``ingestion_state`` in M3; a caller must catch validation errors
+        separately.
+        """
         report_path = Path(source_path)
-        records = self.operational_pipeline.parse_poultry_daily_report(report_path)
+        pipeline = self.operational_pipeline
+        sheets = pipeline.loader.load(report_path)
+        report_shape = pipeline.translator.detect_shape(sheets)
+        records = pipeline.translator.translate(sheets, report_path)
+        pipeline.validator.validate_or_raise(records)
+        if report_shape is None:
+            ingestion_state = KAE_STATE_UNSUPPORTED_OR_AMBIGUOUS
+        elif not records:
+            ingestion_state = KAE_STATE_RECOGNIZED_NO_RECORDS
+        else:
+            ingestion_state = KAE_STATE_SUPPORTED_WITH_DATA
         return KAEOutput(
             source_path=report_path.as_posix(),
             records=records,
+            report_shape=report_shape,
+            ingestion_state=ingestion_state,
         )
 
     def run_oie(self, records: list[PoultryOperationalRecord]) -> OIEOutput:

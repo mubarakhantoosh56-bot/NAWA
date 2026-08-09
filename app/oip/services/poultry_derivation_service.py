@@ -11,6 +11,7 @@ from app.oip.models.derived_artifacts import (
     PoultryDerivedArtifacts,
 )
 from app.oip.models.operational_record import PoultryOperationalRecord
+from app.oip.translators.poultry_report_translator import resolve_source_label
 
 METRIC_FIELDS = (
     "bird_balance",
@@ -23,6 +24,9 @@ METRIC_FIELDS = (
     "broken_eggs",
     "dirty_eggs",
     "water_consumption",
+    "feed_received",
+    "feed_consumed",
+    "feed_per_bird_average",
 )
 REQUIRED_SIGNAL_FIELDS = (
     "date",
@@ -52,6 +56,9 @@ class PoultryDerivationService:
         metrics: list[OperationalMetric] = []
         for record in records:
             for metric_name in METRIC_FIELDS:
+                source_label, raw_source_value = resolve_source_label(
+                    record.raw_values, metric_name
+                )
                 metrics.append(
                     OperationalMetric(
                         metric_name=metric_name,
@@ -59,6 +66,12 @@ class PoultryDerivationService:
                         date=record.date,
                         source_file=record.source_file,
                         source_row_number=record.row_number,
+                        entity_type=record.entity_type,
+                        entity_reference=record.entity_reference,
+                        sheet_name=record.sheet_name,
+                        report_shape=record.report_shape,
+                        source_label=source_label,
+                        raw_source_value=raw_source_value,
                     )
                 )
         return metrics
@@ -68,11 +81,14 @@ class PoultryDerivationService:
         return [
             OperationalEvent(
                 event_type="poultry_daily_report",
-                entity_type="poultry_hall",
+                entity_type=record.entity_type,
+                entity_reference=record.entity_reference,
                 source_file=record.source_file,
                 date=record.date,
                 summary=self._summarize_record(record),
                 source_row_number=record.row_number,
+                sheet_name=record.sheet_name,
+                report_shape=record.report_shape,
             )
             for record in records
         ]
@@ -93,6 +109,9 @@ class PoultryDerivationService:
         if daily_rate is None or standard_rate is None or daily_rate >= standard_rate:
             return []
         gap = standard_rate - daily_rate
+        source_label, raw_source_value = resolve_source_label(
+            record.raw_values, "daily_production_rate"
+        )
         return [
             OperationalSignal(
                 signal_type="production_below_standard",
@@ -104,6 +123,12 @@ class PoultryDerivationService:
                 date=record.date,
                 source_file=record.source_file,
                 source_row_number=record.row_number,
+                entity_type=record.entity_type,
+                entity_reference=record.entity_reference,
+                sheet_name=record.sheet_name,
+                report_shape=record.report_shape,
+                source_label=source_label,
+                raw_source_value=raw_source_value,
             )
         ]
 
@@ -111,6 +136,9 @@ class PoultryDerivationService:
         daily_mortality = record.daily_mortality
         if daily_mortality is None or daily_mortality <= HIGH_DAILY_MORTALITY_THRESHOLD:
             return []
+        source_label, raw_source_value = resolve_source_label(
+            record.raw_values, "daily_mortality"
+        )
         return [
             OperationalSignal(
                 signal_type="high_daily_mortality",
@@ -122,6 +150,12 @@ class PoultryDerivationService:
                 date=record.date,
                 source_file=record.source_file,
                 source_row_number=record.row_number,
+                entity_type=record.entity_type,
+                entity_reference=record.entity_reference,
+                sheet_name=record.sheet_name,
+                report_shape=record.report_shape,
+                source_label=source_label,
+                raw_source_value=raw_source_value,
             )
         ]
 
@@ -141,6 +175,10 @@ class PoultryDerivationService:
                 date=record.date,
                 source_file=record.source_file,
                 source_row_number=record.row_number,
+                entity_type=record.entity_type,
+                entity_reference=record.entity_reference,
+                sheet_name=record.sheet_name,
+                report_shape=record.report_shape,
             )
         ]
 
@@ -173,6 +211,9 @@ class PoultryDerivationService:
             drop = first_rate - third_rate
             start_date = start_record.date.isoformat() if start_record.date else "unknown"
             end_date = end_record.date.isoformat() if end_record.date else "unknown"
+            source_label, raw_source_value = resolve_source_label(
+                end_record.raw_values, "daily_production_rate"
+            )
             signals.append(
                 OperationalSignal(
                     signal_type="production_declining_trend",
@@ -185,6 +226,12 @@ class PoultryDerivationService:
                     date=end_record.date,
                     source_file=end_record.source_file,
                     source_row_number=end_record.row_number,
+                    entity_type=end_record.entity_type,
+                    entity_reference=end_record.entity_reference,
+                    sheet_name=end_record.sheet_name,
+                    report_shape=end_record.report_shape,
+                    source_label=source_label,
+                    raw_source_value=raw_source_value,
                     start_date=start_record.date,
                     end_date=end_record.date,
                 )
@@ -201,6 +248,8 @@ class PoultryDerivationService:
             "daily_production_rate": record.daily_production_rate,
             "standard_production_rate": record.standard_production_rate,
             "water_consumption": record.water_consumption,
+            "feed_received": record.feed_received,
+            "feed_consumed": record.feed_consumed,
         }
         parts = [f"{key}={value}" for key, value in values.items() if value is not None]
         return "Poultry daily report: " + ", ".join(parts)
