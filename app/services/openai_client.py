@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from app.services.decision_debug import (
     update_decision_debug_snapshot,
 )
 
+from app.repositories.operational_event_repository import OperationalEventRepository, to_intelligence_event
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
@@ -99,6 +101,88 @@ def _safe_json_loads(s: str) -> Optional[Dict[str, Any]]:
         return json.loads(s)
     except Exception:
         return None
+
+
+def _event_recency_key(event: Dict[str, Any]) -> datetime:
+    """Sort key used to merge memory_events and operational_events by
+    recency. Both sources always populate created_at/event_timestamp in
+    practice (NOT NULL DEFAULT NOW() on both tables) as real asyncpg
+    datetime values, but this must also accept a valid ISO-8601 string
+    (e.g. from a test double or a future non-DB source) without silently
+    treating it as the oldest possible event. Only a missing or genuinely
+    unparseable value falls back to datetime.min."""
+    value = event.get("created_at")
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = datetime.fromisoformat(value.strip())
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _resolve_scoped_department_id(context: Dict[str, Any]) -> Optional[UUID]:
+    """Extract the RBAC-verified department scope for the Operational Events
+    bridge (M2), if any. Reuses the same authoritative source
+    _load_rag_knowledge_block already relies on for RAG scoping:
+    context["aimx_department"]["id"] is populated only by
+    app/api/chat.py::_build_chat_context, AFTER it has validated the
+    department belongs to the company and the caller holds
+    agents.{department_type}.use permission -- never inferred from
+    user-supplied text. Absence means a CEO/company-wide chat, already
+    gated by the workspace.ceo permission at the API layer."""
+    aimx_department = context.get("aimx_department")
+    if not isinstance(aimx_department, dict) or not aimx_department.get("id"):
+        return None
+    try:
+        return UUID(str(aimx_department["id"]))
+    except ValueError:
+        return None
+
+
+def _dedupe_linked_operational_events(
+    existing_events: List[Dict[str, Any]],
+    operational_events: List[Dict[str, Any]],
+) -> "tuple[List[Dict[str, Any]], int]":
+    """Deterministic-only duplicate guard for the Operational Events bridge
+    (M2 finding: semantic double counting).
+
+    The only cross-source duplicate signal available anywhere in the current
+    application is an EXPLICIT operational_event_id already present on a
+    memory_events row's context (context["operational_event_id"]). No
+    existing write path (chat capture, /operational-inputs,
+    /operational-events, file-draft confirmation) sets this today, so in
+    production this guard currently removes nothing -- but it is the one
+    deterministic mechanism available, costs nothing to apply, and protects
+    against it if a future write path ever adds that linkage.
+
+    Deliberately NOT implemented: fuzzy matching on company/department/
+    event_type/time/text similarity. A full trace of every path that writes
+    memory_events or operational_events found no shared identifier between
+    the two tables for the general case of "the same incident was
+    independently described via chat AND via the manual timeline form."
+    Inventing text/time-similarity matching risks collapsing two genuinely
+    separate incidents, which is explicitly unsafe; this is recorded as a
+    known limitation rather than silently resolved with an unsafe heuristic.
+    """
+    linked_ids: set[str] = set()
+    for event in existing_events:
+        event_context = event.get("context")
+        if isinstance(event_context, dict) and event_context.get("operational_event_id"):
+            linked_ids.add(str(event_context["operational_event_id"]))
+
+    kept: List[Dict[str, Any]] = []
+    skipped = 0
+    for event in operational_events:
+        event_id = event.get("context", {}).get("operational_event_id")
+        if event_id and str(event_id) in linked_ids:
+            skipped += 1
+            continue
+        kept.append(event)
+    return kept, skipped
 
 
 def normalize_fact_key(key: str) -> str:
@@ -1000,6 +1084,64 @@ class AIService:
                             session_id=None,
                             limit=10,
                         )
+
+                    # Operational Events -> Intelligence bridge (M2): merge real,
+                    # tenant-scoped operational timeline events into the same
+                    # context memory_events already feeds. Read-path only --
+                    # nothing is written back.
+                    #
+                    # Department scoping: a department-scoped chat only sees
+                    # that department's operational events (mirrors the
+                    # existing GET /operational-events?department_id=...
+                    # filter semantics exactly); a CEO/company-wide chat (no
+                    # aimx_department in context) sees the full company.
+                    #
+                    # Failure handling: db_pool being unavailable (e.g. a test
+                    # double, or db_enabled=False) is expected and silent --
+                    # there is nothing to bridge. Any other failure while a
+                    # real pool IS available is unexpected: it is logged at
+                    # error level and recorded in
+                    # context["operational_events_bridge"]["status"] so it is
+                    # visible and testable rather than silently presenting as
+                    # complete intelligence.
+                    scoped_department_id = _resolve_scoped_department_id(context)
+                    if self.db_pool is None:
+                        context["operational_events_bridge"] = {"status": "not_configured"}
+                    else:
+                        try:
+                            operational_event_rows = await OperationalEventRepository(self.db_pool).list_events(
+                                company_id=UUID(company_id),
+                                department_id=scoped_department_id,
+                                limit=10,
+                            )
+                        except Exception:
+                            logger.error(
+                                "Operational event bridge failed unexpectedly; proceeding without "
+                                "operational-event evidence",
+                                extra={
+                                    "company_id": company_id,
+                                    "session_id": session_id,
+                                    "department_id": (
+                                        str(scoped_department_id) if scoped_department_id else None
+                                    ),
+                                },
+                                exc_info=True,
+                            )
+                            context["operational_events_bridge"] = {"status": "error"}
+                        else:
+                            mapped_events = [to_intelligence_event(row) for row in operational_event_rows]
+                            deduped_events, skipped_duplicates = _dedupe_linked_operational_events(
+                                recent_events, mapped_events
+                            )
+                            if deduped_events:
+                                recent_events = recent_events + deduped_events
+                                recent_events.sort(key=_event_recency_key, reverse=True)
+                            context["operational_events_bridge"] = {
+                                "status": "ok",
+                                "fetched": len(operational_event_rows),
+                                "merged": len(deduped_events),
+                                "deduplicated": skipped_duplicates,
+                            }
 
                     events_count = len(recent_events)
                     memory_events_block = build_memory_block(recent_events) or ""
