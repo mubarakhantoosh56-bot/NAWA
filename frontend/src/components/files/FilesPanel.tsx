@@ -7,6 +7,7 @@ import { OperationalFileDraftPanel } from "@/components/operations/OperationalFi
 import { ApiError } from "@/lib/api/client";
 import { listFiles } from "@/lib/api/files";
 import { DEMO_FILES } from "@/lib/demo-data";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { CompanyFile, Department } from "@/lib/types";
 
 type FilesPanelProps = {
@@ -28,8 +29,10 @@ export function FilesPanel({ token, departments, activeDepartmentId = null }: Fi
       return current;
     }, {});
   }, [departments]);
-  const displayFiles = status === "ready" && files.length === 0 ? DEMO_FILES : files;
-  const isDemoDataset = status === "ready" && files.length === 0;
+  const isRealListEmpty = status === "ready" && files.length === 0;
+  const showDemoFiles = isRealListEmpty && isDemoModeEnabled();
+  const displayFiles = showDemoFiles ? DEMO_FILES : files;
+  const isGenuinelyEmpty = isRealListEmpty && !showDemoFiles;
 
   useEffect(() => {
     let isMounted = true;
@@ -112,10 +115,17 @@ export function FilesPanel({ token, departments, activeDepartmentId = null }: Fi
           </div>
         ) : null}
 
-        {status === "ready" && isDemoDataset ? (
+        {showDemoFiles ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+            <div className="text-sm font-semibold text-amber-800">{t("demoDataBadge")}</div>
+            <p className="mt-1 text-sm leading-6 text-amber-700">{t("investorKnowledgeBaseText")}</p>
+          </div>
+        ) : null}
+
+        {isGenuinelyEmpty ? (
           <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-sm font-medium text-ink">{t("investorKnowledgeBase")}</div>
-            <p className="mt-1 text-sm leading-6 text-muted">{t("investorKnowledgeBaseText")}</p>
+            <div className="text-sm font-medium text-ink">{t("noFilesYetTitle")}</div>
+            <p className="mt-1 text-sm leading-6 text-muted">{t("noFilesYetText")}</p>
           </div>
         ) : null}
 

@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { getDemoChatTurns } from "@/lib/demo-data";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { ChatResponse, Department } from "@/lib/types";
 
 type ChatTurn = {
@@ -37,7 +38,11 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
 
   const turns = turnsByWorkspace[workspaceKey] ?? [];
-  const demoTurns = useMemo(() => getDemoChatTurns(department), [department]);
+  const demoTurns = useMemo(
+    () => (isDemoModeEnabled() ? getDemoChatTurns(department) : []),
+    [department],
+  );
+  const isShowingDemoTurns = turns.length === 0 && demoTurns.length > 0;
   const visibleTurns = turns.length > 0 ? turns : demoTurns;
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
   const storageKey = useMemo(() => `nawa.chat.${companyId}`, [companyId]);
@@ -115,12 +120,21 @@ export function ChatPanel({
             <span className="nawa-badge">
               {workspaceLabel} {t("session")}
             </span>
-            <span className="nawa-badge">{turns.length > 0 ? t("savedLocally") : t("demoHistory")}</span>
+            <span className="nawa-badge">
+              {turns.length > 0 ? t("savedLocally") : isShowingDemoTurns ? t("demoHistory") : t("newSession")}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto bg-surface/70 p-4">
+        {isShowingDemoTurns ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+            <div className="text-sm font-semibold text-amber-800">{t("demoDataBadge")}</div>
+            <p className="mt-1 text-sm leading-6 text-amber-700">{t("demoConversationBannerText")}</p>
+          </div>
+        ) : null}
+
         {visibleTurns.length === 0 ? (
           <WelcomeState
             department={department}
@@ -182,7 +196,7 @@ export function ChatPanel({
             {isSending ? t("sending") : t("send")}
           </button>
         </div>
-        <div className="mt-2 text-xs text-muted">{t("demoHint")}</div>
+        {isDemoModeEnabled() ? <div className="mt-2 text-xs text-muted">{t("demoHint")}</div> : null}
       </form>
     </section>
   );
@@ -214,9 +228,11 @@ function WelcomeState({
             {isCeo ? t("welcomeCeoText") : t("welcomeDepartmentText")}
           </p>
         </div>
-        <div className="rounded-md border border-line bg-white p-3 text-xs leading-5 text-muted">
-          {t("demoHelper")}
-        </div>
+        {isDemoModeEnabled() ? (
+          <div className="rounded-md border border-line bg-white p-3 text-xs leading-5 text-muted">
+            {t("demoHelper")}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">

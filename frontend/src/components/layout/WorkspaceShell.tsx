@@ -18,6 +18,7 @@ import {
   DEMO_COMPANY,
   DEMO_DEPARTMENTS,
 } from "@/lib/demo-data";
+import { isDemoModeEnabled } from "@/lib/demo-mode";
 import { translate, type Language } from "@/lib/i18n";
 import type { CompanyIntelligenceProfile, Department } from "@/lib/types";
 
@@ -302,6 +303,37 @@ const divisionConfigs: Record<"ceo" | DivisionKey | "inputs" | "memory" | "repor
   },
 };
 
+// Only "ceo"/"dairtna"/"caesar"/"shared" carry hardcoded business-intelligence
+// content (signals/risks/positives/actions/relatedFiles describing simulated
+// company operations). "inputs"/"memory"/"reports"/"automations" describe the
+// feature itself, not fabricated business data, and are left untouched.
+const BUSINESS_INTELLIGENCE_KEYS: Array<keyof typeof divisionConfigs> = [
+  "ceo",
+  "dairtna",
+  "caesar",
+  "shared",
+];
+
+// Real pilot mode: never present demo identity (company name, email, role) as
+// if it belonged to the authenticated user. In the current app, WorkspaceShell
+// only ever renders once RequireAuth has confirmed a real authenticated `me`,
+// so this fallback is defensive-only -- but it must not fabricate identity if
+// that guarantee is ever weakened.
+function demoIdentityFallback(demoValue: string): string {
+  return isDemoModeEnabled() ? demoValue : "";
+}
+
+function getDivisionIntelligence(key: keyof typeof divisionConfigs): DivisionConfig {
+  const base = divisionConfigs[key];
+  if (isDemoModeEnabled() || !BUSINESS_INTELLIGENCE_KEYS.includes(key)) {
+    return base;
+  }
+  // Real pilot mode: never present hardcoded signals/risks/positives/actions
+  // as if they were live intelligence. Title/subtitle/scope are navigational
+  // labels, not simulated data, and are preserved.
+  return { ...base, signals: [], risks: [], positives: [], actions: [], relatedFiles: [] };
+}
+
 const emptyCompanyProfile: CompanyIntelligenceProfile = {
   company_name: "",
   industry: "",
@@ -399,7 +431,8 @@ export function WorkspaceShell() {
     };
   }, [token]);
 
-  const displayDepartments = departments.length > 0 ? departments : DEMO_DEPARTMENTS;
+  const displayDepartments =
+    departments.length === 0 && isDemoModeEnabled() ? DEMO_DEPARTMENTS : departments;
   const activeConfig = getWorkspaceConfig(activeWorkspace);
   const activeDepartment = useMemo(
     () => resolveWorkspaceDepartment(activeWorkspace, displayDepartments, permissions),
@@ -438,8 +471,8 @@ export function WorkspaceShell() {
           <div className="flex items-center gap-3">
             <LanguageToggle />
             <div className="hidden text-end sm:block">
-              <div className="text-sm font-medium">{me?.company.name || DEMO_COMPANY.name}</div>
-              <div className="text-xs text-white/60">{me?.user.email || DEMO_COMPANY.email}</div>
+              <div className="text-sm font-medium">{me?.company.name || demoIdentityFallback(DEMO_COMPANY.name)}</div>
+              <div className="text-xs text-white/60">{me?.user.email || demoIdentityFallback(DEMO_COMPANY.email)}</div>
             </div>
             <button
               className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
@@ -459,7 +492,7 @@ export function WorkspaceShell() {
           departmentStatus={departmentStatus}
           departmentError={departmentError}
           permissionsCount={permissions.length}
-          roleName={me?.role.name || DEMO_COMPANY.role}
+          roleName={me?.role.name || demoIdentityFallback(DEMO_COMPANY.role)}
           canUseCeoWorkspace={canUseCeoWorkspace}
           onSelect={setActiveWorkspace}
         />
@@ -941,7 +974,7 @@ function DivisionStatusCard({
   onOpen: () => void;
 }) {
   const { language, t } = useLanguage();
-  const config = divisionConfigs[divisionKey];
+  const config = getDivisionIntelligence(divisionKey);
 
   const stateByDivision: Record<DivisionKey, "provisional" | "not_started"> = {
     dairtna: "provisional",
@@ -1042,8 +1075,9 @@ function ExecutiveDivisionsSection({
 
   return (
     <div className="space-y-4">
+      {isDemoModeEnabled() ? <DemoDataBanner /> : null}
       {divisionKeys.map((key) => {
-        const config = divisionConfigs[key];
+        const config = getDivisionIntelligence(key);
         return (
           <div key={key} className="rounded-md border border-line bg-white p-4">
             <div className="flex items-start justify-between gap-3">
@@ -1063,9 +1097,11 @@ function ExecutiveDivisionsSection({
               </button>
             </div>
             <div className="mt-3 space-y-1">
-              {config.signals.map((signal) => (
-                <SignalRow key={signal.label} signal={signal} />
-              ))}
+              {config.signals.length > 0 ? (
+                config.signals.map((signal) => <SignalRow key={signal.label} signal={signal} />)
+              ) : (
+                <EmptyIntelligenceNote />
+              )}
             </div>
           </div>
         );
@@ -1080,8 +1116,9 @@ function ExecutiveRisksSection() {
 
   return (
     <div className="space-y-5">
+      {isDemoModeEnabled() ? <DemoDataBanner /> : null}
       {divisionKeys.map((key) => {
-        const config = divisionConfigs[key];
+        const config = getDivisionIntelligence(key);
         return (
           <div key={key}>
             <div className="mb-2 text-xs font-semibold uppercase text-muted">
@@ -1187,7 +1224,7 @@ function DivisionCommandCenter({
     { key: "insights", label: t("workspaceShell.divisionCenter.tabInsights") },
   ];
 
-  const config = divisionConfigs[divisionKey];
+  const config = getDivisionIntelligence(divisionKey);
 
   return (
     <section className="panel overflow-hidden">
@@ -1278,11 +1315,14 @@ function DivisionOverview({ config }: { config: DivisionConfig }) {
 
   return (
     <div className="space-y-4">
+      {isDemoModeEnabled() ? <DemoDataBanner /> : null}
       <IntelligenceSection title={t("workspaceShell.liveSignals")}>
         <div className="space-y-2">
-          {config.signals.map((signal) => (
-            <SignalRow key={signal.label} signal={signal} />
-          ))}
+          {config.signals.length > 0 ? (
+            config.signals.map((signal) => <SignalRow key={signal.label} signal={signal} />)
+          ) : (
+            <EmptyIntelligenceNote />
+          )}
         </div>
       </IntelligenceSection>
       <IntelligenceSection title="Detected risks">
@@ -1313,6 +1353,8 @@ function IntelligencePanel({
         <h2 className="mt-1 text-base font-semibold text-ink">{localizeWorkspaceText(config.title, language)}</h2>
       </div>
       <div className="space-y-4 bg-white p-4">
+        {isDemoModeEnabled() ? <DemoDataBanner /> : null}
+
         <IntelligenceSection title="Active division">
           <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">
             {localizeWorkspaceText(config.scope, language)}
@@ -1321,9 +1363,11 @@ function IntelligencePanel({
 
         <IntelligenceSection title={t("workspaceShell.liveSignals")}>
           <div className="space-y-2">
-            {config.signals.map((signal) => (
-              <SignalRow key={signal.label} signal={signal} />
-            ))}
+            {config.signals.length > 0 ? (
+              config.signals.map((signal) => <SignalRow key={signal.label} signal={signal} />)
+            ) : (
+              <EmptyIntelligenceNote />
+            )}
           </div>
         </IntelligenceSection>
 
@@ -1340,13 +1384,17 @@ function IntelligencePanel({
         </IntelligenceSection>
 
         <IntelligenceSection title="Related files">
-          <div className="flex flex-wrap gap-2">
-            {config.relatedFiles.map((file) => (
-              <span key={file} className="rounded-md border border-line bg-surface px-2 py-1 text-xs text-muted">
-                {localizeWorkspaceText(file, language)}
-              </span>
-            ))}
-          </div>
+          {config.relatedFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {config.relatedFiles.map((file) => (
+                <span key={file} className="rounded-md border border-line bg-surface px-2 py-1 text-xs text-muted">
+                  {localizeWorkspaceText(file, language)}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <EmptyIntelligenceNote />
+          )}
         </IntelligenceSection>
 
         <div className="rounded-md border border-line bg-surface p-3 text-xs leading-5 text-muted">
@@ -1371,6 +1419,20 @@ function IntelligenceSection({ title, children }: { title: string; children: Rea
   );
 }
 
+function DemoDataBanner() {
+  const { t } = useLanguage();
+  return (
+    <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+      {t("demoDataBadge")} — {t("demoDataBannerText")}
+    </div>
+  );
+}
+
+function EmptyIntelligenceNote() {
+  const { t } = useLanguage();
+  return <p className="text-sm leading-6 text-muted">{t("notYetComputed")}</p>;
+}
+
 function SignalRow({ signal }: { signal: Signal }) {
   const { language } = useLanguage();
   const toneClass =
@@ -1393,6 +1455,10 @@ function SignalRow({ signal }: { signal: Signal }) {
 function InsightList({ items, tone }: { items: string[]; tone: "good" | "risk" | "neutral" }) {
   const { language } = useLanguage();
   const markerClass = tone === "good" ? "bg-emerald-500" : tone === "risk" ? "bg-red-500" : "bg-accent";
+
+  if (items.length === 0) {
+    return <EmptyIntelligenceNote />;
+  }
 
   return (
     <div className="space-y-2">
@@ -1653,17 +1719,17 @@ function SidebarItem({
 
 function getWorkspaceConfig(workspace: ActiveWorkspace): DivisionConfig {
   if (workspace.kind === "division") {
-    return divisionConfigs[workspace.divisionKey];
+    return getDivisionIntelligence(workspace.divisionKey);
   }
   if (workspace.kind === "settings") {
     return {
-      ...divisionConfigs.memory,
+      ...getDivisionIntelligence("memory"),
       title: "Settings",
       subtitle: "Company context and organizational intelligence controls for NAWA.",
       scope: "Jannat Al-Firdaws settings",
     };
   }
-  return divisionConfigs[workspace.kind];
+  return getDivisionIntelligence(workspace.kind);
 }
 
 function getWorkspaceKey(workspace: ActiveWorkspace, department: Department | null): string {
