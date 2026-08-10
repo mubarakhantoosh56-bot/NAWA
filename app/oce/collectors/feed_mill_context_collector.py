@@ -129,12 +129,34 @@ class FeedMillContextCollector:
             f"{materials_with_coverage} with a source-reported days-of-coverage figure). "
             "No quantities are included in this description."
         )
+        # M4 Slice 1 Golden Case: this evidence aggregates MULTIPLE material
+        # records, so per-material fields (canonical_field/source_label/
+        # raw_source_value/source_row_number) are deliberately left
+        # unpopulated here rather than fabricated from one arbitrary
+        # material (Founder instruction: do not pretend a multi-claim
+        # artifact has one direct source claim). What IS uniform across
+        # every record in one resolved block - and therefore safe to
+        # surface - is the entity, the epistemic origin, the source
+        # location, and critically the source's own report/snapshot time
+        # status. ``date_range`` above remains the situation/reasoning
+        # window; ``source_time``/``source_time_status`` below are the
+        # SOURCE's own (possibly unresolved) date and must never be
+        # conflated with it or silently backfilled from it.
+        anchor = records[0]
         return Evidence(
             source=workbook_path.as_posix(),
             type="raw_material_inventory",
             status="available",
             description=description,
             date_range=date_range,
+            epistemic_origin="observed",
+            entity_type=anchor.entity_type,
+            entity_reference=anchor.entity_reference,
+            source_file=anchor.source_file,
+            report_shape=anchor.report_shape,
+            source_time=anchor.report_date,
+            source_time_status=anchor.report_date_status,
+            provenance_warnings=anchor.provenance_warnings,
         )
 
     def _resolve_workbook_path(self) -> Path | None:

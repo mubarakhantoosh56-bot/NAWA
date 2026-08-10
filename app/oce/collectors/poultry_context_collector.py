@@ -10,7 +10,11 @@ from app.oce.collectors.feed_mill_context_collector import FeedMillContextCollec
 from app.oce.models.evidence import Evidence
 from app.oce.models.operational_context import OperationalContext
 from app.oip.models.derived_artifacts import OperationalEvent, OperationalMetric, OperationalSignal
-from app.oip.models.operational_record import PoultryOperationalRecord
+from app.oip.models.operational_record import (
+    SOURCE_TIME_AUTHORITATIVE,
+    SOURCE_TIME_UNRESOLVED,
+    PoultryOperationalRecord,
+)
 from app.oip.models.operational_situation import OperationalSituation
 
 COMPANY_NAME = "Jannat Al-Firdaws"
@@ -98,11 +102,19 @@ class PoultryContextCollector:
                 status="available",
                 description=f"Generated situation: {situation.situation_type}",
                 date_range=(start_date, end_date),
+                # A situation is a rule-based grouping of signals (deterministic
+                # date-window/count logic, no AI) - DERIVED, never OBSERVED.
+                epistemic_origin="derived",
+                entity_type=situation.entity_type,
+                entity_reference=situation.entity_reference,
             )
         ]
         missing: list[Evidence] = []
 
-        if any(signal.signal_type == "production_declining_trend" for signal in signals):
+        trend_signal = next(
+            (s for s in signals if s.signal_type == "production_declining_trend"), None
+        )
+        if trend_signal is not None:
             available.append(
                 Evidence(
                     source="oip.signals",
@@ -110,6 +122,20 @@ class PoultryContextCollector:
                     status="available",
                     description="Production declining trend signal is available.",
                     date_range=(start_date, end_date),
+                    epistemic_origin=trend_signal.epistemic_origin,
+                    canonical_field="daily_production_rate",
+                    source_label=trend_signal.source_label,
+                    raw_source_value=trend_signal.raw_source_value,
+                    source_file=trend_signal.source_file,
+                    sheet_name=trend_signal.sheet_name,
+                    source_row_number=trend_signal.source_row_number,
+                    report_shape=trend_signal.report_shape,
+                    entity_type=trend_signal.entity_type,
+                    entity_reference=trend_signal.entity_reference,
+                    source_time=trend_signal.date,
+                    source_time_status=(
+                        SOURCE_TIME_AUTHORITATIVE if trend_signal.date else SOURCE_TIME_UNRESOLVED
+                    ),
                 )
             )
 
@@ -247,6 +273,7 @@ class PoultryContextCollector:
             status="available",
             description="Water consumption metrics are available from parsed daily poultry records.",
             date_range=(start_date, end_date),
+            **self._metric_provenance_fields(water_metrics),
         )
 
     def _feed_consumption_evidence(
@@ -287,7 +314,53 @@ class PoultryContextCollector:
                 f"({situation.entity_type}: {situation.entity_reference})."
             ),
             date_range=(start_date, end_date),
+            **self._metric_provenance_fields(feed_metrics),
         )
+
+    def _metric_provenance_fields(self, matches: list[OperationalMetric]) -> dict[str, Any]:
+        """Build the safe subset of Evidence provenance kwargs for a set of
+        matching metrics (M4 Slice 1).
+
+        Fields describing exactly ONE source claim (canonical_field,
+        normalized_value, source_label, raw_source_value, source_row_number,
+        source_time/status) are populated only when exactly one metric
+        matches - collapsing several days' worth of readings into one would
+        misrepresent a multi-claim aggregate as a single direct observation.
+        Fields that are safe whenever every match agrees (entity, source
+        file/sheet/shape, epistemic origin) are populated whenever uniform;
+        left unpopulated (None) when they disagree, rather than guessed.
+        """
+        fields: dict[str, Any] = {}
+        if self._all_equal(m.epistemic_origin for m in matches):
+            fields["epistemic_origin"] = matches[0].epistemic_origin
+        if self._all_equal(m.entity_type for m in matches) and self._all_equal(
+            m.entity_reference for m in matches
+        ):
+            fields["entity_type"] = matches[0].entity_type
+            fields["entity_reference"] = matches[0].entity_reference
+        if self._all_equal(m.source_file for m in matches):
+            fields["source_file"] = matches[0].source_file
+        if self._all_equal(m.sheet_name for m in matches):
+            fields["sheet_name"] = matches[0].sheet_name
+        if self._all_equal(m.report_shape for m in matches):
+            fields["report_shape"] = matches[0].report_shape
+
+        if len(matches) == 1:
+            metric = matches[0]
+            fields["canonical_field"] = metric.metric_name
+            fields["normalized_value"] = metric.value
+            fields["source_label"] = metric.source_label
+            fields["raw_source_value"] = metric.raw_source_value
+            fields["source_row_number"] = metric.source_row_number
+            fields["source_time"] = metric.date
+            fields["source_time_status"] = (
+                SOURCE_TIME_AUTHORITATIVE if metric.date is not None else SOURCE_TIME_UNRESOLVED
+            )
+        return fields
+
+    def _all_equal(self, values: Any) -> bool:
+        items = list(values)
+        return bool(items) and all(item == items[0] for item in items)
 
     def _related_entities(self, situation: OperationalSituation) -> list[str]:
         if situation.entity_type is None:

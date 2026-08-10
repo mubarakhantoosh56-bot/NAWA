@@ -126,6 +126,7 @@ class PoultrySituationService:
                     "entity_reference": signal.entity_reference,
                     "source_label": signal.source_label,
                     "raw_source_value": signal.raw_source_value,
+                    "epistemic_origin": signal.epistemic_origin,
                 }
             )
         return evidence

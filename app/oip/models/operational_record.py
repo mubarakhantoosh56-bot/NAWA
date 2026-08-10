@@ -5,7 +5,46 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+
+# M4 Slice 1 (Truth Contract Hardening) - Founder Core Trust Principle:
+# information-origin classification. Bounded on purpose (never free text).
+# OBSERVED != DERIVED != INFERRED != RECOMMENDED - no downstream code may
+# silently promote one into another. Shared by app.oip and app.oce so both
+# layers speak the same vocabulary without a new parallel model/package.
+EpistemicOrigin = Literal["observed", "derived", "inferred", "recommended"]
+
+# The vocabulary is a runtime contract, not only a static typing hint
+# (Codex Round 1 Finding 2) - a Literal alone is not enforced by Python at
+# construction time, so every model carrying epistemic_origin validates
+# against this set via validate_epistemic_origin() in __post_init__.
+VALID_EPISTEMIC_ORIGINS = frozenset({"observed", "derived", "inferred", "recommended"})
+
+# Feed Mill's existing source-time vocabulary (Round 2 hardening), reused
+# unchanged here rather than duplicated, per "do not duplicate the same
+# information into multiple competing structures."
+SOURCE_TIME_AUTHORITATIVE = "authoritative"
+SOURCE_TIME_UNRESOLVED = "unresolved"
+
+
+def validate_epistemic_origin(value: EpistemicOrigin | None, *, field_name: str = "epistemic_origin") -> None:
+    """Raise ValueError unless ``value`` is None or an exact allowed
+    EpistemicOrigin literal (Codex Round 1 Finding 2).
+
+    None is accepted everywhere this validator is used: every model field
+    it guards is typed ``EpistemicOrigin | None`` with a default of None
+    (legacy/unresolved-origin evidence, or a metric with no source-backed
+    value - see PoultryDerivationService._metric_epistemic_origin). Beyond
+    that, only the four exact lower-case strings are accepted - no case
+    normalization, no aliases, no silent default to "observed".
+    """
+    if value is None:
+        return
+    if value not in VALID_EPISTEMIC_ORIGINS:
+        raise ValueError(
+            f"{field_name} must be one of {sorted(VALID_EPISTEMIC_ORIGINS)} or None, "
+            f"got {value!r}"
+        )
 
 
 @dataclass(frozen=True)
@@ -17,6 +56,10 @@ class PoultryOperationalRecord:
     - M3). ``entity_type`` is one of ``production_hall``, ``rearing_hall``,
     ``company_aggregate``, or ``None`` when hall/entity identity is not
     structurally supported by the source - it is never guessed.
+
+    ``epistemic_origin`` is always ``"observed"`` for this record type: every
+    field is a direct, unmodified parse of a validated source workbook cell
+    (Founder Core Trust Principle, M4 Slice 1). No computation happens here.
     """
 
     date: date | None
@@ -45,6 +88,10 @@ class PoultryOperationalRecord:
     entity_type: str | None
     entity_reference: str | None
     raw_values: dict[str, Any]
+    epistemic_origin: EpistemicOrigin | None = None
+
+    def __post_init__(self) -> None:
+        validate_epistemic_origin(self.epistemic_origin)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-friendly dictionary representation."""

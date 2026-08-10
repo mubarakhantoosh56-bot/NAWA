@@ -125,6 +125,29 @@ def _row_to_dict(row: asyncpg.Record) -> RowDict:
     return result
 
 
+def _infer_event_origin(row: RowDict) -> str | None:
+    """Conservatively classify an operational event's epistemic origin
+    (M4 Slice 1, Founder Core Trust Principle) from existing authoritative
+    metadata only.
+
+    This does NOT infer origin from event text/title/summary content - only
+    from the structured ``source_type``/``metadata`` columns already written
+    by the confirmation flow. An AI-drafted-then-human-confirmed event
+    (``source_type == "file_draft"`` with ``metadata.ai_proposed is True``)
+    is "inferred": human confirmation is an approval gate, not a
+    re-observation, and per the non-negotiable rule INFERRED must never
+    silently become OBSERVED. Any other source_type (including "manual",
+    which is free-form human-typed text with no source-document validation)
+    cannot be safely asserted as OBSERVED from existing metadata alone, so
+    it is left ``None`` (unresolved/unknown) rather than guessed.
+    """
+    metadata = row.get("metadata") or {}
+    source_type = row.get("source_type") or ""
+    if source_type == "file_draft" and metadata.get("ai_proposed") is True:
+        return "inferred"
+    return None
+
+
 def to_intelligence_event(row: RowDict) -> RowDict:
     """Map one operational_events row into the memory-events shape consumed
     by decision_context.build_decision_context / operational_pattern_detector
@@ -140,6 +163,14 @@ def to_intelligence_event(row: RowDict) -> RowDict:
     respectively). The original provenance fields are ALSO kept, unaliased,
     under context so downstream auditability is never ambiguous about which
     value came from where.
+
+    M4 Slice 1: ``context["origin"]`` conservatively carries the event's
+    epistemic origin (see ``_infer_event_origin``) so a confirmed AI-drafted
+    event is not silently indistinguishable from a directly observed one
+    once it reaches decision_context - the ``ai_proposed``/``confidence``
+    signal was previously present only in ``metadata`` (never surfaced
+    here), which this preserves rather than redesigning the draft/event
+    workflow.
     """
     department_id = row.get("department_id")
     company_id = row.get("company_id")
@@ -166,5 +197,6 @@ def to_intelligence_event(row: RowDict) -> RowDict:
             "title": title,
             "summary": summary,
             "payload": row.get("payload") or {},
+            "origin": _infer_event_origin(row),
         },
     }

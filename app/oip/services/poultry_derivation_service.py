@@ -10,8 +10,68 @@ from app.oip.models.derived_artifacts import (
     OperationalSignal,
     PoultryDerivedArtifacts,
 )
-from app.oip.models.operational_record import PoultryOperationalRecord
+from app.oip.models.operational_record import EpistemicOrigin, PoultryOperationalRecord
 from app.oip.translators.poultry_report_translator import resolve_source_label
+
+# M4 Slice 1 (Truth Contract Hardening) epistemic-origin classification for
+# this service's outputs. Rule (documented, not assumed - see class/method
+# docstrings for the per-artifact justification):
+#   - OperationalMetric: OBSERVED only when the metric carries BOTH a
+#     non-null normalized value AND resolvable source-claim provenance
+#     (source_label + raw_source_value both present - see
+#     _metric_epistemic_origin, Codex Round 2: a non-null value alone is not
+#     sufficient proof of a source claim). A metric_name with no
+#     corresponding value/provenance on the record (missing column, empty
+#     cell, unresolved field, or a malformed/manually-constructed record
+#     with no source claim) is still emitted (existing M3/OCE
+#     missing-evidence detection depends on the metric object existing),
+#     but its epistemic_origin is None (unresolved), never "observed".
+#   - OperationalEvent (poultry_daily_report): DERIVED (deterministic
+#     reformatting of multiple observed fields, not one source cell).
+#   - OperationalSignal (all four generated types): DERIVED (deterministic
+#     threshold/comparison/presence rules, zero AI or interpretation - never
+#     INFERRED, since this service performs no non-deterministic reasoning).
+METRIC_ORIGIN: EpistemicOrigin = "observed"
+EVENT_ORIGIN: EpistemicOrigin = "derived"
+SIGNAL_ORIGIN: EpistemicOrigin = "derived"
+
+
+def _metric_epistemic_origin(
+    value: Any,
+    source_label: str | None,
+    raw_source_value: Any,
+) -> EpistemicOrigin | None:
+    """OBSERVED requires actual source-backed evidence, not merely a
+    non-null normalized value (Codex Round 2 finding: a malformed or
+    manually-constructed record could carry a non-null ``value`` with no
+    resolvable ``source_label``/``raw_source_value`` at all - a non-null
+    value alone is not sufficient proof of a source claim).
+
+    All three must hold, using ``is not None`` semantics throughout - never
+    truthiness, since legitimate source values can be ``0``/``0.0``/
+    ``False``:
+      1. the normalized value is not None;
+      2. the canonical field has a resolvable original source label
+         (``resolve_source_label`` found a matching header on this record);
+      3. the corresponding raw source value is actually present.
+
+    An empty source cell already coerces to ``value is None`` upstream in
+    the translator (``_coerce_value`` returns None for ``(None, "")``), so
+    it is already excluded by condition 1 and never reaches this function
+    with a non-null value - existing M3 empty-cell semantics are preserved
+    unchanged.
+
+    If any condition fails, the metric stays unresolved (``None``) - never
+    silently defaulted to OBSERVED because the value merely "looks valid".
+    """
+    if value is None:
+        return None
+    if source_label is None:
+        return None
+    if raw_source_value is None:
+        return None
+    return METRIC_ORIGIN
+
 
 METRIC_FIELDS = (
     "bird_balance",
@@ -52,17 +112,27 @@ class PoultryDerivationService:
         )
 
     def generate_metrics(self, records: list[PoultryOperationalRecord]) -> list[OperationalMetric]:
-        """Generate one metric artifact for each configured metric field."""
+        """Generate one metric artifact for each configured metric field.
+
+        A metric is still emitted for every METRIC_FIELDS entry even when
+        the record has no value for it - existing missing-evidence detection
+        (e.g. PoultryContextCollector's water/feed-consumption evidence
+        checks, which filter on ``metric.value is not None``) depends on the
+        metric object existing so absence can be represented and detected.
+        What changes is ``epistemic_origin``: only a metric with an actual
+        source-backed value is OBSERVED (Codex Round 1 Finding 1).
+        """
         metrics: list[OperationalMetric] = []
         for record in records:
             for metric_name in METRIC_FIELDS:
+                value = getattr(record, metric_name)
                 source_label, raw_source_value = resolve_source_label(
                     record.raw_values, metric_name
                 )
                 metrics.append(
                     OperationalMetric(
                         metric_name=metric_name,
-                        value=getattr(record, metric_name),
+                        value=value,
                         date=record.date,
                         source_file=record.source_file,
                         source_row_number=record.row_number,
@@ -72,6 +142,9 @@ class PoultryDerivationService:
                         report_shape=record.report_shape,
                         source_label=source_label,
                         raw_source_value=raw_source_value,
+                        epistemic_origin=_metric_epistemic_origin(
+                            value, source_label, raw_source_value
+                        ),
                     )
                 )
         return metrics
@@ -89,6 +162,7 @@ class PoultryDerivationService:
                 source_row_number=record.row_number,
                 sheet_name=record.sheet_name,
                 report_shape=record.report_shape,
+                epistemic_origin=EVENT_ORIGIN,
             )
             for record in records
         ]
@@ -129,6 +203,7 @@ class PoultryDerivationService:
                 report_shape=record.report_shape,
                 source_label=source_label,
                 raw_source_value=raw_source_value,
+                epistemic_origin=SIGNAL_ORIGIN,
             )
         ]
 
@@ -156,6 +231,7 @@ class PoultryDerivationService:
                 report_shape=record.report_shape,
                 source_label=source_label,
                 raw_source_value=raw_source_value,
+                epistemic_origin=SIGNAL_ORIGIN,
             )
         ]
 
@@ -179,6 +255,7 @@ class PoultryDerivationService:
                 entity_reference=record.entity_reference,
                 sheet_name=record.sheet_name,
                 report_shape=record.report_shape,
+                epistemic_origin=SIGNAL_ORIGIN,
             )
         ]
 
@@ -232,6 +309,7 @@ class PoultryDerivationService:
                     report_shape=end_record.report_shape,
                     source_label=source_label,
                     raw_source_value=raw_source_value,
+                    epistemic_origin=SIGNAL_ORIGIN,
                     start_date=start_record.date,
                     end_date=end_record.date,
                 )

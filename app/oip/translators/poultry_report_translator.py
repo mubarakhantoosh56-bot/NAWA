@@ -174,6 +174,7 @@ class PoultryReportTranslator:
                     entity_type=entity_type,
                     entity_reference=entity_reference,
                     raw_values=raw_values,
+                    epistemic_origin="observed",
                 )
             )
         return records

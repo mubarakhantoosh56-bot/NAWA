@@ -197,6 +197,7 @@ class FeedMillInventoryTranslator:
                         report_shape=REPORT_SHAPE,
                         report_date_status=date_status,
                         provenance_warnings=warnings,
+                        epistemic_origin="observed",
                         raw_values={
                             "material_header_label": MATERIAL_HEADER_LABEL,
                             "material_name": material_name,
