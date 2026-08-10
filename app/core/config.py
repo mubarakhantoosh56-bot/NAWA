@@ -38,6 +38,11 @@ class Settings:
     RAG_RETRIEVAL_MODE: str = os.getenv("RAG_RETRIEVAL_MODE", "semantic")
     DECISION_CONTEXT_DEBUG: bool = _env_bool("DECISION_CONTEXT_DEBUG")
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
+    # Authoritative company id for the Jannat/Dairtna pilot tenant. Gates
+    # pilot-specific static sources (M4 Truth Context, M5 Company Brain
+    # documents) - see app/services/operational_truth_context.is_jannat_tenant.
+    # Absent/malformed/mismatched all fail closed; there is no fallback.
+    JANNAT_COMPANY_ID: str = os.getenv("JANNAT_COMPANY_ID", "")
 
     @property
     def is_production(self) -> bool:

@@ -28,7 +28,9 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
+from app.core.config import settings
 from app.oce.collectors.poultry_context_collector import PoultryContextCollector
 from app.oce.models.operational_context import OperationalContext
 from app.oip.models.derived_artifacts import OperationalMetric
@@ -52,8 +54,12 @@ POULTRY_OPERATIONS_DIR = (
 # collector directly instead, exactly as OperationalContextService itself does.
 SNAPSHOT_SITUATION_TYPE = "operational_snapshot"
 
-JANNAT_TENANT_TERMS = ("jannat", "firdaws")
-JANNAT_TENANT_TERM_AR = "الفردوس"
+# Descriptive-only metadata (never used in the entitlement decision below -
+# see is_jannat_tenant). Documents the real pilot tenant's slug convention,
+# matching scripts/seed_jannat.py's COMPANY_SLUG and
+# scripts/seed_jannat_operational_events.py's allowlist, for humans reading
+# this module - it is NOT a security check.
+JANNAT_COMPANY_SLUGS = ("jannat-al-firdaws", "jannat-alfirdaws")
 POULTRY_DEPARTMENT_TERMS = ("dairtna", "deirtna", "ديرتنا", "poultry", "دواجن")
 
 # Prompt-size bounds (mirrors the existing _compact_operational_events /
@@ -82,18 +88,46 @@ STATUS_NOT_APPLICABLE = "not_applicable"
 
 
 def is_jannat_tenant(company: dict[str, Any] | None) -> bool:
-    """Mirror app/api/files.py::_is_jannat_company's exact matching rule.
+    """Authoritative, fail-closed pilot-tenant entitlement check.
 
-    Duplicated locally rather than imported: the API layer must depend on
-    the service layer, not the reverse.
+    ``company`` must be the row fetched from CompanyRepository by the
+    JWT-validated ``company_id`` (never anything derived from user message
+    text or client-supplied company name). Gates static pilot-specific
+    sources (M4 Truth Context, M5 Dairtna Company Brain documents).
+
+    The ONLY entitlement rule: settings.JANNAT_COMPANY_ID, if configured,
+    must equal the authenticated company's id exactly (UUID equality).
+
+    There is no fallback. Every one of these fails closed (returns False):
+    - company is None
+    - JANNAT_COMPANY_ID is not configured (empty/unset)
+    - JANNAT_COMPANY_ID is configured but malformed (not a valid UUID)
+    - the authenticated company's id does not parse as a UUID
+    - the two UUIDs do not match
+
+    Explicitly NOT used for entitlement: company name, slug (see
+    JANNAT_COMPANY_SLUGS - descriptive only), aliases, fuzzy/substring
+    matching, or any value derived from user-supplied text.
     """
     if company is None:
         return False
-    haystack = " ".join(
-        str(company.get(field_name) or "").strip().lower().replace("_", " ").replace("-", " ")
-        for field_name in ("slug", "name")
-    )
-    return (all(term in haystack for term in JANNAT_TENANT_TERMS)) or JANNAT_TENANT_TERM_AR in haystack
+
+    configured_id = settings.JANNAT_COMPANY_ID.strip()
+    if not configured_id:
+        return False
+
+    try:
+        configured_uuid = UUID(configured_id)
+    except ValueError:
+        logger.warning("jannat_company_id_malformed", extra={"configured_value_length": len(configured_id)})
+        return False
+
+    try:
+        company_uuid = UUID(str(company.get("id")))
+    except (ValueError, TypeError):
+        return False
+
+    return company_uuid == configured_uuid
 
 
 def is_poultry_department_scope(aimx_department: dict[str, Any] | None) -> bool:

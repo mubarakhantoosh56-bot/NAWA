@@ -114,6 +114,8 @@ def build_decision_context(
     memory_facts: list[dict[str, Any]] | None = None,
     rag_knowledge_available: bool = False,
     operational_truth_context: list[dict[str, Any]] | None = None,
+    company_brain_context: list[dict[str, Any]] | None = None,
+    operational_semantics_topics: list[str] | None = None,
 ) -> dict[str, Any]:
     """Assemble a compact operational context object before AI generation."""
 
@@ -169,6 +171,21 @@ def build_decision_context(
         # into those, and neither overwrites the other (Founder Truth
         # Principle: conflicts are surfaced, not silently reconciled).
         "operational_truth_context": operational_truth_context or [],
+        # M5: bounded Company Brain claims (CompanyBrainItem.to_dict()
+        # payloads, see app/services/company_brain_context.py) - a
+        # DIFFERENT question from operational_truth_context ("what is
+        # objectively happening" vs "what does this company believe,
+        # prefer, prioritize, require, prohibit, or normally do"). Never
+        # merged into operational_truth_context, memory_events,
+        # operational_events, or trends - kept as its own key so Truth and
+        # Company Brain can disagree in the prompt without one silently
+        # overwriting the other.
+        "company_brain_context": company_brain_context or [],
+        # Operational Semantics topic labels only (never full content, never
+        # classified as policy - Founder instruction, Step 6): terminology/
+        # meaning context is a third, distinct concept from both Truth and
+        # Company Brain.
+        "operational_semantics_topics": operational_semantics_topics or [],
         "detected_patterns": detected_patterns,
         "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
@@ -193,6 +210,12 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
     )
     if truth_context_section:
         lines.append(truth_context_section)
+    company_brain_section = _build_company_brain_section(
+        decision_context.get("company_brain_context"),
+        decision_context.get("operational_semantics_topics"),
+    )
+    if company_brain_section:
+        lines.append(company_brain_section)
     lines.extend(
         [
             "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT:",
@@ -225,6 +248,11 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- When Operational Truth Context source time is unresolved, do not describe that evidence as current, recent, fresh, or up to date - unresolved source time means freshness cannot be assumed.",
             "- Company-wide/aggregate operational evidence must not be presented as if it describes one specific hall/entity unless that evidence's own entity scope supports it.",
             "- Ground operational conclusions in the Operational Truth Context evidence actually provided; if evidence is insufficient or explicitly missing, say what is missing rather than inventing operational facts.",
+            "- Operational Truth Context describes evidence-backed operational reality; Company Brain Context describes company policy, preference, philosophy, goals, and institutional context - they answer different questions and are never the same kind of statement.",
+            "- Company Brain (policy/preference/philosophy) must never override contradictory operational evidence, and operational evidence must never erase or invalidate a legitimate company policy - if Truth and Company Brain disagree, state both and name the tension rather than picking a winner.",
+            "- Do not treat a Company Brain preference, philosophy, or goal as an objective operational fact, and do not treat Company Brain institutional memory as current operational evidence.",
+            "- Do not invent Company Brain policy that is not present in company_brain_context; if Company Brain information is missing or internally conflicted (conflict_state), say so explicitly.",
+            "- Operational Semantics topics describe what company terms mean, not what management prefers or requires - never present them as policy.",
         ]
     )
     return "\n".join(lines)
@@ -278,6 +306,54 @@ def _build_truth_context_section(items: Any) -> str:
         if warnings:
             line += f" | Warnings: {'; '.join(str(w) for w in warnings)}"
         lines.append(line)
+    return "\n".join(lines)
+
+
+def _build_company_brain_section(items: Any, semantics_topics: Any) -> str:
+    """Render the bounded M5 Company Brain Context as its own dedicated
+    text section - conceptually separate from [Operational Truth Context]
+    (see app/services/company_brain_context.py). Each item states its
+    Layer-2 type/statement/scope/authority/source/conflict status; nothing
+    here is ever rendered as an OBSERVED/DERIVED operational claim.
+
+    Operational Semantics topics (terminology/meaning context) are listed
+    separately at the end, explicitly labeled as such rather than folded
+    into the policy/preference item list (Step 6).
+    """
+    has_items = isinstance(items, list) and items
+    has_topics = isinstance(semantics_topics, list) and semantics_topics
+    if not has_items and not has_topics:
+        return ""
+
+    lines = ["[Company Brain Context]"]
+    if has_items:
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get("type") or "UNKNOWN"
+            statement = item.get("statement") or "n/a"
+            scope = item.get("scope") or "unresolved"
+            authority = item.get("authority") or "unresolved"
+            source = item.get("source") or "n/a"
+            conflict_state = item.get("conflict_state")
+
+            line = (
+                f"- Type: {item_type} | Statement: {statement} | Scope: {scope} | "
+                f"Authority: {authority} | Source: {source}"
+            )
+            if conflict_state:
+                provenance_note = item.get("provenance_note")
+                line += f" | Conflict: {conflict_state}"
+                if provenance_note:
+                    line += f" ({provenance_note})"
+            lines.append(line)
+
+    if has_topics:
+        lines.append(
+            "- Operational Semantics topics (terminology/meaning context only, "
+            "NOT policy/preference): " + ", ".join(str(topic) for topic in semantics_topics)
+        )
+
     return "\n".join(lines)
 
 

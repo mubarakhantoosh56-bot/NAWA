@@ -87,6 +87,13 @@ async def _build_chat_context(
     auth_context: AuthContext,
 ) -> dict[str, Any] | None:
     context = dict(request.context or {})
+    # Security: aimx_department is server-authoritative context (gates
+    # pilot-specific Company Brain/Truth Context applicability). A client
+    # can put anything in request.context, so any client-supplied
+    # aimx_department must never survive into the authoritative context -
+    # it is only ever set below, from a validated, company-scoped,
+    # RBAC-checked department row.
+    context.pop("aimx_department", None)
     context["nawa_role"] = {
         "slug": auth_context.role_slug,
         "permissions": auth_context.permissions,

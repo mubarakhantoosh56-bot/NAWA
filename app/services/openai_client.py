@@ -29,6 +29,7 @@ from app.services.memory.memory_prompt import build_memory_block
 from app.services.rag.retrieval import RetrievalService
 from app.services.dairtna.interpreter import interpret_dairtna_measurements
 from app.services.operational_truth_context import assemble_truth_context
+from app.services.company_brain_context import assemble_company_brain_context
 
 logger = logging.getLogger(__name__)
 
@@ -949,6 +950,77 @@ class AIService:
             )
         return result.items, {"status": result.status, "evidence_count": result.evidence_count}
 
+    async def _load_company_brain_context(
+        self,
+        company_id: str,
+        session_id: str,
+        context: Dict[str, Any],
+        memory_facts: List[Dict[str, Any]],
+    ) -> tuple[List[Dict[str, Any]], List[str], Dict[str, Any]]:
+        """M5: bridge Company Brain material (durable memory facts +, for
+        the Jannat/Dairtna pilot tenant, its knowledge documents) into the
+        live chat path.
+
+        Stateless, read-only (ENG-CONF-001 conflict semantics and the
+        memory schema are never written here). ``memory_facts`` is reused
+        from the fetch already performed earlier in chat() rather than
+        queried again. Mirrors ``_load_truth_context``'s exact
+        not_configured/ok/no_evidence/error status pattern so this is
+        visible/testable via the same existing metadata convention rather
+        than a new observability system.
+        """
+        if self.db_pool is None:
+            return [], [], {"status": "not_configured"}
+
+        try:
+            company = await CompanyRepository(self.db_pool).get_by_id(UUID(company_id))
+        except Exception:
+            logger.warning(
+                "company_brain_company_lookup_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return [], [], {"status": "error"}
+
+        aimx_department = context.get("aimx_department")
+        if not isinstance(aimx_department, dict):
+            aimx_department = None
+
+        try:
+            result = await asyncio.to_thread(
+                assemble_company_brain_context,
+                company=company,
+                aimx_department=aimx_department,
+                memory_facts=memory_facts,
+            )
+        except Exception:
+            logger.error(
+                "company_brain_assembly_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return [], [], {"status": "error"}
+
+        if result.status == "ok":
+            logger.info(
+                "company_brain_context_injected",
+                extra={
+                    "company_id": company_id,
+                    "session_id": session_id,
+                    "item_count": result.item_count,
+                    "dairtna_knowledge_included": result.dairtna_knowledge_included,
+                },
+            )
+        return (
+            result.items,
+            result.operational_semantics_topics,
+            {
+                "status": result.status,
+                "item_count": result.item_count,
+                "dairtna_knowledge_included": result.dairtna_knowledge_included,
+            },
+        )
+
     async def _load_rag_knowledge_block(
         self,
         company_id: str,
@@ -1265,6 +1337,18 @@ class AIService:
             )
             context["truth_context_bridge"] = truth_context_status
 
+            (
+                company_brain_items,
+                operational_semantics_topics,
+                company_brain_status,
+            ) = await self._load_company_brain_context(
+                company_id=company_id,
+                session_id=session_id,
+                context=context,
+                memory_facts=facts,
+            )
+            context["company_brain_bridge"] = company_brain_status
+
             decision_context = build_decision_context(
                 context=context,
                 response_language=response_language,
@@ -1273,6 +1357,8 @@ class AIService:
                 memory_facts=facts,
                 rag_knowledge_available=bool(rag_knowledge_block),
                 operational_truth_context=truth_context_items,
+                company_brain_context=company_brain_items,
+                operational_semantics_topics=operational_semantics_topics,
             )
             context["decision_context"] = decision_context
             decision_context_block = build_decision_context_prompt_block(decision_context)

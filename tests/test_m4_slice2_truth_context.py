@@ -12,6 +12,7 @@ pilot-data work. Fixtures that need concrete numbers are synthetic.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -25,10 +26,25 @@ from app.services.decision_context import (
 )
 from app.services.openai_client import AIService
 
-JANNAT_COMPANY = {"slug": "jannat-al-firdaws", "name": "Jannat Al-Firdaws", "metadata": {}}
-OTHER_COMPANY = {"slug": "acme-fmcg", "name": "Acme FMCG", "metadata": {}}
+JANNAT_COMPANY_ID = uuid4()
+JANNAT_COMPANY = {
+    "id": JANNAT_COMPANY_ID,
+    "slug": "jannat-al-firdaws",
+    "name": "Jannat Al-Firdaws",
+    "metadata": {},
+}
+OTHER_COMPANY = {"id": uuid4(), "slug": "acme-fmcg", "name": "Acme FMCG", "metadata": {}}
 POULTRY_DEPARTMENT = {"name": "Dairtna Poultry", "department_type": "poultry_ai", "slug": "dairtna-poultry"}
 SALES_DEPARTMENT = {"name": "Sales", "department_type": "sales_ai", "slug": "sales"}
+
+
+def _configure_jannat_company_id(monkeypatch: pytest.MonkeyPatch, company_id: object) -> None:
+    """R2-F1: settings is a frozen dataclass, so JANNAT_COMPANY_ID cannot be
+    set via monkeypatch.setenv alone (it's read once at import time) or via
+    monkeypatch.setattr on an individual frozen field. Replace the module's
+    ``settings`` reference with a new frozen instance carrying the override -
+    monkeypatch restores the original reference after the test."""
+    monkeypatch.setattr(otc, "settings", dataclasses.replace(otc.settings, JANNAT_COMPANY_ID=str(company_id)))
 
 
 # ---------------------------------------------------------------------------
@@ -36,13 +52,54 @@ SALES_DEPARTMENT = {"name": "Sales", "department_type": "sales_ai", "slug": "sal
 # ---------------------------------------------------------------------------
 
 
-def test_is_jannat_tenant_true_for_pilot_company() -> None:
+def test_is_jannat_tenant_true_for_pilot_company_when_id_configured(monkeypatch) -> None:
+    """R2-F1: entitlement requires JANNAT_COMPANY_ID to be configured AND
+    match the authenticated company's id exactly."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     assert otc.is_jannat_tenant(JANNAT_COMPANY) is True
 
 
-def test_is_jannat_tenant_false_for_other_company() -> None:
+def test_is_jannat_tenant_false_for_other_company_even_when_configured(monkeypatch) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     assert otc.is_jannat_tenant(OTHER_COMPANY) is False
     assert otc.is_jannat_tenant(None) is False
+
+
+# ---------------------------------------------------------------------------
+# R2-F1: fail-closed entitlement (Codex M5 re-review Blocker 1)
+# ---------------------------------------------------------------------------
+
+
+def test_is_jannat_tenant_fails_closed_when_jannat_company_id_not_configured() -> None:
+    """F1-T1/F1-T2 (unit level): with JANNAT_COMPANY_ID unset (the default
+    test/deployment state), even the real pilot tenant's exact canonical
+    slug is NOT sufficient - there is no slug fallback anymore."""
+    assert otc.settings.JANNAT_COMPANY_ID == ""
+    assert otc.is_jannat_tenant(JANNAT_COMPANY) is False
+
+
+def test_is_jannat_tenant_fails_closed_for_malformed_jannat_company_id(monkeypatch) -> None:
+    """F1-T5: a malformed configured id fails closed rather than raising or
+    silently matching."""
+    monkeypatch.setattr(otc, "settings", dataclasses.replace(otc.settings, JANNAT_COMPANY_ID="not-a-uuid"))
+    assert otc.is_jannat_tenant(JANNAT_COMPANY) is False
+
+
+def test_is_jannat_tenant_fails_closed_for_wrong_configured_id(monkeypatch) -> None:
+    """F1-T6: a configured id that does not match the authenticated
+    company's id fails closed, even though the company is the real pilot
+    tenant by every other signal (name, slug)."""
+    _configure_jannat_company_id(monkeypatch, uuid4())
+    assert otc.is_jannat_tenant(JANNAT_COMPANY) is False
+
+
+def test_is_jannat_tenant_no_text_or_name_can_substitute_for_configured_id(monkeypatch) -> None:
+    """F1-T8: no amount of name/slug similarity substitutes for the
+    configured id - a company with the exact real name/slug, and even a
+    non-empty but wrong configured id, is rejected."""
+    spoofed = {"id": uuid4(), "slug": "jannat-al-firdaws", "name": "Jannat Al-Firdaws", "metadata": {}}
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
+    assert otc.is_jannat_tenant(spoofed) is False
 
 
 def test_is_poultry_department_scope_true_for_dairtna() -> None:
@@ -75,23 +132,26 @@ def test_assemble_truth_context_not_applicable_for_missing_company() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_assemble_truth_context_not_applicable_for_non_poultry_department() -> None:
+def test_assemble_truth_context_not_applicable_for_non_poultry_department(monkeypatch) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=SALES_DEPARTMENT)
     assert result.status == "not_applicable"
     assert result.items == []
 
 
-def test_assemble_truth_context_ok_for_ceo_scope_real_pilot_data() -> None:
+def test_assemble_truth_context_ok_for_ceo_scope_real_pilot_data(monkeypatch) -> None:
     """T1: real pilot files produce evidence reaching the bounded contract."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     assert result.status == "ok"
     assert result.evidence_count > 0
     assert result.items
 
 
-def test_entity_scope_distinguishes_halls_from_company_aggregate() -> None:
+def test_entity_scope_distinguishes_halls_from_company_aggregate(monkeypatch) -> None:
     """T8: distinct halls and the company aggregate stay distinguishable,
     never collapsed into one undifferentiated entity."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     entity_pairs = {
         (item.get("entity_type"), item.get("entity_reference")) for item in result.items
@@ -107,9 +167,10 @@ def test_entity_scope_distinguishes_halls_from_company_aggregate() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_headline_production_metric_is_observed_with_authoritative_time() -> None:
+def test_headline_production_metric_is_observed_with_authoritative_time(monkeypatch) -> None:
     """T2: a direct observed production claim carries entity + provenance +
     an authoritative source time - value itself is never asserted."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     headline = [
         item
@@ -125,9 +186,10 @@ def test_headline_production_metric_is_observed_with_authoritative_time() -> Non
         assert item["source_time"] is not None
 
 
-def test_feed_mill_golden_case_observed_with_unresolved_source_time() -> None:
+def test_feed_mill_golden_case_observed_with_unresolved_source_time(monkeypatch) -> None:
     """T7: Feed Mill inventory is OBSERVED while its own report/source time
     stays unresolved - the two properties coexist without contradiction."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     feed_mill_items = [item for item in result.items if item.get("entity_type") == "feed_mill"]
     assert feed_mill_items
@@ -142,7 +204,8 @@ def test_feed_mill_golden_case_observed_with_unresolved_source_time() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_production_trend_item_is_derived_not_observed() -> None:
+def test_production_trend_item_is_derived_not_observed(monkeypatch) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     trend_items = [item for item in result.items if item.get("type") == "production_trend"]
     assert trend_items
@@ -156,7 +219,8 @@ def test_production_trend_item_is_derived_not_observed() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_missing_evidence_items_stay_missing_never_zero() -> None:
+def test_missing_evidence_items_stay_missing_never_zero(monkeypatch) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     missing_items = [item for item in result.items if item.get("status") == "missing"]
     assert missing_items
@@ -171,6 +235,7 @@ def test_missing_evidence_items_stay_missing_never_zero() -> None:
 
 
 def test_no_evidence_when_pilot_directory_absent(monkeypatch, tmp_path) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     monkeypatch.setattr(otc, "POULTRY_OPERATIONS_DIR", tmp_path / "does_not_exist")
     result = otc.assemble_truth_context(company=JANNAT_COMPANY, aimx_department=None)
     assert result.status == "no_evidence"
@@ -184,6 +249,8 @@ def test_no_evidence_when_pilot_directory_absent(monkeypatch, tmp_path) -> None:
 
 
 def test_unexpected_collector_failure_propagates_not_silently_swallowed(monkeypatch) -> None:
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
+
     def _boom(self, **kwargs):
         raise RuntimeError("synthetic unexpected OCE failure")
 
@@ -453,7 +520,9 @@ def test_chat_truth_context_not_applicable_for_non_jannat_company(monkeypatch) -
 
 def test_chat_truth_context_ok_for_jannat_ceo_scope(monkeypatch) -> None:
     """T1 / T7: real evidence reaches the actual assembled prompt text for
-    the pilot tenant at CEO (company-wide) scope."""
+    the pilot tenant at CEO (company-wide) scope, once JANNAT_COMPANY_ID is
+    configured to match the authenticated company."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     service, fake_client = _service_with_fake_db(JANNAT_COMPANY)
     monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
 
@@ -469,9 +538,30 @@ def test_chat_truth_context_ok_for_jannat_ceo_scope(monkeypatch) -> None:
     assert "feed_mill" in prompt_text
 
 
+def test_chat_truth_context_not_applicable_for_jannat_company_without_configured_id(monkeypatch) -> None:
+    """F1-T1/F1-T7 (live chat proof point): the real pilot tenant, with its
+    exact canonical slug, gets NO pilot Truth Context through the real
+    AIService.chat() path when JANNAT_COMPANY_ID is not configured - this
+    is the fail-closed default, proven end to end, not just at the
+    assembler. M4 shares the same is_jannat_tenant() fix as M5."""
+    assert otc.settings.JANNAT_COMPANY_ID == ""
+    service, fake_client = _service_with_fake_db(JANNAT_COMPANY)
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    result = asyncio.run(
+        service.chat(
+            session_id="s3b", message="Status update?", context={}, company_id=str(uuid4())
+        )
+    )
+    assert result["meta"]["context"]["truth_context_bridge"]["status"] == "not_applicable"
+    prompt_text = "\n".join(m["content"] for m in fake_client.chat_completions.messages[0])
+    assert "[Operational Truth Context]" not in prompt_text
+
+
 def test_chat_truth_context_department_scoped_non_poultry_is_not_applicable(monkeypatch) -> None:
     """T8: a non-poultry department scope excludes pilot evidence even for
     the pilot tenant."""
+    _configure_jannat_company_id(monkeypatch, JANNAT_COMPANY_ID)
     service, fake_client = _service_with_fake_db(JANNAT_COMPANY)
     monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
 
