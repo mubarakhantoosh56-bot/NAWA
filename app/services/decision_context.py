@@ -113,6 +113,7 @@ def build_decision_context(
     memory_profile: dict[str, Any] | None = None,
     memory_facts: list[dict[str, Any]] | None = None,
     rag_knowledge_available: bool = False,
+    operational_truth_context: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Assemble a compact operational context object before AI generation."""
 
@@ -161,6 +162,13 @@ def build_decision_context(
         "parsed_entities": unified_capture_context["parsed_entities"],
         "structured_drafts": unified_capture_context["structured_drafts"],
         "operational_events": operational_events,
+        # M4 Slice 2: bounded KAE/OCE evidence (Evidence.to_dict() payloads,
+        # see app/services/operational_truth_context.py). Kept as its own
+        # key, conceptually distinct from memory_events/operational_events/
+        # trends (company memory/policy) - Truth Context is never merged
+        # into those, and neither overwrites the other (Founder Truth
+        # Principle: conflicts are surfaced, not silently reconciled).
+        "operational_truth_context": operational_truth_context or [],
         "detected_patterns": detected_patterns,
         "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
@@ -176,10 +184,17 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
         return ""
 
     payload = json.dumps(decision_context, ensure_ascii=False, indent=2)
-    return "\n".join(
+    lines = [
+        "DECISION CONTEXT ENGINE (MVP - INTERNAL):",
+        payload,
+    ]
+    truth_context_section = _build_truth_context_section(
+        decision_context.get("operational_truth_context")
+    )
+    if truth_context_section:
+        lines.append(truth_context_section)
+    lines.extend(
         [
-            "DECISION CONTEXT ENGINE (MVP - INTERNAL):",
-            payload,
             "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT:",
             "1) Use this hierarchy in order: root_cause_reasoning, detected_patterns, operational_events, KPI/trend context, company profile, generic executive formatting.",
             "2) Final CEO executive_summary MUST explicitly include the root operational bottleneck, cause/effect chain, affected departments, operational impact, business impact, and priority executive action.",
@@ -205,8 +220,65 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Block vague phrases unless backed by concrete operational reasoning: 'there are challenges', 'performance should improve', 'focus on efficiency', 'increase revenue', 'there are operational risks'. Replace them with concrete bottlenecks, inferred cause/effect, evidence, owner, and deadline.",
             "- Treat MVP directional KPIs as operating hints, not audited metrics; do not present mock values as measured facts.",
             "- Keep the answer concise, executive, structured, decisive, and aligned to response_language.",
+            "- Operational Truth Context items (M4 Slice 2): OBSERVED means a direct source-backed operational fact; DERIVED means a deterministic calculation or trend; INFERRED means an AI-origin interpretation and must never be treated as a confirmed fact; UNKNOWN/missing origin means the origin is unresolved and must not be treated as observed.",
+            "- Missing operational evidence means the value is unknown, not zero - never assume a missing water/feed/vet/temperature reading means zero or that no reading means no issue.",
+            "- When Operational Truth Context source time is unresolved, do not describe that evidence as current, recent, fresh, or up to date - unresolved source time means freshness cannot be assumed.",
+            "- Company-wide/aggregate operational evidence must not be presented as if it describes one specific hall/entity unless that evidence's own entity scope supports it.",
+            "- Ground operational conclusions in the Operational Truth Context evidence actually provided; if evidence is insufficient or explicitly missing, say what is missing rather than inventing operational facts.",
         ]
     )
+    return "\n".join(lines)
+
+
+def _build_truth_context_section(items: Any) -> str:
+    """Render the bounded M4 Slice 2 Operational Truth Context as a
+    dedicated, concise text section (not raw JSON - each item is already a
+    bounded Evidence.to_dict() payload from app/services/
+    operational_truth_context.py, never the full internal OCE objects).
+
+    Epistemic origin, entity scope, source time/status, and provenance
+    warnings are always shown explicitly rather than flattened away, so a
+    prompt reader can tell OBSERVED from DERIVED from INFERRED from
+    unresolved/UNKNOWN, and can tell an unresolved source time from an
+    authoritative one, at a glance.
+    """
+    if not isinstance(items, list) or not items:
+        return ""
+
+    lines = ["[Operational Truth Context]"]
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        origin = item.get("epistemic_origin")
+        origin_label = str(origin).upper() if origin else "UNKNOWN"
+        claim = item.get("canonical_field") or item.get("type") or "unknown_claim"
+        status = item.get("status") or "unknown"
+        value = item.get("normalized_value")
+        value_label = value if value is not None else "n/a"
+        entity_type = item.get("entity_type")
+        entity_reference = item.get("entity_reference")
+        if entity_type and entity_reference:
+            entity_label = f"{entity_type}:{entity_reference}"
+        else:
+            entity_label = entity_type or "unresolved"
+        source_time = item.get("source_time")
+        source_time_status = item.get("source_time_status") or "unknown"
+        evidence_label = item.get("source_label") or item.get("description") or "n/a"
+        source_file = item.get("source_file")
+
+        line = (
+            f"- Claim: {claim} | Status: {status} | Origin: {origin_label} | "
+            f"Entity: {entity_label} | Value: {value_label} | "
+            f"Source time: {source_time or 'unresolved'} ({source_time_status}) | "
+            f"Evidence: {evidence_label}"
+        )
+        if source_file:
+            line += f" [{source_file}]"
+        warnings = item.get("provenance_warnings")
+        if warnings:
+            line += f" | Warnings: {'; '.join(str(w) for w in warnings)}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _response_enforcement() -> dict[str, Any]:
@@ -408,6 +480,13 @@ def _compact_operational_events(events: list[dict[str, Any]]) -> list[dict[str, 
                     "target_department": str(context.get("target_department") or classification.get("inferred_department") or ""),
                     "category": str(context.get("category") or ""),
                     "priority": str(context.get("priority") or ""),
+                    # M4 Slice 2 (Scenario F): preserve
+                    # OperationalEventRepository.to_intelligence_event's
+                    # conservative origin tag (e.g. "inferred" for a
+                    # confirmed AI-drafted event) - previously computed but
+                    # silently dropped here. None means unresolved/unknown,
+                    # never fabricated as "observed".
+                    "origin": context.get("origin"),
                 }
             )
     return compact[:5]

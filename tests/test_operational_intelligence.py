@@ -127,6 +127,9 @@ def test_decision_context_uses_operational_events():
             "target_department": "finance",
             "category": "kpi",
             "priority": "watch",
+            # M4 Slice 2: epistemic origin preserved from context["origin"];
+            # this event's context sets none, so it stays unresolved (None).
+            "origin": None,
         }
     ]
 

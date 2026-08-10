@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -20,12 +21,14 @@ from app.services.decision_debug import (
     update_decision_debug_snapshot,
 )
 
+from app.repositories.company_repository import CompanyRepository
 from app.repositories.operational_event_repository import OperationalEventRepository, to_intelligence_event
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
 from app.services.rag.retrieval import RetrievalService
 from app.services.dairtna.interpreter import interpret_dairtna_measurements
+from app.services.operational_truth_context import assemble_truth_context
 
 logger = logging.getLogger(__name__)
 
@@ -884,6 +887,68 @@ class AIService:
             )
         return signal_block
 
+    async def _load_truth_context(
+        self,
+        company_id: str,
+        session_id: str,
+        context: Dict[str, Any],
+    ) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """M4 Slice 2: bridge KAE/OCE evidence into the live chat path.
+
+        Stateless, read-only, no DB writes beyond the existing company
+        lookup already used elsewhere in this file. Returns
+        ``([], status_metadata)`` whenever the integration does not apply
+        (not the Jannat/Dairtna pilot tenant, a non-poultry department
+        scope, or no evidence currently available) - those are expected
+        degraded states, not failures, mirroring exactly how
+        ``operational_events_bridge`` above distinguishes "not_configured"/
+        "ok"/"error" so this is visible/testable via the same existing
+        pattern rather than a new observability subsystem.
+        """
+        if self.db_pool is None:
+            return [], {"status": "not_configured"}
+
+        try:
+            company = await CompanyRepository(self.db_pool).get_by_id(UUID(company_id))
+        except Exception:
+            logger.warning(
+                "truth_context_company_lookup_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return [], {"status": "error"}
+
+        aimx_department = context.get("aimx_department")
+        if not isinstance(aimx_department, dict):
+            aimx_department = None
+
+        try:
+            # Excel parsing is blocking I/O/CPU work; keep it off the event
+            # loop the same way ExcelLoader.load_async already does.
+            result = await asyncio.to_thread(
+                assemble_truth_context,
+                company=company,
+                aimx_department=aimx_department,
+            )
+        except Exception:
+            logger.error(
+                "truth_context_assembly_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return [], {"status": "error"}
+
+        if result.status == "ok":
+            logger.info(
+                "truth_context_injected",
+                extra={
+                    "company_id": company_id,
+                    "session_id": session_id,
+                    "evidence_count": result.evidence_count,
+                },
+            )
+        return result.items, {"status": result.status, "evidence_count": result.evidence_count}
+
     async def _load_rag_knowledge_block(
         self,
         company_id: str,
@@ -1193,6 +1258,12 @@ class AIService:
                 company_id=company_id,
                 session_id=session_id,
             )
+            truth_context_items, truth_context_status = await self._load_truth_context(
+                company_id=company_id,
+                session_id=session_id,
+                context=context,
+            )
+            context["truth_context_bridge"] = truth_context_status
 
             decision_context = build_decision_context(
                 context=context,
@@ -1201,6 +1272,7 @@ class AIService:
                 memory_profile=memory_profile,
                 memory_facts=facts,
                 rag_knowledge_available=bool(rag_knowledge_block),
+                operational_truth_context=truth_context_items,
             )
             context["decision_context"] = decision_context
             decision_context_block = build_decision_context_prompt_block(decision_context)
