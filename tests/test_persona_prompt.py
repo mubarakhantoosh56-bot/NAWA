@@ -9,16 +9,32 @@ from app.services.openai_client import AIService
 from app.services.output_formatter import format_ai_response
 
 
-VALID_AI_JSON = """
+_REASONING_ASSESSMENT_JSON = """"reasoning_assessment": {
+      "reasoning_state": "insufficient_evidence",
+      "operational_assessment": "n/a",
+      "company_brain_alignment": "cannot determine",
+      "tensions": [],
+      "evidence_gaps": [],
+      "risk_assessment": "n/a",
+      "confidence": 50,
+      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
+    }"""
+
+VALID_AI_JSON = (
+    """
 {
-  "executive_summary": "Executive Summary\\n- Operating posture is clear.\\n\\nKey Insights\\n- Execution quality is improving.\\n\\nRisks\\n- Capacity remains the main constraint.\\n\\nRecommended Actions\\n- CEO: confirm the weekly execution review within 7 days.\\n\\nPriority Level\\n- High.",
+  "executive_summary": "Executive Summary\\n- Operating posture is clear for Production; inventory operational impact is stable.\\n\\nKey Insights\\n- Execution quality is improving.\\n\\nRisks\\n- Capacity remains the main constraint.\\n\\nRecommended Actions\\n- CEO: confirm the weekly execution review within 7 days.\\n\\nPriority Level\\n- High.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
-    }
+    },
+    """
+    + _REASONING_ASSESSMENT_JSON
+    + """
   }
 }
 """
+)
 
 
 class _FakeChatCompletions:
@@ -29,16 +45,21 @@ class _FakeChatCompletions:
         self.messages.append(kwargs["messages"])
         content = VALID_AI_JSON
         if any("response_language: ar" in message["content"] for message in kwargs["messages"]):
-            content = """
+            content = (
+                """
 {
-  "executive_summary": "الملخص التنفيذي\\n- الموقف التشغيلي واضح ويتطلب ضبط الأولويات.\\n\\nأبرز الملاحظات\\n- جودة التنفيذ تتحسن.\\n\\nالمخاطر\\n- السعة التشغيلية هي القيد الرئيسي.\\n\\nالإجراءات الموصى بها\\n- الإدارة التنفيذية: تثبيت مراجعة أسبوعية للتنفيذ خلال 7 أيام.\\n\\nمستوى الأولوية\\n- عال.",
+  "executive_summary": "الملخص التنفيذي\\n- الموقف التشغيلي واضح في قسم production ويتطلب ضبط الأولويات، مع مراجعة inventory.\\n\\nأبرز الملاحظات\\n- جودة التنفيذ تتحسن.\\n\\nالمخاطر\\n- السعة التشغيلية هي القيد الرئيسي.\\n\\nالإجراءات الموصى بها\\n- الإدارة التنفيذية: تثبيت مراجعة أسبوعية للتنفيذ خلال 7 أيام.\\n\\nمستوى الأولوية\\n- عال.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
-    }
+    },
+    """
+                + _REASONING_ASSESSMENT_JSON
+                + """
   }
 }
 """
+            )
         return SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
         )

@@ -7,38 +7,64 @@ from app.services.decision_debug import list_decision_debug_snapshots
 from app.services.openai_client import AIService
 
 
-VALID_AI_JSON = """
+_REASONING_ASSESSMENT_JSON = """"reasoning_assessment": {
+      "reasoning_state": "insufficient_evidence",
+      "operational_assessment": "n/a",
+      "company_brain_alignment": "cannot determine",
+      "tensions": [],
+      "evidence_gaps": [],
+      "risk_assessment": "n/a",
+      "confidence": 50,
+      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
+    }"""
+
+VALID_AI_JSON = (
+    """
 {
   "executive_summary": "Executive Summary\\n- Production delay is creating fulfillment risk.\\n\\nKey Insights\\n- Inventory and distribution must be aligned before Sales commits more orders.\\n\\nRisks\\n- Wastage and service misses can pressure margin.\\n\\nRecommended Actions\\n- Operations: confirm stock, delivery capacity, and margin impact within 48 hours.\\n\\nPriority Level\\n- High.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
-    }
+    },
+    """
+    + _REASONING_ASSESSMENT_JSON
+    + """
   }
 }
 """
+)
 
-GENERIC_AI_JSON = """
+GENERIC_AI_JSON = (
+    """
 {
   "executive_summary": "Executive Summary\\n- There are challenges and performance should improve.\\n\\nRecommended Actions\\n- Focus on efficiency.\\n\\nPriority Level\\n- High.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
-    }
+    },
+    """
+    + _REASONING_ASSESSMENT_JSON
+    + """
   }
 }
 """
+)
 
-OPERATIONAL_AI_JSON = """
+OPERATIONAL_AI_JSON = (
+    """
 {
   "executive_summary": "Executive Summary\\n- Root operational bottleneck: production capacity is constraining Baghdad orange fulfillment after demand rose while line speed slowed.\\n- Cause/effect chain: higher Sales orders plus slower Production output creates Distribution backlog and Finance margin pressure from overtime and delayed collections.\\n- Affected departments: Production, Sales, Distribution/Ops, and Finance.\\n- Operational impact: fulfillment windows and OTIF are at risk for orange orders.\\n- Business impact: overtime cost and weak collections pressure margin and cash.\\n\\nRecommended Actions\\n- CEO: freeze new orange commitments for 48 hours until Production confirms line recovery, Distribution resequences priority routes, and Finance clears collection exposure.\\n\\nPriority Level\\n- Critical.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
-    }
+    },
+    """
+    + _REASONING_ASSESSMENT_JSON
+    + """
   }
 }
 """
+)
 
 
 class _FakeRepo:

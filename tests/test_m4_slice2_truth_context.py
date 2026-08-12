@@ -466,12 +466,29 @@ class _FakeDbPool:
         return self._company_row
 
 
-_VALID_AI_JSON = """
+_VALID_REASONING_ASSESSMENT = """
 {
-  "executive_summary": "Executive Summary\\n- Operational review complete.\\n\\nRecommended Actions\\n- Monitor hall performance.\\n\\nPriority Level\\n- Medium.",
-  "raw_decision": {"truth_validation": {"contradictions": []}}
+  "reasoning_state": "insufficient_evidence",
+  "operational_assessment": "n/a",
+  "company_brain_alignment": "cannot determine",
+  "tensions": [],
+  "evidence_gaps": [],
+  "risk_assessment": "n/a",
+  "confidence": 50,
+  "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
 }
 """
+
+_VALID_AI_JSON = (
+    """
+{
+  "executive_summary": "Executive Summary\\n- Operational review complete for Production; inventory operational impact assessed as normal.\\n\\nRecommended Actions\\n- Monitor hall performance.\\n\\nPriority Level\\n- Medium.",
+  "raw_decision": {"truth_validation": {"contradictions": []}, "reasoning_assessment": """
+    + _VALID_REASONING_ASSESSMENT
+    + """}
+}
+"""
+)
 
 
 def _service_with_fake_db(company_row: dict | None) -> tuple[AIService, _FakeOpenAIClient]:

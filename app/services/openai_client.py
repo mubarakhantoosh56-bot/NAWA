@@ -15,10 +15,18 @@ from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
 from app.core.persona_prompt import build_persona_prompt, resolve_response_language
 from app.services.company_profile import build_company_profile_prompt_block
-from app.services.decision_context import build_decision_context, build_decision_context_prompt_block
+from app.services.decision_context import (
+    build_decision_context,
+    build_decision_context_prompt_block,
+    public_decision_context,
+)
 from app.services.decision_debug import (
     start_decision_debug_snapshot,
     update_decision_debug_snapshot,
+)
+from app.services.reasoning_validation import (
+    build_reasoning_assessment_repair_instruction,
+    validate_reasoning_assessment,
 )
 
 from app.repositories.company_repository import CompanyRepository
@@ -458,6 +466,22 @@ def _is_ceo_decision_context(decision_context: Dict[str, Any]) -> bool:
     return isinstance(department, dict) and department.get("key") == "ceo"
 
 
+def _reasoning_state_from_parsed(parsed: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Read the model's own declared M6 reasoning_state, if present -
+    read-only, never assigned by this module (see decision_context.py's
+    _build_reasoning_signals docstring: Python never decides the state)."""
+    if not isinstance(parsed, dict):
+        return None
+    raw_decision = parsed.get("raw_decision")
+    if not isinstance(raw_decision, dict):
+        return None
+    reasoning_assessment = raw_decision.get("reasoning_assessment")
+    if not isinstance(reasoning_assessment, dict):
+        return None
+    state = reasoning_assessment.get("reasoning_state")
+    return state if isinstance(state, str) else None
+
+
 def _operational_response_missing_elements(
     *,
     parsed: Optional[Dict[str, Any]],
@@ -485,6 +509,13 @@ def _operational_response_missing_elements(
         and "signal_level: warning" not in dairtna_signal_block
         and "signal_level: critical" not in dairtna_signal_block
     )
+    # M6-R4: read ONLY the raw structured reasoning_state as a conservative
+    # hint here (never validated at this point - the full M6 validator
+    # still runs later and can fail closed on a malformed
+    # reasoning_assessment even if this hint said insufficient_evidence).
+    # Deliberately language-independent: NAWA is Arabic-first, and safety
+    # must not depend on matching an English phrase dictionary.
+    insufficient_evidence_declared = _reasoning_state_from_parsed(parsed) == "insufficient_evidence"
 
     required_signals = {
         "root operational bottleneck": [
@@ -529,6 +560,8 @@ def _operational_response_missing_elements(
     for element, signals in required_signals.items():
         if element == "root operational bottleneck" and all_signals_normal:
             continue  # Normal-range signals do not require bottleneck language
+        if element in {"root operational bottleneck", "cause/effect chain"} and insufficient_evidence_declared:
+            continue  # M6-R4: insufficient_evidence never requires confident cause language, in any language
         if not any(signal in text for signal in signals):
             missing.append(element)
 
@@ -550,6 +583,7 @@ def _build_operational_regeneration_instruction(
     missing_elements: List[str],
     response_language: str,
     dairtna_signal_block: str = "",
+    insufficient_evidence_declared: bool = False,
 ) -> str:
     missing = ", ".join(missing_elements)
 
@@ -561,6 +595,14 @@ def _build_operational_regeneration_instruction(
             "IMPORTANT: The DAIRTNA OPERATIONAL SIGNAL INTERPRETATION block shows signal_level=normal "
             "for mortality. Do NOT frame that mortality figure as a bottleneck, crisis, or production risk. "
             "Report it as an observed fact within normal operating range and cite the computed_rate. "
+        )
+    elif insufficient_evidence_declared:
+        # M6 Part 2: never pressure the model to invent a cause when it has
+        # legitimately declared reasoning_state=insufficient_evidence.
+        opening = (
+            "Start the executive_summary by stating plainly that the root cause is not yet established "
+            "given current evidence. Name the hypotheses under consideration and the specific evidence "
+            "required to determine cause. Do NOT invent or assume a root cause. "
         )
     else:
         opening = "Start the executive_summary with the concrete root operational bottleneck. "
@@ -1360,7 +1402,13 @@ class AIService:
                 company_brain_context=company_brain_items,
                 operational_semantics_topics=operational_semantics_topics,
             )
-            context["decision_context"] = decision_context
+            # M6 Part 6: reasoning_signals/reasoning_reference_catalog are
+            # internal prompt-control/validation metadata, not auditable
+            # executive output - the public response gets a sanitized copy.
+            # `decision_context` itself (full) continues to be used for
+            # prompt construction, the debug snapshot, and M6 validation
+            # below.
+            context["decision_context"] = public_decision_context(decision_context)
             decision_context_block = build_decision_context_prompt_block(decision_context)
             messages: List[Dict[str, str]] = [
                 {"role": "system", "content": AIMX_SYSTEM_PROMPT},
@@ -1467,9 +1515,22 @@ class AIService:
                 retry_count += 1
 
             if not _validate_execution_structure(parsed):
-                logger.warning(
-                    "Retry response still invalid",
-                    extra={"company_id": company_id, "session_id": session_id},
+                # M6-F04: the legacy retry BUDGET (not just the loop
+                # condition) is authoritative. A candidate that is still
+                # legacy-invalid after the retry budget is exhausted must
+                # never continue to operational enforcement, M6 validation,
+                # or persistence merely because it "looks" operationally or
+                # M6-complete - legacy structural validity is independently
+                # required, not inherited or overridden by later checks.
+                logger.error(
+                    "Legacy execution structure still invalid after retry budget exhausted; "
+                    "failing closed rather than continuing with a malformed candidate",
+                    extra={"company_id": company_id, "session_id": session_id, "retry_count": retry_count},
+                )
+                update_decision_debug_snapshot(debug_snapshot, raw_model_response=answer_text)
+                raise RuntimeError(
+                    "Legacy execution structure validation failed after exhausting the retry budget "
+                    f"({retry_count} retries)"
                 )
             update_decision_debug_snapshot(debug_snapshot, raw_model_response=answer_text)
 
@@ -1495,6 +1556,7 @@ class AIService:
                             missing_elements=missing_operational_elements,
                             response_language=response_language,
                             dairtna_signal_block=dairtna_signal_block,
+                            insufficient_evidence_declared=_reasoning_state_from_parsed(parsed) == "insufficient_evidence",
                         ),
                     },
                 ]
@@ -1514,52 +1576,175 @@ class AIService:
                 )
                 regenerated_answer_text = regeneration_resp.choices[0].message.content or answer_text
                 regenerated_parsed = _safe_json_loads(regenerated_answer_text)
+                # M6-F03: operational regeneration produced a brand-new
+                # model-generated candidate - it does NOT inherit the
+                # legacy-structural validity of the candidate it replaces.
+                # Legacy structure is re-checked here, before operational
+                # completeness, before this candidate may become active.
+                regenerated_legacy_valid = _validate_execution_structure(regenerated_parsed)
                 regenerated_missing = _operational_response_missing_elements(
                     parsed=regenerated_parsed,
                     decision_context=decision_context,
                     dairtna_signal_block=dairtna_signal_block,
                 )
-                if not regenerated_missing:
-                    answer_text = regenerated_answer_text
-                    parsed = regenerated_parsed
-                else:
-                    # The English-keyword check produces false negatives for Arabic responses.
-                    # Accept the regenerated response if it is longer (more specific detail),
-                    # since the regeneration instruction explicitly asks for operational facts.
-                    orig_summary = str((parsed or {}).get("executive_summary") or "")
-                    regen_summary = str((regenerated_parsed or {}).get("executive_summary") or "")
-                    if regenerated_parsed and len(regen_summary) > len(orig_summary):
-                        answer_text = regenerated_answer_text
-                        parsed = regenerated_parsed
-                        logger.info(
-                            "Operational regeneration accepted by length heuristic",
-                            extra={
-                                "company_id": company_id,
-                                "session_id": session_id,
-                                "orig_len": len(orig_summary),
-                                "regen_len": len(regen_summary),
-                            },
-                        )
-                    else:
-                        logger.warning(
-                            "Operational response enforcement retry still missing elements",
-                            extra={
-                                "company_id": company_id,
-                                "session_id": session_id,
-                                "missing_elements": regenerated_missing,
-                            },
-                        )
                 update_decision_debug_snapshot(
                     debug_snapshot,
-                    raw_model_response=answer_text,
+                    raw_model_response=regenerated_answer_text,
                     operational_regeneration={
                         "attempted": True,
                         "missing_elements": missing_operational_elements,
                         "raw_response": regenerated_answer_text,
-                        "accepted": not regenerated_missing,
+                        "legacy_valid": regenerated_legacy_valid,
+                        "accepted": bool(regenerated_legacy_valid and not regenerated_missing),
                         "remaining_missing_elements": regenerated_missing,
                     },
                 )
+                if not regenerated_legacy_valid:
+                    logger.error(
+                        "Operationally-regenerated response failed legacy execution structure "
+                        "validation; failing closed rather than persisting a malformed candidate",
+                        extra={"company_id": company_id, "session_id": session_id},
+                    )
+                    raise RuntimeError(
+                        "Legacy execution structure validation failed for the operationally-"
+                        "regenerated response"
+                    )
+                if regenerated_missing:
+                    # M6-F02: no length-based/heuristic acceptance. Contract
+                    # satisfaction is structural, not "longer response =
+                    # more compliant" - a still-incomplete regenerated
+                    # response fails closed rather than being accepted
+                    # because it happens to contain more characters. Exactly
+                    # one operational regeneration attempt is allowed (no
+                    # further model call here).
+                    logger.error(
+                        "Operational response enforcement retry still missing required elements; "
+                        "failing closed rather than returning an incomplete decision",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "missing_elements": regenerated_missing,
+                        },
+                    )
+                    raise RuntimeError(
+                        "Operational response enforcement failed after regeneration attempt: missing "
+                        + ", ".join(regenerated_missing)
+                    )
+                answer_text = regenerated_answer_text
+                parsed = regenerated_parsed
+
+            # M6-F1: reasoning_assessment is a REQUIRED runtime contract, not
+            # prompt-only guidance. Validated against both structure
+            # (Pydantic: required fields, exact reasoning_state enum,
+            # confidence bounds) and decision provenance (every
+            # recommendation_basis reference must be a real T#/CB# id
+            # actually supplied via decision_context's turn-local
+            # reasoning_reference_catalog - M6-F4). One repair attempt is
+            # allowed; a still-invalid response is NEVER formatted/returned
+            # as a decision (fails closed through the existing
+            # except-Exception -> HTTPException(500) path below).
+            m6_valid, m6_errors = validate_reasoning_assessment(parsed, decision_context)
+            update_decision_debug_snapshot(
+                debug_snapshot,
+                m6_reasoning_validation={"valid": m6_valid, "errors": m6_errors},
+            )
+            if not m6_valid:
+                logger.warning(
+                    "M6 reasoning_assessment invalid, attempting one repair",
+                    extra={"company_id": company_id, "session_id": session_id, "errors": m6_errors},
+                )
+                repair_messages = messages + [
+                    {"role": "assistant", "content": answer_text},
+                    {
+                        "role": "system",
+                        "content": build_reasoning_assessment_repair_instruction(
+                            errors=m6_errors,
+                            response_language=response_language,
+                        ),
+                    },
+                ]
+                repair_resp = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=repair_messages,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                )
+                repaired_answer_text = repair_resp.choices[0].message.content or answer_text
+                repaired_parsed = _safe_json_loads(repaired_answer_text)
+                repaired_m6_valid, repaired_m6_errors = validate_reasoning_assessment(
+                    repaired_parsed, decision_context
+                )
+                update_decision_debug_snapshot(
+                    debug_snapshot,
+                    raw_model_response=repaired_answer_text,
+                    m6_reasoning_validation_repair={
+                        "attempted": True,
+                        "errors": m6_errors,
+                        "raw_response": repaired_answer_text,
+                        "valid": repaired_m6_valid,
+                        "remaining_errors": repaired_m6_errors,
+                    },
+                )
+                if not repaired_m6_valid:
+                    logger.error(
+                        "M6 reasoning_assessment repair failed; failing closed rather than "
+                        "returning an invalid decision",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "errors": repaired_m6_errors,
+                        },
+                    )
+                    raise RuntimeError(
+                        "M6 reasoning_assessment validation failed after repair attempt: "
+                        + "; ".join(repaired_m6_errors)
+                    )
+
+                # M6-F01: the M6 repair is a NEW model-generated candidate -
+                # it must not inherit the legacy/operational validation
+                # success already established for the PREVIOUS candidate
+                # (e.g. the repair may have changed reasoning_state, which
+                # changes what operational enforcement requires, or may
+                # have altered/broken raw_decision's legacy execution
+                # structure while fixing reasoning_assessment). The final
+                # candidate is validated against every applicable contract,
+                # evaluated using ITS OWN final reasoning_state, before it
+                # may proceed to persistence/formatting. No further LLM
+                # call is made here - this is a deterministic gate only.
+                final_legacy_valid = _validate_execution_structure(repaired_parsed)
+                final_missing_elements = _operational_response_missing_elements(
+                    parsed=repaired_parsed,
+                    decision_context=decision_context,
+                    dairtna_signal_block=dairtna_signal_block,
+                )
+                update_decision_debug_snapshot(
+                    debug_snapshot,
+                    final_contract_validation={
+                        "legacy_valid": final_legacy_valid,
+                        "operational_missing_elements": final_missing_elements,
+                        "m6_valid": True,
+                    },
+                )
+                if final_legacy_valid and not final_missing_elements:
+                    answer_text = repaired_answer_text
+                    parsed = repaired_parsed
+                else:
+                    logger.error(
+                        "M6-repaired response failed final cross-contract validation; failing "
+                        "closed rather than returning a response that violates the legacy "
+                        "execution structure or operational response contract",
+                        extra={
+                            "company_id": company_id,
+                            "session_id": session_id,
+                            "final_legacy_valid": final_legacy_valid,
+                            "final_missing_elements": final_missing_elements,
+                        },
+                    )
+                    raise RuntimeError(
+                        "Final cross-contract validation failed after M6 repair: "
+                        f"legacy_valid={final_legacy_valid}, "
+                        f"operational_missing_elements={final_missing_elements}"
+                    )
 
             try:
                 log_decision_event(

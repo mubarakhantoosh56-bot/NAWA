@@ -130,6 +130,16 @@ VALID_AI_JSON = """
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
+    },
+    "reasoning_assessment": {
+      "reasoning_state": "insufficient_evidence",
+      "operational_assessment": "n/a",
+      "company_brain_alignment": "cannot determine",
+      "tensions": [],
+      "evidence_gaps": [],
+      "risk_assessment": "n/a",
+      "confidence": 50,
+      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
     }
   }
 }

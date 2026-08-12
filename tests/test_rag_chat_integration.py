@@ -8,10 +8,20 @@ from app.services.rag.retrieval import RetrievalService
 
 VALID_AI_JSON = """
 {
-  "executive_summary": "ok",
+  "executive_summary": "Executive Summary\\n- Operational review complete for Production; inventory operational impact assessed as normal.\\n\\nRecommended Actions\\n- Monitor.\\n\\nPriority Level\\n- Medium.",
   "raw_decision": {
     "truth_validation": {
       "contradictions": []
+    },
+    "reasoning_assessment": {
+      "reasoning_state": "insufficient_evidence",
+      "operational_assessment": "n/a",
+      "company_brain_alignment": "cannot determine",
+      "tensions": [],
+      "evidence_gaps": [],
+      "risk_assessment": "n/a",
+      "confidence": 50,
+      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
     }
   }
 }
@@ -80,7 +90,12 @@ def test_chat_still_works_without_files(monkeypatch):
         )
     )
 
-    assert result["ceo_text"] == "ok"
+    # Purpose of this test is resilience (chat completes end-to-end without
+    # files/DB), not exact content - the fake response text now satisfies
+    # CEO-scope operational enforcement (M6-F02 correction round removed
+    # the length-heuristic fallback that used to silently tolerate
+    # incomplete responses), so assert success rather than a literal "ok".
+    assert result["ceo_text"]
     assert set(result.keys()) == {"ceo_text", "logic_json", "followup_question", "meta"}
     prompt_text = "\n".join(message["content"] for message in fake_client.chat_completions.messages[0])
     assert "COMPANY KNOWLEDGE" not in prompt_text
@@ -223,6 +238,11 @@ def test_retrieval_failure_does_not_fail_chat(monkeypatch):
         )
     )
 
-    assert result["ceo_text"] == "ok"
+    # Purpose of this test is resilience (chat completes end-to-end without
+    # files/DB), not exact content - the fake response text now satisfies
+    # CEO-scope operational enforcement (M6-F02 correction round removed
+    # the length-heuristic fallback that used to silently tolerate
+    # incomplete responses), so assert success rather than a literal "ok".
+    assert result["ceo_text"]
     prompt_text = "\n".join(message["content"] for message in fake_client.chat_completions.messages[0])
     assert "COMPANY KNOWLEDGE" not in prompt_text

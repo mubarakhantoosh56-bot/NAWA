@@ -9,6 +9,39 @@ from app.services.operational_pattern_detector import detect_operational_pattern
 from app.services.organizational_intelligence import build_organizational_intelligence
 from app.services.root_cause_reasoning import build_root_cause_reasoning
 
+# M6: AI Reasoning Layer - reasoning states (never epistemic origins; see
+# app/services/operational_truth_context.py's OBSERVED/DERIVED/INFERRED,
+# which is a different, unrelated vocabulary). The LLM chooses which of
+# these three applies each turn (Decision Context only supplies bounded,
+# deterministic structural signals below - it never decides the state
+# itself, since that requires judgment about whether evidence currently
+# supports a company preference, not a fact Python can compute).
+REASONING_STATE_ALIGNED = "aligned"
+REASONING_STATE_TENSION = "tension"
+REASONING_STATE_INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+REASONING_STATES = (
+    REASONING_STATE_ALIGNED,
+    REASONING_STATE_TENSION,
+    REASONING_STATE_INSUFFICIENT_EVIDENCE,
+)
+
+# Every M5 Company Brain type except INSTITUTIONAL_MEMORY (generic per-tenant
+# memory facts, not curated company doctrine - see
+# app/services/company_brain_context.py). Reused, not redefined: this is the
+# same frozen Layer-2 type vocabulary M5 already established, not a new
+# taxonomy invented for M6.
+COMPANY_BRAIN_POLICY_TYPES = frozenset(
+    {
+        "POLICY",
+        "PREFERENCE",
+        "DECISION_RULE",
+        "OPERATING_PRINCIPLE",
+        "GOAL",
+        "RISK_POSTURE",
+        "MANAGEMENT_STANDARD",
+    }
+)
+
 DEPARTMENT_ALIASES = {
     "sales_ai": "sales",
     "finance_ai": "finance",
@@ -148,6 +181,11 @@ def build_decision_context(
         operational_events=operational_events,
         related_departments=related_departments,
     )
+    reasoning_reference_catalog = _build_reasoning_reference_catalog(
+        operational_truth_context=operational_truth_context or [],
+        company_brain_context=company_brain_context or [],
+    )
+    reasoning_signals = _build_reasoning_signals(reasoning_reference_catalog)
 
     return {
         "department": department,
@@ -186,6 +224,24 @@ def build_decision_context(
         # meaning context is a third, distinct concept from both Truth and
         # Company Brain.
         "operational_semantics_topics": operational_semantics_topics or [],
+        # M6: bounded, deterministic structural signals only (booleans and
+        # counts derived from operational_truth_context/company_brain_context
+        # already assembled above by M4/M5 - never reloaded independently,
+        # never a new tenant/business-unit source). This is NOT a tension
+        # verdict: it never decides aligned/tension/insufficient_evidence
+        # itself, it only tells the model which materials are actually
+        # USABLE this turn so reasoning is never silently skipped, based on
+        # assumed-absent evidence, or fooled by mere row presence (an
+        # INFERRED-only or missing Truth item does not count as usable
+        # evidence; a conflicted/unresolved Company Brain item does not
+        # count as settled policy - see _build_reasoning_signals).
+        "reasoning_signals": reasoning_signals,
+        # M6: turn-local T#/CB# reference handles for decision provenance
+        # (recommendation_basis). Internal-only - see INTERNAL_ONLY_DECISION_
+        # CONTEXT_KEYS / public_decision_context(): never reloads DB/files,
+        # only classifies the operational_truth_context/company_brain_context
+        # already supplied above.
+        "reasoning_reference_catalog": reasoning_reference_catalog,
         "detected_patterns": detected_patterns,
         "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
@@ -194,6 +250,25 @@ def build_decision_context(
         "confidence": "MVP directional context; use exact user, memory, profile, and retrieved-file facts when available.",
         "response_language": "ar" if response_language == "ar" else "en",
     }
+
+
+# M6: internal prompt-control/validation metadata that must never reach the
+# public API response (app/api/chat.py -> ChatResponse.meta.context). These
+# keys ARE used for prompt construction, the runtime reasoning_assessment
+# validator, and the DECISION_CONTEXT_DEBUG snapshot (which captures the
+# full decision_context dict before this filter is ever applied) - only the
+# copy placed into the public response is reduced. This is distinct from
+# the model-generated logic_json.reasoning_assessment, which is the
+# auditable executive reasoning OUTPUT and does remain public.
+INTERNAL_ONLY_DECISION_CONTEXT_KEYS = frozenset({"reasoning_signals", "reasoning_reference_catalog"})
+
+
+def public_decision_context(decision_context: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of decision_context with M6 internal-only prompt-control
+    metadata removed, safe to place into the public chat response."""
+    if not isinstance(decision_context, dict):
+        return decision_context
+    return {k: v for k, v in decision_context.items() if k not in INTERNAL_ONLY_DECISION_CONTEXT_KEYS}
 
 
 def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str:
@@ -216,6 +291,11 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
     )
     if company_brain_section:
         lines.append(company_brain_section)
+    reasoning_signals_section = _build_reasoning_signals_section(
+        decision_context.get("reasoning_signals")
+    )
+    if reasoning_signals_section:
+        lines.append(reasoning_signals_section)
     lines.extend(
         [
             "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT:",
@@ -253,6 +333,22 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Do not treat a Company Brain preference, philosophy, or goal as an objective operational fact, and do not treat Company Brain institutional memory as current operational evidence.",
             "- Do not invent Company Brain policy that is not present in company_brain_context; if Company Brain information is missing or internally conflicted (conflict_state), say so explicitly.",
             "- Operational Semantics topics describe what company terms mean, not what management prefers or requires - never present them as policy.",
+            "AI REASONING LAYER (M6) - RULES:",
+            "- Populate raw_decision.reasoning_assessment on every response: reasoning_state (one of aligned/tension/insufficient_evidence - see Reasoning Signals for the allowed values), operational_assessment, company_brain_alignment, tensions, evidence_gaps, risk_assessment, confidence, and recommendation_basis (evidence_basis, company_basis, missing_evidence). These are auditable decision provenance, never hidden chain-of-thought - do not write step-by-step internal deliberation into any field.",
+            "- Every Operational Truth Context item shown below is labeled with a reference ID (T1, T2, ...) and every Company Brain Context item shown below is labeled (CB1, CB2, ...). recommendation_basis.evidence_basis may ONLY cite a T# that is USABLE evidence (AVAILABLE with an OBSERVED or DERIVED origin - never missing, never inferred-only). recommendation_basis.company_basis may ONLY cite a CB# that is AUTHORITATIVE settled company doctrine (a curated policy-type item, not INSTITUTIONAL_MEMORY, whose authority is exactly 'authoritative' and which is not conflicted - never a merely-not-conflicted or unlabeled item). missing_evidence may only cite a T# that is itself missing or has unresolved source time. Never invent a reference ID, never cite a reference from the wrong section, and never cite a prose source (e.g. 'a report' or a made-up document name) - only these exact IDs are valid, and this is validated at runtime.",
+            "- Reason in this order every time: first determine what the Operational Truth Context evidence actually supports; only then relate that to Company Brain Context; only then decide what action is justified. Never start from a Company Brain preference and search for supporting facts - that is confirmation bias.",
+            "- Neither Operational Truth Context nor Company Brain Context automatically wins when they point in different directions. Do not say 'continue because this is company policy' and do not say 'ignore company strategy because evidence changed.' State the evidence, state the company position, name the tension explicitly, and evaluate whether current evidence supports acting on the company position now.",
+            "- You may explicitly say current evidence does not support executing a Company Brain preference right now. This is an evidence-based recommendation about timing/conditions, not a claim that company policy is wrong - never mark a Company Brain item as incorrect.",
+            "- When two technically valid actions are both supported by the evidence, Company Brain (risk posture, philosophy, priorities) may legitimately determine which one is recommended - if it does, say explicitly that the company's stated position influenced the choice.",
+            "- Use only: 'supported by current evidence', 'not supported by current evidence', 'partially supported', or 'cannot determine' to describe whether a Company Brain position is currently actionable. Do not use these phrases to describe whether the policy itself is right or wrong.",
+            "- A correlation, hypothesis, or possible explanation must never be written as a confirmed cause. Only a DERIVED trend or an OBSERVED fact may be treated as established; an INFERRED explanation stays a hypothesis in the reasoning, explicitly labeled as such.",
+            "- A Recommended Action is a proposal, never a fact - do not phrase a recommendation as something that has already happened or that is objectively true. Distinguish it from Facts/Key Insights.",
+            "- If a recommendation depends materially on evidence that is missing (missing_evidence_count > 0 in Reasoning Signals), do not assign it a confident root cause: give a conditional recommendation, recommend collecting the missing evidence first, and lower confidence accordingly.",
+            "- Confidence must go down, not stay flat, when: material evidence is missing, a Truth item's source time is unresolved (do not imply freshness), or a Company Brain item used as basis has conflict_state set. A tension that IS resolved with clear supporting evidence does not by itself require low confidence.",
+            "- A Company Brain item with conflict_state set is unresolved institutional context, not a settled company position - do not silently pick the current/latest memory value as authoritative; say the institutional context is internally conflicted on this point.",
+            "- Degrade conservatively based on what is actually available this turn (see Reasoning Signals): Truth available + Company Brain unavailable -> give an evidence-based assessment and state that company-policy context is unavailable, do not guess company preference. Company Brain available + Truth unavailable -> do not produce a confident operational recommendation from policy alone. Neither available -> say so; do not fabricate either.",
+            "- If RAG-retrieved excerpts conflict with Operational Truth Context or Company Brain Context, state that conflict/uncertainty explicitly where material - retrieved text never silently overrides either layer.",
+            "- If the user asks for a specific desired conclusion (e.g. asks you to confirm an action is safe) that the Operational Truth Context does not support, state what the evidence actually supports instead. User phrasing or pressure never overrides evidence-grounded reasoning.",
         ]
     )
     return "\n".join(lines)
@@ -268,15 +364,20 @@ def _build_truth_context_section(items: Any) -> str:
     warnings are always shown explicitly rather than flattened away, so a
     prompt reader can tell OBSERVED from DERIVED from INFERRED from
     unresolved/UNKNOWN, and can tell an unresolved source time from an
-    authoritative one, at a glance.
+    authoritative one, at a glance. Each line is prefixed with its M6
+    turn-local reference ID (T1, T2, ...) - the SAME numbering
+    _build_reasoning_reference_catalog uses (both enumerate this identical
+    list in this identical order), so recommendation_basis references can
+    be validated against exactly what the model was actually shown.
     """
     if not isinstance(items, list) or not items:
         return ""
 
     lines = ["[Operational Truth Context]"]
-    for item in items:
+    for index, item in enumerate(items, start=1):
         if not isinstance(item, dict):
             continue
+        ref = f"T{index}"
         origin = item.get("epistemic_origin")
         origin_label = str(origin).upper() if origin else "UNKNOWN"
         claim = item.get("canonical_field") or item.get("type") or "unknown_claim"
@@ -295,7 +396,7 @@ def _build_truth_context_section(items: Any) -> str:
         source_file = item.get("source_file")
 
         line = (
-            f"- Claim: {claim} | Status: {status} | Origin: {origin_label} | "
+            f"[{ref}] Claim: {claim} | Status: {status} | Origin: {origin_label} | "
             f"Entity: {entity_label} | Value: {value_label} | "
             f"Source time: {source_time or 'unresolved'} ({source_time_status}) | "
             f"Evidence: {evidence_label}"
@@ -314,7 +415,10 @@ def _build_company_brain_section(items: Any, semantics_topics: Any) -> str:
     text section - conceptually separate from [Operational Truth Context]
     (see app/services/company_brain_context.py). Each item states its
     Layer-2 type/statement/scope/authority/source/conflict status; nothing
-    here is ever rendered as an OBSERVED/DERIVED operational claim.
+    here is ever rendered as an OBSERVED/DERIVED operational claim. Each
+    item is prefixed with its M6 turn-local reference ID (CB1, CB2, ...) -
+    see _build_truth_context_section's docstring for the matching-order
+    guarantee this relies on.
 
     Operational Semantics topics (terminology/meaning context) are listed
     separately at the end, explicitly labeled as such rather than folded
@@ -327,9 +431,10 @@ def _build_company_brain_section(items: Any, semantics_topics: Any) -> str:
 
     lines = ["[Company Brain Context]"]
     if has_items:
-        for item in items:
+        for index, item in enumerate(items, start=1):
             if not isinstance(item, dict):
                 continue
+            ref = f"CB{index}"
             item_type = item.get("type") or "UNKNOWN"
             statement = item.get("statement") or "n/a"
             scope = item.get("scope") or "unresolved"
@@ -338,7 +443,7 @@ def _build_company_brain_section(items: Any, semantics_topics: Any) -> str:
             conflict_state = item.get("conflict_state")
 
             line = (
-                f"- Type: {item_type} | Statement: {statement} | Scope: {scope} | "
+                f"[{ref}] Type: {item_type} | Statement: {statement} | Scope: {scope} | "
                 f"Authority: {authority} | Source: {source}"
             )
             if conflict_state:
@@ -355,6 +460,167 @@ def _build_company_brain_section(items: Any, semantics_topics: Any) -> str:
         )
 
     return "\n".join(lines)
+
+
+def _build_reasoning_reference_catalog(
+    *,
+    operational_truth_context: list[dict[str, Any]],
+    company_brain_context: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """M6: bounded turn-local T#/CB# reference catalog for decision
+    provenance validation (recommendation_basis).
+
+    Enumerates operational_truth_context/company_brain_context in the exact
+    same order _build_truth_context_section/_build_company_brain_section
+    render them (T{i}/CB{i} = items[i-1]) - this is what lets the runtime
+    validator confirm a model-cited reference actually exists and classify
+    it (usable evidence / missing / inferred / unresolved-time for Truth;
+    policy-type / conflicted / unresolved / settled for Company Brain).
+
+    Turn-local only: never a database ID, never persisted, never reloads
+    M4/M5 sources - purely a classification of the two lists already
+    supplied as arguments.
+    """
+    truth_items = [item for item in operational_truth_context if isinstance(item, dict)]
+    brain_items = [item for item in company_brain_context if isinstance(item, dict)]
+
+    truth_refs: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(truth_items, start=1):
+        status = item.get("status")
+        origin = item.get("epistemic_origin")
+        source_time_status = item.get("source_time_status")
+        is_missing = status == "missing"
+        # Row presence alone is never enough (M6-F2): only AVAILABLE +
+        # OBSERVED/DERIVED counts as usable evidence. MISSING, INFERRED-only,
+        # and any other/unknown status are all explicitly excluded.
+        is_usable_evidence = status == "available" and origin in {"observed", "derived"}
+        # "Unresolved source time" is a freshness-claim risk about USABLE
+        # evidence specifically (the Feed Mill Golden Case: OBSERVED,
+        # available, but freshness cannot be assumed) - it is not the same
+        # concern as an INFERRED hypothesis merely lacking a timestamp,
+        # which was never being asserted as current fact in the first
+        # place (that is already captured separately by is_inferred). Gating
+        # on is_usable_evidence keeps this signal tied to its actual
+        # purpose: confidence/freshness-claim degradation for evidence that
+        # could otherwise be mistaken for current.
+        is_unresolved_time = is_usable_evidence and source_time_status == "unresolved"
+        truth_refs[f"T{index}"] = {
+            "status": status,
+            "epistemic_origin": origin,
+            "source_time_status": source_time_status,
+            "is_missing": is_missing,
+            "is_inferred": origin == "inferred",
+            "is_unresolved_time": is_unresolved_time,
+            "is_usable_evidence": is_usable_evidence,
+            # Eligible for recommendation_basis.missing_evidence: a genuine
+            # gap (missing) or usable evidence whose freshness cannot be
+            # assumed (unresolved source time) - never an available,
+            # resolved item, and never an unconfirmed hypothesis (an
+            # INFERRED item is not "evidence" in the first place, so its
+            # own timestamp state is not a missing-evidence gap).
+            "is_gap_reference": is_missing or is_unresolved_time,
+        }
+
+    company_brain_refs: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(brain_items, start=1):
+        item_type = item.get("type")
+        conflict_state = item.get("conflict_state")
+        authority = item.get("authority")
+        is_policy_type = item_type in COMPANY_BRAIN_POLICY_TYPES
+        is_conflicted = bool(conflict_state)
+        is_unresolved = authority == "unresolved"
+        # M6-R2: "authoritative" is an explicit allow-list value, never a
+        # not-unresolved proxy. None/"unknown"/"institutional"/any other
+        # authority value (including simply absent) must NOT be treated as
+        # authoritative - only an item whose authority is EXACTLY the
+        # string "authoritative" qualifies. This is deliberately strict:
+        # a policy-like item with unrecognized authority metadata is
+        # unproven, not innocent-until-proven-conflicted.
+        is_authoritative = authority == "authoritative"
+        # Row presence alone is never enough (M6-F2): INSTITUTIONAL_MEMORY,
+        # a conflicted item, or anything not explicitly authoritative is
+        # excluded from "settled" - never auto-picked as authoritative
+        # company_basis (ENG-CONF stays frozen; this only READS
+        # conflict_state/authority, never resolves them).
+        is_settled = is_policy_type and is_authoritative and not is_conflicted
+        company_brain_refs[f"CB{index}"] = {
+            "type": item_type,
+            "conflict_state": conflict_state,
+            "authority": authority,
+            "is_policy_type": is_policy_type,
+            "is_conflicted": is_conflicted,
+            "is_authoritative": is_authoritative,
+            "is_unresolved": is_unresolved,
+            "is_settled": is_settled,
+        }
+
+    return {"truth": truth_refs, "company_brain": company_brain_refs}
+
+
+def _build_reasoning_signals(reasoning_reference_catalog: dict[str, Any]) -> dict[str, Any]:
+    """M6: bounded structural signals for the AI Reasoning Layer, derived
+    from the reference catalog's per-item classification (never from mere
+    row presence - M6-F2). Never inspects statement text, never matches
+    domain-specific keywords (e.g. "poultry", "expansion"), and never
+    decides whether a tension actually exists - only whether usable
+    evidence / settled policy context exist this turn. The LLM performs
+    the actual reasoning-state judgment, guided by the REASONING RULES in
+    build_decision_context_prompt_block.
+    """
+    truth_refs = reasoning_reference_catalog.get("truth") or {}
+    company_brain_refs = reasoning_reference_catalog.get("company_brain") or {}
+
+    usable_truth_refs = [ref for ref, meta in truth_refs.items() if meta["is_usable_evidence"]]
+    inferred_refs = [ref for ref, meta in truth_refs.items() if meta["is_inferred"]]
+    missing_refs = [ref for ref, meta in truth_refs.items() if meta["is_missing"]]
+    unresolved_time_refs = [ref for ref, meta in truth_refs.items() if meta["is_unresolved_time"]]
+
+    settled_policy_refs = [ref for ref, meta in company_brain_refs.items() if meta["is_settled"]]
+    conflicted_policy_refs = [ref for ref, meta in company_brain_refs.items() if meta["is_conflicted"]]
+
+    truth_available = bool(usable_truth_refs)
+    company_brain_policy_available = bool(settled_policy_refs)
+
+    return {
+        "allowed_reasoning_states": list(REASONING_STATES),
+        "truth_context_item_count": len(truth_refs),
+        "usable_truth_evidence_count": len(usable_truth_refs),
+        "inferred_context_count": len(inferred_refs),
+        "missing_evidence_count": len(missing_refs),
+        "unresolved_source_time_count": len(unresolved_time_refs),
+        "truth_available": truth_available,
+        "company_brain_context_item_count": len(company_brain_refs),
+        "settled_company_brain_policy_count": len(settled_policy_refs),
+        "conflicted_company_brain_policy_count": len(conflicted_policy_refs),
+        "company_brain_policy_available": company_brain_policy_available,
+        "both_layers_present": truth_available and company_brain_policy_available,
+    }
+
+
+def _build_reasoning_signals_section(reasoning_signals: Any) -> str:
+    """Render the M6 reasoning signals as their own dedicated text section,
+    distinct from [Operational Truth Context] and [Company Brain Context] -
+    a pointer to what materials are USABLE, never a verdict."""
+    if not isinstance(reasoning_signals, dict) or not reasoning_signals:
+        return ""
+
+    return "\n".join(
+        [
+            "[Reasoning Signals]",
+            f"- Truth Context items supplied: {reasoning_signals.get('truth_context_item_count', 0)} "
+            f"(usable evidence: {reasoning_signals.get('usable_truth_evidence_count', 0)}, "
+            f"inferred-only: {reasoning_signals.get('inferred_context_count', 0)})",
+            f"- Usable Truth evidence available: {reasoning_signals.get('truth_available')}",
+            f"- Company Brain items supplied: {reasoning_signals.get('company_brain_context_item_count', 0)} "
+            f"(settled policy/preference: {reasoning_signals.get('settled_company_brain_policy_count', 0)}, "
+            f"conflicted/unresolved: {reasoning_signals.get('conflicted_company_brain_policy_count', 0)})",
+            f"- Settled Company Brain policy/preference available: {reasoning_signals.get('company_brain_policy_available')}",
+            f"- Both layers present this turn: {reasoning_signals.get('both_layers_present')}",
+            f"- Missing Truth evidence items: {reasoning_signals.get('missing_evidence_count', 0)}",
+            f"- Truth items with unresolved source time: {reasoning_signals.get('unresolved_source_time_count', 0)}",
+            f"- Allowed reasoning_state values: {', '.join(reasoning_signals.get('allowed_reasoning_states', []))}",
+        ]
+    )
 
 
 def _response_enforcement() -> dict[str, Any]:
