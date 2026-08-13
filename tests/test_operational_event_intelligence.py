@@ -541,3 +541,205 @@ def test_no_operational_events_leaves_memory_events_list_unchanged(db_available)
             await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
 
     _run(scenario())
+
+
+# ---------------------------------------------------------------------------
+# M7 Slice 1 Correction Round 1 (M7-03): reference/test seed operational
+# events (scripts/seed_jannat_operational_events.py writes
+# source_type="reference_seed") must never influence a live Golden
+# reasoning response as if they were verified operational events. Filtered
+# in AIService.chat() right after fetch (see REFERENCE_SEED_EVENT_SOURCE_TYPE
+# in app/services/openai_client.py) - list_events() itself is untouched, so
+# other callers (e.g. an admin auditing the raw operational-events list)
+# still see seed rows unfiltered.
+# ---------------------------------------------------------------------------
+
+
+async def _create_reference_seed_event(
+    pool: asyncpg.Pool,
+    *,
+    company_id: str,
+    user_id: str,
+    department_id: str | None = None,
+    title: str = "Synthetic Reference Seed Event",
+    summary: str = "Synthetic reference-seed placeholder event, never a real operational report.",
+) -> dict:
+    repo = OperationalEventRepository(pool)
+    return await repo.create_event(
+        company_id=UUID(company_id),
+        created_by_user_id=UUID(user_id),
+        department_id=UUID(department_id) if department_id else None,
+        event_type="operational.reference_seed",
+        category="issue",
+        priority="normal",
+        title=title,
+        summary=summary,
+        source_type="reference_seed",
+        payload={},
+    )
+
+
+def test_s1_real_operational_event_remains_in_live_context(db_available, monkeypatch):
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    async def scenario():
+        pool = await _make_pool()
+        company_id, user_id = await _seed_company_and_user(pool)
+        try:
+            await _create_operational_event(
+                pool, company_id=company_id, user_id=user_id,
+                summary="Production hall reported a feed shortage.",
+            )
+            service, fake_client = _service_with_real_db(pool)
+            result = await service.chat(
+                session_id="m7-03-s1",
+                message="What happened today?",
+                context={"response_language": "en"},
+                company_id=company_id,
+            )
+            return result, fake_client
+        finally:
+            await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
+
+    result, fake_client = _run(scenario())
+
+    bridge = result["meta"]["context"]["operational_events_bridge"]
+    assert bridge["status"] == "ok"
+    assert bridge["fetched"] == 1
+    summaries = [item["summary"] for item in result["meta"]["context"]["decision_context"]["operational_events"]]
+    assert any("feed shortage" in s.lower() for s in summaries)
+    prompt_text = "\n".join(m["content"] for m in fake_client.chat_completions.messages[0])
+    assert "feed shortage" in prompt_text.lower()
+
+
+def test_s2_reference_seed_event_excluded_from_live_reasoning_context(db_available, monkeypatch):
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    async def scenario():
+        pool = await _make_pool()
+        company_id, user_id = await _seed_company_and_user(pool)
+        try:
+            await _create_reference_seed_event(
+                pool, company_id=company_id, user_id=user_id,
+                title="Reference Seed Only Event",
+                summary="This reference-seed event must never reach live reasoning.",
+            )
+            service, fake_client = _service_with_real_db(pool)
+            result = await service.chat(
+                session_id="m7-03-s2",
+                message="What happened today?",
+                context={"response_language": "en"},
+                company_id=company_id,
+            )
+            return result, fake_client
+        finally:
+            await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
+
+    result, fake_client = _run(scenario())
+
+    bridge = result["meta"]["context"]["operational_events_bridge"]
+    assert bridge["status"] == "ok"
+    assert bridge["fetched"] == 0
+    assert result["meta"]["context"]["decision_context"]["operational_events"] == []
+    prompt_text = "\n".join(m["content"] for m in fake_client.chat_completions.messages[0])
+    assert "reference-seed event must never reach live reasoning" not in prompt_text.lower()
+
+
+def test_s3_mixture_of_real_and_seed_events_only_real_reaches_live_context(db_available, monkeypatch):
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    async def scenario():
+        pool = await _make_pool()
+        company_id, user_id = await _seed_company_and_user(pool)
+        try:
+            await _create_operational_event(
+                pool, company_id=company_id, user_id=user_id,
+                summary="Production hall reported a feed shortage.",
+            )
+            await _create_reference_seed_event(
+                pool, company_id=company_id, user_id=user_id,
+                title="Reference Seed Only Event",
+                summary="Synthetic seed summary that must not appear live.",
+            )
+            service, fake_client = _service_with_real_db(pool)
+            result = await service.chat(
+                session_id="m7-03-s3",
+                message="What happened today?",
+                context={"response_language": "en"},
+                company_id=company_id,
+            )
+            return result, fake_client
+        finally:
+            await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
+
+    result, fake_client = _run(scenario())
+
+    bridge = result["meta"]["context"]["operational_events_bridge"]
+    assert bridge["status"] == "ok"
+    assert bridge["fetched"] == 1
+    summaries = [item["summary"] for item in result["meta"]["context"]["decision_context"]["operational_events"]]
+    assert any("feed shortage" in s.lower() for s in summaries)
+    assert not any("synthetic seed summary" in s.lower() for s in summaries)
+    prompt_text = "\n".join(m["content"] for m in fake_client.chat_completions.messages[0])
+    assert "feed shortage" in prompt_text.lower()
+    assert "synthetic seed summary" not in prompt_text.lower()
+
+
+def test_s4_reference_seed_event_never_produces_a_truth_reference(db_available, monkeypatch):
+    """Operational Truth Context (M4 T#) has zero code path reading
+    operational_events at all (assemble_truth_context takes no DB handle -
+    see test_seed_operational_events_isolation_truth_assembly_has_no_db_access
+    in test_m7_slice1_upload_truth_bridge.py for the structural proof); this
+    is the live-chat-level confirmation that a reference-seed event produces
+    no reasoning_reference_catalog entry of any kind."""
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    async def scenario():
+        pool = await _make_pool()
+        company_id, user_id = await _seed_company_and_user(pool)
+        try:
+            await _create_reference_seed_event(pool, company_id=company_id, user_id=user_id)
+            service, _fake_client = _service_with_real_db(pool)
+            result = await service.chat(
+                session_id="m7-03-s4",
+                message="What happened today?",
+                context={"response_language": "en"},
+                company_id=company_id,
+            )
+            return result
+        finally:
+            await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
+
+    result = _run(scenario())
+    assert result["meta"]["context"]["decision_context"]["operational_events"] == []
+    assert "reasoning_reference_catalog" not in result["meta"]["context"]["decision_context"]
+
+
+def test_s5_reference_seed_event_absent_from_verified_event_prompt_text(db_available, monkeypatch):
+    monkeypatch.setattr("app.services.openai_client._validate_execution_structure", lambda parsed: True)
+
+    async def scenario():
+        pool = await _make_pool()
+        company_id, user_id = await _seed_company_and_user(pool)
+        try:
+            await _create_reference_seed_event(
+                pool, company_id=company_id, user_id=user_id,
+                title="Unmistakable Seed Marker Title",
+                summary="Unmistakable seed marker summary text.",
+            )
+            service, fake_client = _service_with_real_db(pool)
+            await service.chat(
+                session_id="m7-03-s5",
+                message="What happened today?",
+                context={"response_language": "en"},
+                company_id=company_id,
+            )
+            return fake_client
+        finally:
+            await _cleanup(pool, company_ids=[company_id], user_ids=[user_id])
+
+    fake_client = _run(scenario())
+    full_prompt_text = "\n".join(
+        m["content"] for call_messages in [fake_client.chat_completions.messages[0]] for m in call_messages
+    )
+    assert "unmistakable seed marker" not in full_prompt_text.lower()

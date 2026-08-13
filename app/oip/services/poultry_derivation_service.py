@@ -145,6 +145,10 @@ class PoultryDerivationService:
                         epistemic_origin=_metric_epistemic_origin(
                             value, source_label, raw_source_value
                         ),
+                        source_file_id=record.source_file_id,
+                        source_filename=record.source_filename,
+                        source_company_id=record.source_company_id,
+                        source_department_id=record.source_department_id,
                     )
                 )
         return metrics
@@ -163,6 +167,10 @@ class PoultryDerivationService:
                 sheet_name=record.sheet_name,
                 report_shape=record.report_shape,
                 epistemic_origin=EVENT_ORIGIN,
+                source_file_id=record.source_file_id,
+                source_filename=record.source_filename,
+                source_company_id=record.source_company_id,
+                source_department_id=record.source_department_id,
             )
             for record in records
         ]
@@ -204,6 +212,10 @@ class PoultryDerivationService:
                 source_label=source_label,
                 raw_source_value=raw_source_value,
                 epistemic_origin=SIGNAL_ORIGIN,
+                source_file_id=record.source_file_id,
+                source_filename=record.source_filename,
+                source_company_id=record.source_company_id,
+                source_department_id=record.source_department_id,
             )
         ]
 
@@ -232,6 +244,10 @@ class PoultryDerivationService:
                 source_label=source_label,
                 raw_source_value=raw_source_value,
                 epistemic_origin=SIGNAL_ORIGIN,
+                source_file_id=record.source_file_id,
+                source_filename=record.source_filename,
+                source_company_id=record.source_company_id,
+                source_department_id=record.source_department_id,
             )
         ]
 
@@ -256,6 +272,10 @@ class PoultryDerivationService:
                 sheet_name=record.sheet_name,
                 report_shape=record.report_shape,
                 epistemic_origin=SIGNAL_ORIGIN,
+                source_file_id=record.source_file_id,
+                source_filename=record.source_filename,
+                source_company_id=record.source_company_id,
+                source_department_id=record.source_department_id,
             )
         ]
 
@@ -312,6 +332,10 @@ class PoultryDerivationService:
                     epistemic_origin=SIGNAL_ORIGIN,
                     start_date=start_record.date,
                     end_date=end_record.date,
+                    source_file_id=end_record.source_file_id,
+                    source_filename=end_record.source_filename,
+                    source_company_id=end_record.source_company_id,
+                    source_department_id=end_record.source_department_id,
                 )
             )
         return signals

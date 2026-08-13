@@ -57,6 +57,17 @@ class Evidence:
     source_time: date | None = None
     source_time_status: str | None = None
     provenance_warnings: tuple[str, ...] = ()
+    # M7 Slice 1 Correction Round 1 (M7-01): stable, machine-resolvable
+    # upload provenance anchor - the real uploaded files.id, never the
+    # transient filesystem path a temp upload was parsed from (that path
+    # may not survive the request; source_file above stays as-is for
+    # backward compatibility/dedup, this is additive). None whenever the
+    # underlying claim did not originate from a real user upload (e.g.
+    # static pilot files, company-wide knowledge documents).
+    source_file_id: str | None = None
+    source_filename: str | None = None
+    source_company_id: str | None = None
+    source_department_id: str | None = None
 
     def __post_init__(self) -> None:
         validate_epistemic_origin(self.epistemic_origin)

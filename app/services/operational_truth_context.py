@@ -45,6 +45,15 @@ POULTRY_OPERATIONS_DIR = (
     Path("data_sources") / "jannat_al_firdaws" / "2026_06" / "poultry_operations"
 )
 
+# M7 Slice 1: shared record_type string between the write side
+# (app/api/files.py's structured-ingestion persistence, after a real
+# uploaded Dairtna daily report is KAE-parsed and validated) and this read
+# side (_collect_uploaded_records below) - a single source of truth so the
+# two sides can never drift apart. The stored rows live in the EXISTING
+# structured_record_drafts table (no new table, no migration) - see
+# app.repositories.unified_data_capture_repository.
+POULTRY_DAILY_REPORT_RECORD_TYPE = "poultry_daily_technical_report"
+
 # A synthetic situation type used only to reuse PoultryContextCollector.collect()
 # when no rule-triggered situation (e.g. production_declining_trend) currently
 # exists for a file - so evidence that isn't trend-gated (e.g. a plain
@@ -158,9 +167,19 @@ def assemble_truth_context(
     *,
     company: dict[str, Any] | None,
     aimx_department: dict[str, Any] | None,
+    uploaded_records: list[PoultryOperationalRecord] | None = None,
 ) -> TruthContextResult:
     """Build the bounded Operational Truth Context for the current chat
     request, or explain why none applies.
+
+    ``uploaded_records`` (M7 Slice 1): already-parsed, already-validated
+    PoultryOperationalRecord rows reconstructed from a real user upload's
+    persisted structured_record_drafts row (see AIService._load_truth_context
+    / app.repositories.unified_data_capture_repository). This function never
+    fetches them itself - the caller resolves them from the DB, exactly like
+    it already resolves ``company``/``aimx_department`` - so this module
+    stays a pure function of its arguments. Passing None or an empty list is
+    identical to passing nothing (M4 contract unchanged for existing callers).
 
     Raises on genuinely unexpected failures (a real collector/service bug)
     so the caller can distinguish that from the expected degraded states
@@ -173,7 +192,7 @@ def assemble_truth_context(
     if aimx_department is not None and not is_poultry_department_scope(aimx_department):
         return TruthContextResult(STATUS_NOT_APPLICABLE, 0)
 
-    contexts, headline_metrics = _collect_operational_contexts()
+    contexts, headline_metrics = _collect_operational_contexts(uploaded_records=uploaded_records)
     items = _bounded_evidence_items(contexts, headline_metrics)
     if not items:
         return TruthContextResult(STATUS_NO_EVIDENCE, 0)
@@ -181,10 +200,13 @@ def assemble_truth_context(
     return TruthContextResult(STATUS_OK, len(items), items)
 
 
-def _collect_operational_contexts() -> tuple[list[OperationalContext], list[OperationalMetric]]:
+def _collect_operational_contexts(
+    *, uploaded_records: list[PoultryOperationalRecord] | None = None,
+) -> tuple[list[OperationalContext], list[OperationalMetric]]:
     """Run KAE (translate) -> OIE (derive/situations) -> OCE (collect) for
-    every currently available pilot poultry file, reusing existing
-    services exactly as app/nco/pipeline.py already does.
+    every currently available pilot poultry file PLUS any real
+    upload-derived records supplied this turn, reusing existing services
+    exactly as app/nco/pipeline.py already does.
 
     Also returns every OBSERVED headline metric encountered (see
     HEADLINE_OBSERVED_METRIC_FIELDS) so Scenario A (a directly observed
@@ -195,7 +217,7 @@ def _collect_operational_contexts() -> tuple[list[OperationalContext], list[Oper
     hide evidence from the rest. Any other exception is a real bug and is
     left to propagate, per Step 12's expected-vs-unexpected distinction.
     """
-    if not POULTRY_OPERATIONS_DIR.exists():
+    if not POULTRY_OPERATIONS_DIR.exists() and not uploaded_records:
         return [], []
 
     pipeline = OperationalPipelineService()
@@ -203,47 +225,35 @@ def _collect_operational_contexts() -> tuple[list[OperationalContext], list[Oper
     contexts: list[OperationalContext] = []
     headline_metrics: list[OperationalMetric] = []
 
-    for path in sorted(POULTRY_OPERATIONS_DIR.glob("*.xlsx")):
-        try:
-            records = pipeline.parse_poultry_daily_report(path)
-        except PoultryValidationError:
-            logger.warning("truth_context_skipped_invalid_file", extra={"path": str(path)})
-            continue
-        if not records:
-            continue
-
-        artifacts = pipeline.derivation_service.derive(records)
-        headline_metrics.extend(
-            metric
-            for metric in artifacts.metrics
-            if metric.metric_name in HEADLINE_OBSERVED_METRIC_FIELDS
-            and metric.epistemic_origin == "observed"
-        )
-        situations = pipeline.situation_service.generate_situations(artifacts.signals)
-
-        if situations:
-            contexts.extend(
-                pipeline.operational_context_service.build_contexts(
-                    situations=situations,
-                    metrics=artifacts.metrics,
-                    events=artifacts.events,
-                    signals=artifacts.signals,
-                    records=records,
-                )
+    if POULTRY_OPERATIONS_DIR.exists():
+        for path in sorted(POULTRY_OPERATIONS_DIR.glob("*.xlsx")):
+            try:
+                records = pipeline.parse_poultry_daily_report(path)
+            except PoultryValidationError:
+                logger.warning("truth_context_skipped_invalid_file", extra={"path": str(path)})
+                continue
+            _process_records_into_contexts(
+                records,
+                pipeline=pipeline,
+                collector=collector,
+                contexts=contexts,
+                headline_metrics=headline_metrics,
             )
-            continue
 
-        snapshot = _snapshot_situation(records)
-        if snapshot is None:
-            continue
-        contexts.append(
-            collector.collect(
-                situation=snapshot,
-                metrics=artifacts.metrics,
-                events=artifacts.events,
-                signals=artifacts.signals,
-                records=records,
-            )
+    if uploaded_records:
+        # Real user-uploaded evidence (M7 Slice 1). The active Golden
+        # Journey does not depend on POULTRY_OPERATIONS_DIR existing at all
+        # - this branch runs independently of the static-file scan above.
+        # Deduplication in _bounded_evidence_items keys on (type,
+        # entity_type, entity_reference, source_file, source_row_number),
+        # and each record's own source_file (the real uploaded filename)
+        # keeps upload-derived evidence distinct from static-file evidence.
+        _process_records_into_contexts(
+            list(uploaded_records),
+            pipeline=pipeline,
+            collector=collector,
+            contexts=contexts,
+            headline_metrics=headline_metrics,
         )
 
     if not contexts:
@@ -259,6 +269,57 @@ def _collect_operational_contexts() -> tuple[list[OperationalContext], list[Oper
             )
 
     return contexts, headline_metrics
+
+
+def _process_records_into_contexts(
+    records: list[PoultryOperationalRecord],
+    *,
+    pipeline: OperationalPipelineService,
+    collector: PoultryContextCollector,
+    contexts: list[OperationalContext],
+    headline_metrics: list[OperationalMetric],
+) -> None:
+    """Derive metrics/situations/contexts from one batch of already-parsed,
+    already-validated records and append the results in place - the exact
+    per-file logic _collect_operational_contexts always ran, factored out
+    so the static-file loop and the uploaded-records branch share it
+    identically rather than duplicating it."""
+    if not records:
+        return
+
+    artifacts = pipeline.derivation_service.derive(records)
+    headline_metrics.extend(
+        metric
+        for metric in artifacts.metrics
+        if metric.metric_name in HEADLINE_OBSERVED_METRIC_FIELDS
+        and metric.epistemic_origin == "observed"
+    )
+    situations = pipeline.situation_service.generate_situations(artifacts.signals)
+
+    if situations:
+        contexts.extend(
+            pipeline.operational_context_service.build_contexts(
+                situations=situations,
+                metrics=artifacts.metrics,
+                events=artifacts.events,
+                signals=artifacts.signals,
+                records=records,
+            )
+        )
+        return
+
+    snapshot = _snapshot_situation(records)
+    if snapshot is None:
+        return
+    contexts.append(
+        collector.collect(
+            situation=snapshot,
+            metrics=artifacts.metrics,
+            events=artifacts.events,
+            signals=artifacts.signals,
+            records=records,
+        )
+    )
 
 
 def _snapshot_situation(records: list[PoultryOperationalRecord]) -> OperationalSituation | None:
@@ -353,6 +414,20 @@ def _bounded_evidence_items(
             seen_missing.add(evidence.type)
             missing.append(evidence.to_dict())
 
+    # M7-02 (Correction Round 1): a fresh runtime upload must not be
+    # silently truncated away by a large volume of legacy static pilot
+    # evidence sharing the same bound. This is selection ORDER only - it
+    # never changes an item's epistemic origin, status, or the bound
+    # itself (MAX_AVAILABLE_EVIDENCE_ITEMS is unchanged) - a stable
+    # partition using source_file_id (M7-01's real-upload provenance
+    # anchor, set only for genuine uploaded evidence) as the sole signal,
+    # so direct user-upload-derived items are considered before legacy
+    # static evidence once the existing bound is applied. Dedup above is
+    # untouched and still runs first.
+    upload_derived = [item for item in available if item.get("source_file_id")]
+    other_available = [item for item in available if not item.get("source_file_id")]
+    available = upload_derived + other_available
+
     return available[:MAX_AVAILABLE_EVIDENCE_ITEMS] + missing[:MAX_MISSING_EVIDENCE_ITEMS]
 
 
@@ -388,4 +463,10 @@ def _metric_to_truth_item(metric: OperationalMetric) -> dict[str, Any]:
         "source_time": metric.date.isoformat() if metric.date else None,
         "source_time_status": "authoritative" if metric.date is not None else "unresolved",
         "provenance_warnings": (),
+        # M7 Slice 1 Correction Round 1 (M7-01): stable upload provenance
+        # anchor - see PoultryOperationalRecord's identical fields.
+        "source_file_id": metric.source_file_id,
+        "source_filename": metric.source_filename,
+        "source_company_id": metric.source_company_id,
+        "source_department_id": metric.source_department_id,
     }

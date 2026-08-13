@@ -30,14 +30,24 @@ from app.services.reasoning_validation import (
 )
 
 from app.repositories.company_repository import CompanyRepository
+from app.repositories.department_repository import DepartmentRepository
 from app.repositories.operational_event_repository import OperationalEventRepository, to_intelligence_event
+from app.repositories.unified_data_capture_repository import UnifiedDataCaptureRepository
 from app.services.memory.event_log import log_decision_event, log_decision_event_db
 from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
 from app.services.rag.retrieval import RetrievalService
 from app.services.dairtna.interpreter import interpret_dairtna_measurements
-from app.services.operational_truth_context import assemble_truth_context
-from app.services.company_brain_context import assemble_company_brain_context
+from app.services.operational_truth_context import (
+    assemble_truth_context,
+    is_jannat_tenant,
+    POULTRY_DAILY_REPORT_RECORD_TYPE,
+)
+from app.services.company_brain_context import (
+    assemble_company_brain_context,
+    DAIRTNA_POULTRY_DEPARTMENT_SLUG,
+)
+from app.oip.models.operational_record import PoultryOperationalRecord
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +56,12 @@ RAG_CHUNKS_REQUESTED = 5
 RAG_MAX_CHUNKS_INJECTED = 3
 RAG_MAX_CHUNK_CHARS = 1600
 RAG_MAX_BLOCK_CHARS = 6000
+
+# M7-03 (Correction Round 1): the exact source_type scripts/seed_jannat_
+# operational_events.py's REFERENCE_EVENTS are written with - the only
+# reliable, non-string-matching signal that an operational_events row is
+# reference/test seed data rather than a real verified operational event.
+REFERENCE_SEED_EVENT_SOURCE_TYPE = "reference_seed"
 
 
 FACT_EXTRACTOR_SYSTEM = """
@@ -930,6 +946,67 @@ class AIService:
             )
         return signal_block
 
+    async def _load_uploaded_truth_records(
+        self,
+        *,
+        company: Dict[str, Any] | None,
+        company_id: str,
+        session_id: str,
+    ) -> List[PoultryOperationalRecord]:
+        """M7 Slice 1: fetch real user-uploaded-and-parsed Dairtna daily
+        report records for this company, reconstructed from the persisted
+        structured_record_drafts rows app/api/files.py writes after a
+        supported upload (see _persist_structured_ingestion_result there).
+
+        Deliberately scoped to the real Dairtna poultry department id
+        (resolved by the same exact-slug convention the write side uses),
+        NOT to whichever department the current chat happens to be scoped
+        to - a CEO/company-wide chat (aimx_department is None) must see
+        this evidence exactly like it already sees the static pilot files,
+        and a non-poultry department chat must not (assemble_truth_context
+        itself still enforces that boundary independently). Returns []
+        whenever the tenant isn't entitled, no Dairtna department exists,
+        or nothing has been uploaded yet - all expected, non-error states.
+        """
+        if self.db_pool is None or not is_jannat_tenant(company):
+            return []
+
+        try:
+            company_uuid = UUID(company_id)
+            department = await DepartmentRepository(self.db_pool).get_by_slug(
+                company_uuid, DAIRTNA_POULTRY_DEPARTMENT_SLUG
+            )
+            if department is None:
+                return []
+            drafts = await UnifiedDataCaptureRepository(self.db_pool).list_structured_drafts_by_record_type(
+                company_id=company_uuid,
+                department_id=UUID(str(department["id"])),
+                record_type=POULTRY_DAILY_REPORT_RECORD_TYPE,
+            )
+        except Exception:
+            logger.warning(
+                "truth_context_uploaded_records_fetch_failed",
+                extra={"company_id": company_id, "session_id": session_id},
+                exc_info=True,
+            )
+            return []
+
+        records: List[PoultryOperationalRecord] = []
+        for draft in drafts:
+            payload = draft.get("extracted_payload")
+            if not isinstance(payload, dict):
+                continue
+            for raw_record in payload.get("records") or []:
+                try:
+                    records.append(PoultryOperationalRecord.from_dict(raw_record))
+                except (KeyError, ValueError, TypeError):
+                    logger.warning(
+                        "truth_context_uploaded_record_malformed",
+                        extra={"company_id": company_id, "session_id": session_id},
+                    )
+                    continue
+        return records
+
     async def _load_truth_context(
         self,
         company_id: str,
@@ -965,6 +1042,12 @@ class AIService:
         if not isinstance(aimx_department, dict):
             aimx_department = None
 
+        uploaded_records = await self._load_uploaded_truth_records(
+            company=company,
+            company_id=company_id,
+            session_id=session_id,
+        )
+
         try:
             # Excel parsing is blocking I/O/CPU work; keep it off the event
             # loop the same way ExcelLoader.load_async already does.
@@ -972,6 +1055,7 @@ class AIService:
                 assemble_truth_context,
                 company=company,
                 aimx_department=aimx_department,
+                uploaded_records=uploaded_records,
             )
         except Exception:
             logger.error(
@@ -1293,6 +1377,22 @@ class AIService:
                                 department_id=scoped_department_id,
                                 limit=10,
                             )
+                            # M7-03 (Correction Round 1): reference/test seed
+                            # operational events (scripts/seed_jannat_operational_
+                            # events.py writes source_type="reference_seed") must
+                            # never influence a live Golden reasoning response as
+                            # if they were verified operational events. Filtered
+                            # here - the live reasoning prompt assembly path -
+                            # rather than in list_events() itself, which stays
+                            # unchanged for other callers (e.g. the operational-
+                            # events list endpoint, where an admin auditing seed
+                            # data legitimately needs to see it). Real operational
+                            # events (source_type != "reference_seed") are
+                            # unaffected.
+                            operational_event_rows = [
+                                row for row in operational_event_rows
+                                if row.get("source_type") != REFERENCE_SEED_EVENT_SOURCE_TYPE
+                            ]
                         except Exception:
                             logger.error(
                                 "Operational event bridge failed unexpectedly; proceeding without "

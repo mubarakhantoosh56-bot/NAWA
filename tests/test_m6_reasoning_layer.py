@@ -755,7 +755,7 @@ def _service_with_synthetic_m4_m5(monkeypatch, responses: list[str], *, truth_it
     truth_items = SYNTHETIC_TRUTH_ITEMS if truth_items is None else truth_items
     brain_items = SYNTHETIC_BRAIN_ITEMS if brain_items is None else brain_items
 
-    def _fake_assemble_truth_context(*, company, aimx_department):
+    def _fake_assemble_truth_context(*, company, aimx_department, uploaded_records=None):
         return TruthContextResult(
             status="ok" if truth_items else "no_evidence",
             evidence_count=len(truth_items),

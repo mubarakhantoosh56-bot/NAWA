@@ -225,6 +225,84 @@ class UnifiedDataCaptureRepository:
         )
         return _row_to_dict(row)
 
+    async def find_structured_draft_by_file_id(
+        self,
+        *,
+        company_id: UUID,
+        file_id: UUID,
+        record_type: str,
+    ) -> RowDict | None:
+        """M7: idempotency lookup for upload-derived structured drafts -
+        extracted_payload->>'file_id' is the only place file identity is
+        recorded for this record type (no schema change), so this is a
+        JSONB text-comparison lookup, not an indexed FK lookup.
+
+        ``record_type`` MUST be included in the filter: the same file_id can
+        independently acquire an unrelated structured_record_drafts row from
+        the generic UnifiedDataCaptureService/FileOperationalAnalyzer capture
+        path (e.g. record_type "issue"/"daily_update"/"document" - see
+        app.services.unified_data_capture). Without this filter, an
+        unrelated generic-capture row for the same file would be
+        misidentified as "this poultry ingestion already ran," silently
+        skipping the real persistence - confirmed against the real pilot
+        database during the M7 Slice 1 structural probe."""
+        row = await self.db.fetchrow(
+            """
+            SELECT *
+            FROM structured_record_drafts
+            WHERE company_id = $1
+              AND extracted_payload ->> 'file_id' = $2
+              AND record_type = $3
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            company_id,
+            str(file_id),
+            record_type,
+        )
+        return _optional_row_to_dict(row)
+
+    async def list_structured_drafts_by_record_type(
+        self,
+        *,
+        company_id: UUID,
+        department_id: UUID,
+        record_type: str,
+    ) -> list[RowDict]:
+        """M7: read side of the upload-to-Truth bridge - company- and
+        department-scoped, never a cross-tenant or cross-department read.
+        Rejected drafts are excluded; draft/confirmed both count as real
+        parsed evidence (this table has no separate "structured ingestion
+        succeeded" flag beyond the row existing with a valid payload).
+
+        M7-02 Correction Round 2 (M7-09): ordered newest-draft-first
+        (``created_at DESC``) so that when upload-derived evidence exceeds
+        the bounded-context cap downstream (see
+        operational_truth_context._bounded_evidence_items), the most
+        recently uploaded supported report is the one selection-order
+        prioritizes - not the oldest. This is a context-selection ordering
+        only; it never changes the source report's own date,
+        source_time_status, or epistemic origin. ``id DESC`` is an
+        existing-column deterministic tie-breaker for the rare case of two
+        drafts sharing an identical created_at timestamp - it carries no
+        temporal meaning of its own (a UUID is not sequential), it only
+        guarantees the same order every time."""
+        rows = await self.db.fetch(
+            """
+            SELECT *
+            FROM structured_record_drafts
+            WHERE company_id = $1
+              AND department_id = $2
+              AND record_type = $3
+              AND status != 'rejected'
+            ORDER BY created_at DESC, id DESC
+            """,
+            company_id,
+            department_id,
+            record_type,
+        )
+        return [_row_to_dict(row) for row in rows]
+
     async def get_debug_snapshot(
         self,
         *,

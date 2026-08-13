@@ -46,6 +46,14 @@ class OperationalMetric:
     source_label: str | None = None
     raw_source_value: Any | None = None
     epistemic_origin: EpistemicOrigin | None = None
+    # M7 Slice 1 Correction Round 1 (M7-01): stable upload provenance
+    # anchor, copied 1:1 from the source PoultryOperationalRecord when
+    # present (see PoultryDerivationService.generate_metrics). None for
+    # every static pilot-file-derived metric, matching prior behavior.
+    source_file_id: str | None = None
+    source_filename: str | None = None
+    source_company_id: str | None = None
+    source_department_id: str | None = None
 
     def __post_init__(self) -> None:
         validate_epistemic_origin(self.epistemic_origin)
@@ -84,6 +92,12 @@ class OperationalEvent:
     source_label: str | None = None
     raw_source_value: Any | None = None
     epistemic_origin: EpistemicOrigin | None = None
+    # M7 Slice 1 Correction Round 1 (M7-01): see OperationalMetric's
+    # identical fields above.
+    source_file_id: str | None = None
+    source_filename: str | None = None
+    source_company_id: str | None = None
+    source_department_id: str | None = None
 
     def __post_init__(self) -> None:
         validate_epistemic_origin(self.epistemic_origin)
@@ -131,6 +145,12 @@ class OperationalSignal:
     epistemic_origin: EpistemicOrigin | None = None
     start_date: date | None = None
     end_date: date | None = None
+    # M7 Slice 1 Correction Round 1 (M7-01): see OperationalMetric's
+    # identical fields above.
+    source_file_id: str | None = None
+    source_filename: str | None = None
+    source_company_id: str | None = None
+    source_department_id: str | None = None
 
     def __post_init__(self) -> None:
         validate_epistemic_origin(self.epistemic_origin)

@@ -136,6 +136,10 @@ class PoultryContextCollector:
                     source_time_status=(
                         SOURCE_TIME_AUTHORITATIVE if trend_signal.date else SOURCE_TIME_UNRESOLVED
                     ),
+                    source_file_id=trend_signal.source_file_id,
+                    source_filename=trend_signal.source_filename,
+                    source_company_id=trend_signal.source_company_id,
+                    source_department_id=trend_signal.source_department_id,
                 )
             )
 
@@ -344,6 +348,18 @@ class PoultryContextCollector:
             fields["sheet_name"] = matches[0].sheet_name
         if self._all_equal(m.report_shape for m in matches):
             fields["report_shape"] = matches[0].report_shape
+        # M7 Slice 1 Correction Round 1 (M7-01): stable upload provenance
+        # anchor, same "populate only when every match agrees" discipline
+        # as the fields immediately above - never guessed across
+        # disagreeing matches.
+        if self._all_equal(m.source_file_id for m in matches):
+            fields["source_file_id"] = matches[0].source_file_id
+        if self._all_equal(m.source_filename for m in matches):
+            fields["source_filename"] = matches[0].source_filename
+        if self._all_equal(m.source_company_id for m in matches):
+            fields["source_company_id"] = matches[0].source_company_id
+        if self._all_equal(m.source_department_id for m in matches):
+            fields["source_department_id"] = matches[0].source_department_id
 
         if len(matches) == 1:
             metric = matches[0]

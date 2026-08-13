@@ -89,6 +89,20 @@ class PoultryOperationalRecord:
     entity_reference: str | None
     raw_values: dict[str, Any]
     epistemic_origin: EpistemicOrigin | None = None
+    # M7 Slice 1 Correction Round 1 (M7-01): stable, machine-resolvable
+    # upload provenance anchor - all optional/additive, following the same
+    # backward-compatible pattern app.oce.models.evidence.Evidence already
+    # established. Populated ONLY by app/api/files.py's
+    # _persist_structured_ingestion_result at the moment a real uploaded
+    # file is persisted (the one place company/department/file identity is
+    # authoritatively known) - never guessed, never derived from
+    # source_file (a transient/temp filesystem path that may not survive
+    # the request). Static pilot-file-derived records never set these and
+    # stay None, matching pre-existing behavior exactly.
+    source_file_id: str | None = None
+    source_filename: str | None = None
+    source_company_id: str | None = None
+    source_department_id: str | None = None
 
     def __post_init__(self) -> None:
         validate_epistemic_origin(self.epistemic_origin)
@@ -99,4 +113,27 @@ class PoultryOperationalRecord:
         if self.date is not None:
             payload["date"] = self.date.isoformat()
         payload["source_file"] = Path(self.source_file).as_posix()
+        # M7: raw_values holds the original untouched cell values keyed by
+        # source column header (audit/debugging provenance) - a date/
+        # datetime cell (e.g. openpyxl's native type for التاريخ) is not
+        # itself JSON-serializable, and this method's contract is to be
+        # JSON-friendly, so it is normalized here the same way the typed
+        # ``date`` field above already is. Every other raw cell type
+        # (str/int/float/bool/None) passes through unchanged.
+        payload["raw_values"] = {
+            key: value.isoformat() if isinstance(value, date) else value
+            for key, value in self.raw_values.items()
+        }
         return payload
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "PoultryOperationalRecord":
+        """Reconstruct a record from its to_dict() representation (M7:
+        round-trips through JSONB persistence - see
+        app/services/operational_truth_context.py's uploaded-evidence
+        source). Never guesses a missing field; raises KeyError/ValueError
+        the same as constructing the dataclass directly would."""
+        data = dict(payload)
+        raw_date = data.get("date")
+        data["date"] = date.fromisoformat(raw_date) if raw_date else None
+        return cls(**data)

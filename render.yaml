@@ -28,3 +28,5 @@ services:
         value: "1536"
       - key: RAG_RETRIEVAL_MODE
         value: semantic
+      - key: JANNAT_COMPANY_ID
+        sync: false

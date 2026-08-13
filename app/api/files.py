@@ -1,5 +1,6 @@
 """Files API routes for MVP RAG ingestion."""
 
+import dataclasses
 import logging
 import tempfile
 from pathlib import Path
@@ -37,9 +38,16 @@ from app.models.response import (
     FileResponse,
 )
 from app.nco import NCOLiteOrchestrator
+from app.nco.pipeline import KAE_STATE_SUPPORTED_WITH_DATA, KAEOutput
 from app.repositories.company_repository import CompanyRepository
+from app.repositories.unified_data_capture_repository import UnifiedDataCaptureRepository
 from app.services.file_ingestion_service import FileIngestionService
 from app.services.operational_event_draft_service import OperationalEventDraftService
+from app.services.operational_truth_context import (
+    POULTRY_DAILY_REPORT_RECORD_TYPE,
+    is_jannat_tenant,
+)
+from app.services.company_brain_context import DAIRTNA_POULTRY_DEPARTMENT_SLUG
 
 router = APIRouter(prefix="/files", tags=["Files"])
 logger = logging.getLogger(__name__)
@@ -278,11 +286,28 @@ async def _run_nco_lite_after_upload_if_applicable(
             department_id=department_id,
         )
 
-    if not _is_jannat_company(company):
+    # M7 Slice 1: reuse the same authoritative, non-spoofable tenant check
+    # M4/M5/M6 already established (settings.JANNAT_COMPANY_ID == the
+    # authenticated company's id, exact UUID equality) - the old fuzzy
+    # name/slug substring match here was a real gap once this path started
+    # PERSISTING structured output (see _persist_structured_ingestion_result
+    # below): a spoofed company name could previously only have wasted a
+    # discarded NCO-lite run, but persisted output would have been real
+    # tenant-isolation contamination.
+    if not is_jannat_tenant(company):
         return None
-    if not _is_dairtna_poultry_daily_report(filename=filename, department=department):
+    # Department identity itself must be authoritative (the exact-slug
+    # convention M5's Company Brain applicability already uses) - a
+    # CEO/no-department upload, or a non-Dairtna department, must never
+    # be treated as Dairtna-scoped structured evidence. The filename marker
+    # remains a coarse "does this look like the daily technical report"
+    # routing hint only, never a substitute for validated department scope.
+    if department is None or str(department.get("slug") or "") != DAIRTNA_POULTRY_DEPARTMENT_SLUG:
+        return None
+    if not _has_daily_report_filename_marker(filename):
         return None
 
+    structured_ingestion_status = "unsupported"
     try:
         orchestrator = NCOLiteOrchestrator()
         result = await orchestrator.run_upload_completed(
@@ -295,7 +320,26 @@ async def _run_nco_lite_after_upload_if_applicable(
             session_id=f"upload:{file_record.get('id')}",
             store_memory=False,
         )
-        return _summarize_nco_result(result.to_dict())
+        summary = _summarize_nco_result(result.to_dict())
+        kae = result.kae
+        if kae is not None and kae.ingestion_state == KAE_STATE_SUPPORTED_WITH_DATA:
+            # Real structured records exist and passed PoultryValidator
+            # regardless of whether the downstream MVP evidence policy later
+            # blocked CEO-brief generation (a separate, stricter gate for a
+            # different purpose) - Truth Context only needs validated
+            # records, not a complete executive brief.
+            persisted = await _persist_structured_ingestion_result(
+                file_service=file_service,
+                company_id=company_id,
+                department_id=department_id,
+                created_by=UUID(auth_context.user_id),
+                file_id=UUID(str(file_record.get("id"))),
+                filename=filename,
+                kae=kae,
+            )
+            structured_ingestion_status = "succeeded" if persisted else "unsupported"
+        summary["structured_ingestion_status"] = structured_ingestion_status
+        return summary
     except Exception as exc:
         logger.warning(
             "nco_lite_upload_integration_failed",
@@ -308,44 +352,99 @@ async def _run_nco_lite_after_upload_if_applicable(
         )
         return {
             "nco_status": "failed",
+            "structured_ingestion_status": "failed",
             "error": str(exc) or type(exc).__name__,
         }
 
 
-def _is_jannat_company(company: dict[str, object] | None) -> bool:
-    if company is None:
-        return False
-    haystack = _normalized_match_text(
-        company.get("slug"),
-        company.get("name"),
-    )
-    return (
-        "jannat" in haystack
-        and "firdaws" in haystack
-    ) or "الفردوس" in haystack
-
-
-def _is_dairtna_poultry_daily_report(
+async def _persist_structured_ingestion_result(
     *,
+    file_service: FileIngestionService,
+    company_id: UUID,
+    department_id: UUID | None,
+    created_by: UUID,
+    file_id: UUID,
     filename: str,
-    department: dict[str, object] | None,
+    kae: KAEOutput,
 ) -> bool:
+    """Persist KAE's validated structured records so Operational Truth
+    Context can read them later, using the existing structured-record-draft
+    table (already the designated "normalized structured upload output"
+    store - see UnifiedDataCaptureRepository.create_structured_record_draft,
+    used today only by the generic keyword-capture path). No new table, no
+    migration.
+
+    Idempotent by file_id: if this file was already persisted (e.g. a
+    retried upload/duplicate processing), this is a no-op rather than
+    duplicating Truth evidence.
+    """
+    repo = UnifiedDataCaptureRepository(file_service.db)
+    existing = await repo.find_structured_draft_by_file_id(
+        company_id=company_id, file_id=file_id, record_type=POULTRY_DAILY_REPORT_RECORD_TYPE
+    )
+    if existing is not None:
+        logger.info(
+            "structured_ingestion_already_persisted",
+            extra={"company_id": str(company_id), "file_id": str(file_id)},
+        )
+        return True
+
+    raw_input = await repo.create_raw_input(
+        company_id=company_id,
+        created_by=created_by,
+        # "file" is the real allowed value (see migrations/007_unified_data_
+        # capture.sql's chk_raw_inputs_source_type CHECK constraint: 'chat',
+        # 'form', 'file', 'integration', 'automation' - no migration for a
+        # new value, per Section 8's minimal-reuse preference). The
+        # structured-ingestion-specific nature is already captured by
+        # record_type="poultry_daily_technical_report" on the draft below
+        # plus this row's own file_id/source_ref, so no provenance is lost.
+        source_type="file",
+        raw_content=f"Structured Dairtna daily technical report: {filename}",
+        department_id=department_id,
+        source_ref=filename,
+        file_id=file_id,
+        processing_status="parsed",
+    )
+    # M7-01 (Correction Round 1): stamp the stable upload provenance anchor
+    # onto each record HERE - the one place company/department/file
+    # identity is authoritatively known - so it survives independently of
+    # the transient parser temp path, all the way through to the final
+    # Truth item/T#. See PoultryOperationalRecord.source_file_id and
+    # friends.
+    provenanced_records = [
+        dataclasses.replace(
+            record,
+            source_file_id=str(file_id),
+            source_filename=filename,
+            source_company_id=str(company_id),
+            source_department_id=str(department_id) if department_id else None,
+        )
+        for record in kae.records
+    ]
+    await repo.create_structured_record_draft(
+        company_id=company_id,
+        raw_input_id=raw_input["id"],
+        created_by=created_by,
+        department_id=department_id,
+        record_type=POULTRY_DAILY_REPORT_RECORD_TYPE,
+        extracted_payload={
+            "file_id": str(file_id),
+            "filename": filename,
+            "report_shape": kae.report_shape,
+            "ingestion_state": kae.ingestion_state,
+            "records": [record.to_dict() for record in provenanced_records],
+        },
+    )
+    return True
+
+
+def _has_daily_report_filename_marker(filename: str) -> bool:
     filename_text = _normalized_match_text(filename)
-    scope_text = _normalized_match_text(
-        filename,
-        department.get("slug") if department else None,
-        department.get("name") if department else None,
-        department.get("department_type") if department else None,
-    )
-    has_dairtna_scope = any(
-        token in scope_text
-        for token in ("dairtna", "deirtna", "ديرتنا", "poultry", "دواجن")
-    )
-    has_daily_report_marker = any(
+    return any(
         token in filename_text
         for token in ("daily", "technical", "report", "تقرير", "التقرير", "يومي", "اليومي")
     )
-    return has_dairtna_scope and has_daily_report_marker
 
 
 def _normalized_match_text(*values: object) -> str:
