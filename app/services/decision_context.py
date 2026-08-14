@@ -271,6 +271,125 @@ def public_decision_context(decision_context: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in decision_context.items() if k not in INTERNAL_ONLY_DECISION_CONTEXT_KEYS}
 
 
+# M7 Slice 2A: explicit allowlist for meta.context (app/api/chat.py's
+# ChatResponse.meta.context) - the ONLY top-level fields the public chat
+# response may echo back. Replaces "pass the entire internal `context` dict
+# accumulated during chat() straight through" with an explicit, auditable
+# list. Derived only from currently-tested/required compatibility accesses:
+# the three bridge-status keys, company_intelligence_profile, and (narrowed
+# further below) decision_context.department / decision_context.
+# operational_events - plus the new Slice 2A "explainability" block.
+# Everything else chat() accumulates along the way (organizational_
+# intelligence, the full operational_truth_context/company_brain_context
+# lists, internal role/data-capture bookkeeping, raw client-echoed
+# request.context fields, mock KPI scaffolding, internal UUID/path
+# provenance, etc.) is intentionally dropped here.
+PUBLIC_CONTEXT_ALLOWED_KEYS = frozenset(
+    {
+        "operational_events_bridge",
+        "truth_context_bridge",
+        "company_brain_bridge",
+        "company_intelligence_profile",
+        "decision_context",
+        "explainability",
+    }
+)
+
+# Once inside the (already reasoning_signals/reasoning_reference_catalog
+# -stripped) public decision_context, only these two sub-keys survive -
+# the exact two currently-tested compatibility accesses (department.key,
+# operational_events). Full operational_truth_context/company_brain_context/
+# organizational_intelligence/key_kpis/trends/etc. never reach the public
+# response even though public_decision_context() above still carries them
+# (that function's job is only to strip the M6-internal keys; this one
+# narrows further to what the public contract actually needs).
+PUBLIC_DECISION_CONTEXT_ALLOWED_KEYS = frozenset({"department", "operational_events"})
+
+
+def public_context_allowlist(context: dict[str, Any]) -> dict[str, Any]:
+    """Return a new dict containing ONLY the approved public meta.context
+    fields, safe to place into the public chat response. Never mutates the
+    input `context` (which remains the full internal working dict used for
+    logging/prompt construction earlier in the same turn)."""
+    if not isinstance(context, dict):
+        return {}
+
+    public: dict[str, Any] = {
+        key: context[key] for key in PUBLIC_CONTEXT_ALLOWED_KEYS if key in context
+    }
+
+    raw_decision_context = context.get("decision_context")
+    if isinstance(raw_decision_context, dict):
+        public["decision_context"] = {
+            key: raw_decision_context[key]
+            for key in PUBLIC_DECISION_CONTEXT_ALLOWED_KEYS
+            if key in raw_decision_context
+        }
+
+    return public
+
+
+def reasoning_prose_language_instruction(response_language: str | None) -> str:
+    """response_language binds reasoning_assessment human-readable prose
+    (operational_assessment/tensions/evidence_gaps/risk_assessment/etc.) -
+    never reasoning_state (stays the English enum) or a T#/CB# reference
+    ID. Single source of truth for this instruction text (Correction
+    Round 1, 2A-F1): consumed both by the initial prompt (via
+    build_decision_context_prompt_block) and by every repair/regeneration
+    prompt through reasoning_language_contract(), so a candidate produced
+    by ANY path is bound by the identical wording - never only inherited
+    from the first message in a conversation an LLM may deprioritize once
+    a later, more specific repair instruction is appended."""
+    if response_language == "ar":
+        return (
+            "- response_language for this turn is 'ar': write operational_assessment, tensions, evidence_gaps, "
+            "risk_assessment, and every other human-readable reasoning_assessment prose field in Arabic. "
+            "reasoning_state stays the exact English enum value (aligned/tension/insufficient_evidence) and "
+            "evidence_basis/company_basis/missing_evidence stay the exact reference IDs (T#/CB#) - never "
+            "translate the enum value or a reference ID."
+        )
+    return (
+        "- response_language for this turn is 'en': write operational_assessment, tensions, "
+        "evidence_gaps, risk_assessment, and every other human-readable reasoning_assessment prose "
+        "field in English."
+    )
+
+
+def company_brain_alignment_vocabulary_instruction(response_language: str | None) -> str:
+    """The company_brain_alignment controlled vocabulary (Section 10) -
+    same single-source-of-truth rationale as
+    reasoning_prose_language_instruction above."""
+    if response_language == "ar":
+        return (
+            "- company_brain_alignment must use EXACTLY one of these four Arabic phrases, verbatim, with no "
+            "paraphrase and no translation of your own: 'مدعوم بالأدلة الحالية' (supported by current "
+            "evidence), 'غير مدعوم بالأدلة الحالية' (not supported by current evidence), 'مدعوم جزئيًا' "
+            "(partially supported), or 'لا يمكن التحديد' (cannot determine). Do not use these phrases to "
+            "describe whether the policy itself is right or wrong."
+        )
+    return (
+        "- Use only: 'supported by current evidence', 'not supported by current evidence', 'partially "
+        "supported', or 'cannot determine' to describe whether a Company Brain position is currently "
+        "actionable. Do not use these phrases to describe whether the policy itself is right or wrong."
+    )
+
+
+def reasoning_language_contract(response_language: str | None) -> str:
+    """Combined reasoning-prose-language + company_brain_alignment-
+    vocabulary contract, for prompts that need to freshly re-assert the
+    FULL binding in one message (Correction Round 1, 2A-F1) - the legacy
+    execution-structure retry, the operational-response regeneration
+    instruction, and the M6 reasoning_assessment repair instruction all
+    append this, so the binding does not rely on merely surviving from the
+    initial prompt into a repair/regeneration candidate."""
+    return "\n".join(
+        [
+            reasoning_prose_language_instruction(response_language),
+            company_brain_alignment_vocabulary_instruction(response_language),
+        ]
+    )
+
+
 def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str:
     if not decision_context:
         return ""
@@ -335,12 +454,13 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Operational Semantics topics describe what company terms mean, not what management prefers or requires - never present them as policy.",
             "AI REASONING LAYER (M6) - RULES:",
             "- Populate raw_decision.reasoning_assessment on every response: reasoning_state (one of aligned/tension/insufficient_evidence - see Reasoning Signals for the allowed values), operational_assessment, company_brain_alignment, tensions, evidence_gaps, risk_assessment, confidence, and recommendation_basis (evidence_basis, company_basis, missing_evidence). These are auditable decision provenance, never hidden chain-of-thought - do not write step-by-step internal deliberation into any field.",
+            reasoning_prose_language_instruction(decision_context.get("response_language")),
             "- Every Operational Truth Context item shown below is labeled with a reference ID (T1, T2, ...) and every Company Brain Context item shown below is labeled (CB1, CB2, ...). recommendation_basis.evidence_basis may ONLY cite a T# that is USABLE evidence (AVAILABLE with an OBSERVED or DERIVED origin - never missing, never inferred-only). recommendation_basis.company_basis may ONLY cite a CB# that is AUTHORITATIVE settled company doctrine (a curated policy-type item, not INSTITUTIONAL_MEMORY, whose authority is exactly 'authoritative' and which is not conflicted - never a merely-not-conflicted or unlabeled item). missing_evidence may only cite a T# that is itself missing or has unresolved source time. Never invent a reference ID, never cite a reference from the wrong section, and never cite a prose source (e.g. 'a report' or a made-up document name) - only these exact IDs are valid, and this is validated at runtime.",
             "- Reason in this order every time: first determine what the Operational Truth Context evidence actually supports; only then relate that to Company Brain Context; only then decide what action is justified. Never start from a Company Brain preference and search for supporting facts - that is confirmation bias.",
             "- Neither Operational Truth Context nor Company Brain Context automatically wins when they point in different directions. Do not say 'continue because this is company policy' and do not say 'ignore company strategy because evidence changed.' State the evidence, state the company position, name the tension explicitly, and evaluate whether current evidence supports acting on the company position now.",
             "- You may explicitly say current evidence does not support executing a Company Brain preference right now. This is an evidence-based recommendation about timing/conditions, not a claim that company policy is wrong - never mark a Company Brain item as incorrect.",
             "- When two technically valid actions are both supported by the evidence, Company Brain (risk posture, philosophy, priorities) may legitimately determine which one is recommended - if it does, say explicitly that the company's stated position influenced the choice.",
-            "- Use only: 'supported by current evidence', 'not supported by current evidence', 'partially supported', or 'cannot determine' to describe whether a Company Brain position is currently actionable. Do not use these phrases to describe whether the policy itself is right or wrong.",
+            company_brain_alignment_vocabulary_instruction(decision_context.get("response_language")),
             "- A correlation, hypothesis, or possible explanation must never be written as a confirmed cause. Only a DERIVED trend or an OBSERVED fact may be treated as established; an INFERRED explanation stays a hypothesis in the reasoning, explicitly labeled as such.",
             "- A Recommended Action is a proposal, never a fact - do not phrase a recommendation as something that has already happened or that is objectively true. Distinguish it from Facts/Key Insights.",
             "- If a recommendation depends materially on evidence that is missing (missing_evidence_count > 0 in Reasoning Signals), do not assign it a confident root cause: give a conditional recommendation, recommend collecting the missing evidence first, and lower confidence accordingly.",
@@ -519,6 +639,19 @@ def _build_reasoning_reference_catalog(
             # INFERRED item is not "evidence" in the first place, so its
             # own timestamp state is not a missing-evidence gap).
             "is_gap_reference": is_missing or is_unresolved_time,
+            # M7 Slice 2A-F4: the exact item that received THIS T# this
+            # turn, captured here (not re-derived later by indexing into
+            # operational_truth_context). This is what makes T# resolution
+            # immune to the caller reordering/rebuilding that list after
+            # catalog creation - the catalog entry itself is the only
+            # authoritative source of "what T# means". Internal-only: a
+            # shallow copy so later mutation of the source list's items
+            # can't retroactively change what was cited; must NEVER be
+            # placed in any public/serialized payload (see
+            # INTERNAL_ONLY_DECISION_CONTEXT_KEYS and explainability.py,
+            # which reads this field but only re-emits an explicit
+            # sanitized allowlist from it).
+            "internal_source_item": dict(item),
         }
 
     company_brain_refs: dict[str, dict[str, Any]] = {}
@@ -552,6 +685,10 @@ def _build_reasoning_reference_catalog(
             "is_authoritative": is_authoritative,
             "is_unresolved": is_unresolved,
             "is_settled": is_settled,
+            # M7 Slice 2A-F4: see the matching truth_refs comment above -
+            # the exact item that received THIS CB# this turn, immune to
+            # later reordering of company_brain_context. Internal-only.
+            "internal_source_item": dict(item),
         }
 
     return {"truth": truth_refs, "company_brain": company_brain_refs}

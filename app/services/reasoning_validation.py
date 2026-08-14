@@ -29,6 +29,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.services.decision_context import reasoning_language_contract
+
 from pydantic import BaseModel, ConfigDict, StrictInt, ValidationError, field_validator
 
 REASONING_STATES = ("aligned", "tension", "insufficient_evidence")
@@ -210,5 +212,11 @@ def build_reasoning_assessment_repair_instruction(
         "applies, use an empty list for that field instead.\n"
         "- Do NOT explain your reasoning process outside the JSON fields; only populate the structured "
         "fields themselves.\n"
-        f"Keep executive_summary in response_language={response_language}. Return only JSON."
+        f"Keep executive_summary in response_language={response_language}. Return only JSON.\n"
+        # 2A-F1 (Correction Round 1): re-assert the full reasoning-language
+        # contract here too - a repair prompt is the newest, most specific
+        # instruction the model sees, so it must not be silent on prose
+        # language/vocabulary merely because the initial prompt already
+        # stated it.
+        f"{reasoning_language_contract(response_language)}"
     )

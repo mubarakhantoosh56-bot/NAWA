@@ -18,7 +18,9 @@ from app.services.company_profile import build_company_profile_prompt_block
 from app.services.decision_context import (
     build_decision_context,
     build_decision_context_prompt_block,
+    public_context_allowlist,
     public_decision_context,
+    reasoning_language_contract,
 )
 from app.services.decision_debug import (
     start_decision_debug_snapshot,
@@ -38,6 +40,7 @@ from app.services.memory.repository import MemoryRepository
 from app.services.memory.memory_prompt import build_memory_block
 from app.services.rag.retrieval import RetrievalService
 from app.services.dairtna.interpreter import interpret_dairtna_measurements
+from app.services.explainability import build_public_explainability
 from app.services.operational_truth_context import (
     assemble_truth_context,
     is_jannat_tenant,
@@ -637,7 +640,12 @@ def _build_operational_regeneration_instruction(
         "For FMCG, apply concrete logic such as rising demand + slower production line = fulfillment bottleneck, "
         "overtime + delayed collections = margin pressure, delayed production + sales growth = execution instability. "
         "Avoid vague phrases such as there are challenges, performance should improve, focus on efficiency, increase revenue. "
-        f"Keep executive_summary concise and in response_language={response_language}. Return only JSON."
+        f"Keep executive_summary concise and in response_language={response_language}. Return only JSON.\n"
+        # 2A-F1 (Correction Round 1): this regeneration can become the
+        # final candidate - re-assert the full reasoning-language contract
+        # here too, not only in the initial prompt this message list
+        # inherited.
+        f"{reasoning_language_contract(response_language)}"
     )
 
 
@@ -1598,7 +1606,13 @@ class AIService:
                             "Do NOT write generic items like develop prototype, launch campaign, evaluate performance, create content. "
                             "Do not place generic product-building or planning items inside solution_generator. "
                             "Every solution_generator item must also be a market execution action with platform, audience, KPI, quantity, and timeframe. "
-                            "Valid example: Send 150 LinkedIn outreach messages to Iraqi retail business owners within 21 days targeting a 12% reply rate."
+                            "Valid example: Send 150 LinkedIn outreach messages to Iraqi retail business owners within 21 days targeting a 12% reply rate.\n"
+                            # 2A-F1 (Correction Round 1): this retry can
+                            # become the final candidate - re-assert the
+                            # full reasoning-language contract here too,
+                            # not only in the initial prompt this message
+                            # list inherited.
+                            f"{reasoning_language_contract(response_language)}"
                         ),
                     },
                 ]
@@ -1846,6 +1860,30 @@ class AIService:
                         f"operational_missing_elements={final_missing_elements}"
                     )
 
+            # M7 Slice 2A: public explainability, built ONLY here - after
+            # legacy validation, operational validation, M6 validation, and
+            # every repair/regeneration/replacement path above has fully
+            # settled `parsed` as the FINAL accepted candidate. A rejected,
+            # repaired-away, or regenerated-away candidate's references can
+            # structurally never reach this point (each such path either
+            # reassigns `parsed`/`decision_context` before this line or
+            # raises, exiting the function entirely) - see
+            # app/services/explainability.py's own docstring for the
+            # contract this placement guarantees. Resolved only from the
+            # already-scoped decision_context built earlier this turn -
+            # never a second independent Truth/Company Brain fetch.
+            final_reasoning_assessment: Dict[str, Any] | None = None
+            if isinstance(parsed, dict):
+                final_raw_decision = parsed.get("raw_decision")
+                if isinstance(final_raw_decision, dict):
+                    candidate_assessment = final_raw_decision.get("reasoning_assessment")
+                    if isinstance(candidate_assessment, dict):
+                        final_reasoning_assessment = candidate_assessment
+            context["explainability"] = build_public_explainability(
+                reasoning_assessment=final_reasoning_assessment,
+                decision_context=decision_context,
+            )
+
             try:
                 log_decision_event(
                     company_id=company_id,
@@ -1901,7 +1939,11 @@ class AIService:
 
             return format_ai_response(
                 answer_text=answer_text,
-                context=context,
+                # M7 Slice 2A: the public response only ever sees the
+                # explicit meta.context allowlist - the full internal
+                # `context` dict (already used above for logging/prompt
+                # construction) is never echoed back wholesale.
+                context=public_context_allowlist(context),
                 session_id=session_id,
                 company_id=company_id,
                 followup_question=None,

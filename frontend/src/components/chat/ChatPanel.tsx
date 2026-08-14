@@ -5,15 +5,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { chatStorageKey, sanitizeExplainability } from "@/lib/chat/storage";
 import { getDemoChatTurns } from "@/lib/demo-data";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
-import type { ChatResponse, Department } from "@/lib/types";
-
-type ChatTurn = {
-  id: string;
-  userMessage: string;
-  response: ChatResponse;
-};
+import type { ChatResponse, ChatTurn, Department, PersistedChatResponse, PersistedChatTurn } from "@/lib/types";
 
 type ChatPanelProps = {
   token: string;
@@ -45,16 +40,14 @@ export function ChatPanel({
   const isShowingDemoTurns = turns.length === 0 && demoTurns.length > 0;
   const visibleTurns = turns.length > 0 ? turns : demoTurns;
   const sessionId = useMemo(() => `frontend-${workspaceKey}-session`, [workspaceKey]);
-  const storageKey = useMemo(() => `nawa.chat.${companyId}`, [companyId]);
+  const storageKey = useMemo(() => chatStorageKey(companyId), [companyId]);
   const suggestedPrompts = useMemo(() => getSuggestedPrompts(department, language), [department, language]);
   const workspaceLabel = department ? localizeDepartmentName(department.name, language) : "CEO";
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(storageKey);
-      if (saved) {
-        setTurnsByWorkspace(JSON.parse(saved) as Record<string, ChatTurn[]>);
-      }
+      setTurnsByWorkspace(saved ? parseStoredTurns(saved) : {});
     } catch {
       setTurnsByWorkspace({});
     } finally {
@@ -67,7 +60,7 @@ export function ChatPanel({
       return;
     }
 
-    window.localStorage.setItem(storageKey, JSON.stringify(turnsByWorkspace));
+    window.localStorage.setItem(storageKey, JSON.stringify(buildPersistedTurns(turnsByWorkspace)));
   }, [hasLoadedSession, storageKey, turnsByWorkspace]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -93,7 +86,8 @@ export function ChatPanel({
       const nextTurn: ChatTurn = {
         id: `${workspaceKey}-${Date.now()}`,
         userMessage: message,
-        response,
+        response: toPersistedChatResponse(response),
+        logicJson: response.logic_json,
       };
 
       setTurnsByWorkspace((current) => ({
@@ -159,7 +153,7 @@ export function ChatPanel({
                 </div>
                 <MetaIndicators response={turn.response} />
               </div>
-              <LogicPanel logic={turn.response.logic_json} />
+              <LogicPanel logic={turn.logicJson} />
             </div>
           </article>
         ))}
@@ -254,7 +248,7 @@ function WelcomeState({
   );
 }
 
-function MetaIndicators({ response }: { response: ChatResponse }) {
+function MetaIndicators({ response }: { response: PersistedChatResponse }) {
   const { t } = useLanguage();
 
   return (
@@ -272,9 +266,17 @@ function MetaIndicators({ response }: { response: ChatResponse }) {
   );
 }
 
-function LogicPanel({ logic }: { logic: Record<string, unknown> }) {
+// M7 Slice 2A: logic_json is internal M6 output kept for backend
+// compatibility only (see ChatResponse.logic_json's own doc comment in
+// lib/types.ts) - this panel is legacy display, not a UI contract. It only
+// ever receives a value for the CURRENT session's freshly-received turns
+// (see ChatTurn.logicJson); a turn reloaded from localStorage has none and
+// renders as empty, never crashing. Slice 2B replaces this with an
+// Executive Reasoning panel built from meta.context.explainability.
+function LogicPanel({ logic }: { logic: unknown }) {
   const { t } = useLanguage();
-  const keys = Object.keys(logic);
+  const record = logic && typeof logic === "object" ? (logic as Record<string, unknown>) : {};
+  const keys = Object.keys(record);
 
   return (
     <details className="mt-4 rounded-md border border-line bg-surface">
@@ -285,10 +287,127 @@ function LogicPanel({ logic }: { logic: Record<string, unknown> }) {
         </span>
       </summary>
       <pre className="max-h-56 overflow-auto border-t border-line bg-white p-3 text-xs leading-5 text-ink">
-        {JSON.stringify(logic, null, 2)}
+        {JSON.stringify(record, null, 2)}
       </pre>
     </details>
   );
+}
+
+// --- M7 Slice 2A privacy boundary -------------------------------------
+// The only place a full backend ChatResponse is narrowed down to the
+// sanitized PersistedChatResponse shape actually kept in React state/
+// localStorage, and the only place a raw localStorage payload (current or
+// legacy) is parsed back into that same sanitized shape. See lib/types.ts
+// for the type contract this enforces.
+
+export function toPersistedChatResponse(response: ChatResponse): PersistedChatResponse {
+  return {
+    ceo_text: response.ceo_text,
+    followup_question: response.followup_question,
+    meta: {
+      parse_ok: response.meta.parse_ok,
+      memory_injected: response.meta.memory_injected,
+      events_count: response.meta.events_count,
+      // 2A-F2 (Correction Round 1): sanitized at runtime, never trusted
+      // via a TypeScript cast - a malformed/over-broad live backend
+      // response must not be able to smuggle extra fields into persisted
+      // state (defense in depth on top of the backend's own allowlist).
+      explainability: sanitizeExplainability(response.meta.context?.explainability),
+    },
+  };
+}
+
+export function buildPersistedTurns(
+  turnsByWorkspace: Record<string, ChatTurn[]>,
+): Record<string, PersistedChatTurn[]> {
+  const persisted: Record<string, PersistedChatTurn[]> = {};
+  for (const [workspace, turnList] of Object.entries(turnsByWorkspace)) {
+    persisted[workspace] = turnList.map(({ id, userMessage, response }) => ({
+      id,
+      userMessage,
+      response,
+    }));
+  }
+  return persisted;
+}
+
+export function parseStoredTurns(raw: string): Record<string, ChatTurn[]> {
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!data || typeof data !== "object") {
+    return {};
+  }
+
+  const result: Record<string, ChatTurn[]> = {};
+  for (const [workspace, value] of Object.entries(data as Record<string, unknown>)) {
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    const turns: ChatTurn[] = [];
+    for (const entry of value) {
+      const turn = toStoredChatTurn(entry);
+      if (turn) {
+        turns.push(turn);
+      }
+    }
+    result[workspace] = turns;
+  }
+  return result;
+}
+
+// Defensive/crash-safe: a legacy (pre-Slice-2A) stored payload has MORE
+// fields than this (full meta.context, logic_json) - those are simply
+// ignored, never re-persisted. Any entry missing the fields this UI
+// actually needs is dropped rather than crashing the chat view.
+export function toStoredChatTurn(entry: unknown): ChatTurn | null {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+  const record = entry as Record<string, unknown>;
+  if (typeof record.id !== "string" || typeof record.userMessage !== "string") {
+    return null;
+  }
+
+  const response = record.response;
+  if (!response || typeof response !== "object") {
+    return null;
+  }
+  const responseRecord = response as Record<string, unknown>;
+  if (typeof responseRecord.ceo_text !== "string") {
+    return null;
+  }
+
+  const meta = responseRecord.meta;
+  const metaRecord = meta && typeof meta === "object" ? (meta as Record<string, unknown>) : {};
+  // Pre-Slice-2A payloads kept explainability (if present at all) nested
+  // under meta.context; current payloads keep it directly under meta.
+  const context = metaRecord.context;
+  const contextRecord = context && typeof context === "object" ? (context as Record<string, unknown>) : {};
+  const explainability = metaRecord.explainability ?? contextRecord.explainability ?? null;
+
+  return {
+    id: record.id,
+    userMessage: record.userMessage,
+    response: {
+      ceo_text: responseRecord.ceo_text,
+      followup_question: typeof responseRecord.followup_question === "string" ? responseRecord.followup_question : null,
+      meta: {
+        parse_ok: Boolean(metaRecord.parse_ok),
+        memory_injected: Boolean(metaRecord.memory_injected),
+        events_count: typeof metaRecord.events_count === "number" ? metaRecord.events_count : 0,
+        // 2A-F2 (Correction Round 1): sanitized at runtime - a legacy or
+        // adversarial localStorage payload must not be able to smuggle
+        // extra fields (internal UUIDs/paths nested inside an otherwise
+        // valid-looking item, unapproved confidence drivers, ...) back
+        // into React state via an unchecked TypeScript cast.
+        explainability: sanitizeExplainability(explainability),
+      },
+    },
+  };
 }
 
 function Badge({

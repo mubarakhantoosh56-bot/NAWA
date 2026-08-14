@@ -1,4 +1,4 @@
-import type { ChatResponse, CompanyFile, Department } from "@/lib/types";
+import type { ChatTurn, CompanyFile, Department, PersistedChatResponse } from "@/lib/types";
 
 export const DEMO_COMPANY = {
   name: "Jannat Al-Firdaws",
@@ -232,32 +232,28 @@ const DEMO_CHAT_HISTORY = {
   ],
 };
 
-function turn(userMessage: string, ceoText: string, logic: Record<string, unknown>) {
+function turn(userMessage: string, ceoText: string, logic: Record<string, unknown>): ChatTurn {
   return {
     id: `demo-${userMessage.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     userMessage,
-    response: demoResponse(ceoText, logic),
+    response: demoResponse(ceoText),
+    // Demo turns are synthetic and never persisted (isDemoModeEnabled()
+    // turns only ever populate visibleTurns as a fallback when no real,
+    // storable turns exist yet) - safe to keep showing illustrative
+    // logic_json content here.
+    logicJson: { demo_mode: true, confidence: "high", ...logic },
   };
 }
 
-function demoResponse(ceoText: string, logic: Record<string, unknown>): ChatResponse {
+function demoResponse(ceoText: string): PersistedChatResponse {
   return {
     ceo_text: ceoText,
-    logic_json: {
-      demo_mode: true,
-      confidence: "high",
-      ...logic,
-    },
     followup_question: null,
     meta: {
-      company_id: "demo-company",
-      session_id: "investor-demo",
-      context: {
-        dataset: "Jannat Al-Firdaws operational demo",
-      },
       parse_ok: true,
       memory_injected: true,
       events_count: 12,
+      explainability: null,
     },
   };
 }
