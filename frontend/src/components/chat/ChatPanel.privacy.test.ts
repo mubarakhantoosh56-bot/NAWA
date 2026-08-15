@@ -77,6 +77,24 @@ function fakeBackendResponse(): ChatResponse {
             { id: "c1", label: "Feed sourcing priority", type: "POLICY", statement: "Prefer local feed suppliers." },
           ],
           confidence: { value: 80, band: "high", drivers: [] },
+          // M7 Slice 2B safe executive-provenance fields.
+          reasoning_state: "aligned",
+          operational_assessment: "Hall 2 trend reviewed against current evidence.",
+          company_brain_alignment: "supported by current evidence",
+          tensions: [],
+          evidence_gaps: [],
+          risk_assessment: "Low risk given current evidence.",
+          missing_evidence: [
+            {
+              id: "m1",
+              label: "water_consumption",
+              filename: null,
+              report_date: null,
+              entity: null,
+              epistemic_origin: null,
+              source_time_status: null,
+            },
+          ],
         },
       },
     },
@@ -131,6 +149,28 @@ describe("toPersistedChatResponse", () => {
     expect(persisted.meta.events_count).toBe(4);
     expect(persisted.meta.explainability?.cited_evidence[0].label).toBe("bird_balance");
     expect(persisted.meta.explainability?.confidence?.band).toBe("high");
+  });
+
+  it("P2B-01..05: retains the new Slice 2B safe executive-provenance fields", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponse());
+    const explainability = persisted.meta.explainability;
+    expect(explainability?.reasoning_state).toBe("aligned");
+    expect(explainability?.operational_assessment).toBe("Hall 2 trend reviewed against current evidence.");
+    expect(explainability?.company_brain_alignment).toBe("supported by current evidence");
+    expect(explainability?.tensions).toEqual([]);
+    expect(explainability?.evidence_gaps).toEqual([]);
+    expect(explainability?.risk_assessment).toBe("Low risk given current evidence.");
+    expect(explainability?.missing_evidence).toEqual([
+      {
+        id: "m1",
+        label: "water_consumption",
+        filename: null,
+        report_date: null,
+        entity: null,
+        epistemic_origin: null,
+        source_time_status: null,
+      },
+    ]);
   });
 
   it("does not carry logic_json at all", () => {
@@ -361,5 +401,65 @@ describe("parseStoredTurns (P8: legacy payload safety)", () => {
     ]) {
       expect(serialized).not.toContain(unsafe);
     }
+  });
+
+  it("P2B-09: strips malformed/adversarial Slice 2B fields from a legacy payload rather than crashing", () => {
+    const maliciousRaw = JSON.stringify({
+      ceo: [
+        {
+          id: "legacy-2b",
+          userMessage: "old question",
+          response: {
+            ceo_text: "old answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 1,
+              explainability: {
+                cited_evidence: [],
+                cited_company_basis: [],
+                confidence: null,
+                reasoning_state: "an_invented_fifth_state",
+                operational_assessment: { nested: "not a string" },
+                company_brain_alignment: 12345,
+                tensions: ["safe-tension", { nested: "leak" }],
+                evidence_gaps: "not-an-array",
+                risk_assessment: ["also", "not", "a", "string"],
+                missing_evidence: [
+                  {
+                    id: "m1",
+                    label: "water_consumption",
+                    source_file_id: "b6e6b8f0-1111-2222-3333-444455556666",
+                    filesystem_path: "/var/data/hall2.xlsx",
+                    T_ref: "T3",
+                  },
+                  { label: "no id here - must be dropped" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(maliciousRaw);
+    expect(parsed.ceo).toHaveLength(1);
+    const explainability = parsed.ceo[0].response.meta.explainability;
+
+    expect(explainability?.reasoning_state).toBeNull();
+    expect(explainability?.operational_assessment).toBeNull();
+    expect(explainability?.company_brain_alignment).toBeNull();
+    expect(explainability?.tensions).toEqual(["safe-tension"]);
+    expect(explainability?.evidence_gaps).toEqual([]);
+    expect(explainability?.risk_assessment).toBeNull();
+    expect(explainability?.missing_evidence).toHaveLength(1);
+
+    const serialized = JSON.stringify(explainability);
+    expect(serialized).not.toContain("an_invented_fifth_state");
+    expect(serialized).not.toContain("source_file_id");
+    expect(serialized).not.toContain("filesystem_path");
+    expect(serialized).not.toContain("b6e6b8f0-1111-2222-3333-444455556666");
+    expect(serialized).not.toContain("T_ref");
   });
 });

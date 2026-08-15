@@ -125,10 +125,30 @@ export type ExplainabilityConfidence = {
   drivers: ConfidenceDriver[];
 };
 
+// M7 Slice 2B: backend enum, verbatim - never a fourth state, never
+// translated here (see ExecutiveReasoningPanel for the localized display
+// label mapping, which is presentation-only and never changes this value).
+export type ReasoningState = "aligned" | "tension" | "insufficient_evidence";
+
 export type Explainability = {
   cited_evidence: ExplainabilityEvidenceItem[];
   cited_company_basis: ExplainabilityCompanyBasisItem[];
   confidence: ExplainabilityConfidence | null;
+  // M7 Slice 2B: safe executive-provenance passthrough from the FINAL
+  // accepted reasoning_assessment - see app/services/explainability.py.
+  // Never reconstructed/inferred in frontend code.
+  reasoning_state: ReasoningState | null;
+  operational_assessment: string | null;
+  // Verbatim controlled-vocabulary string from the backend (frozen UX
+  // decision, Slice 2B Section 8) - never re-mapped to another label here.
+  company_brain_alignment: string | null;
+  tensions: string[];
+  evidence_gaps: string[];
+  risk_assessment: string | null;
+  // Structured, server-resolved gap provenance - same safe shape as
+  // cited_evidence (see app/services/explainability.py's
+  // _resolve_missing_evidence, which reuses _sanitize_evidence_item).
+  missing_evidence: ExplainabilityEvidenceItem[];
 };
 
 export type ChatDecisionContextDepartment = {

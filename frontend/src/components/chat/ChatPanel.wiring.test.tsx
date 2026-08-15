@@ -56,8 +56,30 @@ function overBroadResponse(): ChatResponse {
               source_file_id: "b6e6b8f0-1111-2222-3333-444455556666",
             },
           ],
-          cited_company_basis: [],
+          cited_company_basis: [
+            { id: "c1", label: "Feed sourcing priority", type: "POLICY", statement: "Prefer local feed suppliers." },
+          ],
           confidence: { value: 80, band: "high", drivers: [] },
+          reasoning_state: "aligned",
+          operational_assessment: "Hall 2 trend reviewed against current evidence.",
+          company_brain_alignment: "supported by current evidence",
+          tensions: [],
+          evidence_gaps: [],
+          risk_assessment: "Low risk given current evidence.",
+          missing_evidence: [
+            {
+              id: "m1",
+              label: "water_consumption",
+              filename: null,
+              report_date: null,
+              entity: null,
+              epistemic_origin: null,
+              source_time_status: null,
+              // Defense-in-depth: a hypothetical backend regression leaking
+              // internal provenance through the new missing_evidence field too.
+              source_file_id: "cccc0000-1111-2222-3333-444455556666",
+            },
+          ],
         },
       },
     },
@@ -71,11 +93,11 @@ describe("ChatPanel real persistence wiring (Section 15)", () => {
     vi.mocked(sendChatMessage).mockReset();
   });
 
-  it("persists only sanitized content after a real submit + save-effect cycle", async () => {
+  it("persists only sanitized content after a real submit + save-effect cycle, and renders ExecutiveReasoningPanel without any raw LogicPanel (Section 35)", async () => {
     vi.mocked(sendChatMessage).mockResolvedValue(overBroadResponse());
 
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <LanguageProvider>
         <ChatPanel token="tok" companyId="company-123" workspaceKey="ceo" title="CEO" department={null} />
       </LanguageProvider>,
@@ -89,6 +111,34 @@ describe("ChatPanel real persistence wiring (Section 15)", () => {
       expect(screen.getByText("Hall 2 production is on track.")).toBeInTheDocument();
     });
 
+    // ExecutiveReasoningPanel renders with the real submitted response.
+    expect(screen.getByText("Executive Reasoning")).toBeInTheDocument();
+    expect(screen.getByText("Aligned")).toBeInTheDocument();
+    expect(screen.getByText("Hall 2 trend reviewed against current evidence.")).toBeInTheDocument();
+    expect(screen.getByText("supported by current evidence")).toBeInTheDocument();
+    expect(screen.getByText("bird_balance")).toBeInTheDocument();
+    expect(screen.getByText("Feed sourcing priority")).toBeInTheDocument();
+    expect(screen.getByText("water_consumption")).toBeInTheDocument();
+    expect(screen.getByText("Low risk given current evidence.")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+
+    // UI-13: raw LogicPanel is entirely absent from normal UX - no
+    // "Decision logic" debug toggle, no raw JSON dump, no <details>/<pre>.
+    expect(screen.queryByText("Decision logic")).not.toBeInTheDocument();
+    expect(container.querySelector("pre")).toBeNull();
+    expect(container.querySelector("details")).toBeNull();
+
+    // UI-08: numeric confidence value (80) is never rendered as visible text.
+    expect(container.textContent).not.toMatch(/80/);
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+
+    // UI-14: no internal T#/CB#/UUID/path visible anywhere in the DOM.
+    expect(container.textContent).not.toContain("source_file_id");
+    expect(container.textContent).not.toContain("b6e6b8f0-1111-2222-3333-444455556666");
+    expect(container.textContent).not.toContain("cccc0000-1111-2222-3333-444455556666");
+    expect(container.textContent).not.toMatch(/\bT\d+\b/);
+    expect(container.textContent).not.toMatch(/\bCB\d+\b/);
+
     await waitFor(() => {
       const raw = window.localStorage.getItem(chatStorageKey("company-123"));
       expect(raw).toBeTruthy();
@@ -100,6 +150,8 @@ describe("ChatPanel real persistence wiring (Section 15)", () => {
     expect(raw).toContain("Hall 2 production is on track.");
     expect(raw).toContain("Would you like the weekly trend as well?");
     expect(raw).toContain("bird_balance");
+    expect(raw).toContain("aligned");
+    expect(raw).toContain("water_consumption");
 
     // logic_json absent.
     expect(raw).not.toContain("should_never_persist");
@@ -115,8 +167,10 @@ describe("ChatPanel real persistence wiring (Section 15)", () => {
     expect(raw).not.toContain("leaked event should not persist");
     expect(raw).not.toContain("confidential doctrine");
 
-    // Unsafe explainability extras / internal UUID absent.
+    // Unsafe explainability extras / internal UUID absent, including from
+    // the new missing_evidence field.
     expect(raw).not.toContain("source_file_id");
     expect(raw).not.toContain("b6e6b8f0-1111-2222-3333-444455556666");
+    expect(raw).not.toContain("cccc0000-1111-2222-3333-444455556666");
   });
 });

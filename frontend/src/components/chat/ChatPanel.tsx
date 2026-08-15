@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { chatStorageKey, sanitizeExplainability } from "@/lib/chat/storage";
+import { ExecutiveReasoningPanel } from "@/components/chat/ExecutiveReasoningPanel";
 import { getDemoChatTurns } from "@/lib/demo-data";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { ChatResponse, ChatTurn, Department, PersistedChatResponse, PersistedChatTurn } from "@/lib/types";
@@ -153,7 +154,7 @@ export function ChatPanel({
                 </div>
                 <MetaIndicators response={turn.response} />
               </div>
-              <LogicPanel logic={turn.logicJson} />
+              <ExecutiveReasoningPanel explainability={turn.response.meta.explainability} />
             </div>
           </article>
         ))}
@@ -266,32 +267,13 @@ function MetaIndicators({ response }: { response: PersistedChatResponse }) {
   );
 }
 
-// M7 Slice 2A: logic_json is internal M6 output kept for backend
-// compatibility only (see ChatResponse.logic_json's own doc comment in
-// lib/types.ts) - this panel is legacy display, not a UI contract. It only
-// ever receives a value for the CURRENT session's freshly-received turns
-// (see ChatTurn.logicJson); a turn reloaded from localStorage has none and
-// renders as empty, never crashing. Slice 2B replaces this with an
-// Executive Reasoning panel built from meta.context.explainability.
-function LogicPanel({ logic }: { logic: unknown }) {
-  const { t } = useLanguage();
-  const record = logic && typeof logic === "object" ? (logic as Record<string, unknown>) : {};
-  const keys = Object.keys(record);
-
-  return (
-    <details className="mt-4 rounded-md border border-line bg-surface">
-      <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-semibold uppercase text-muted">
-        <span>{t("decisionLogic")}</span>
-        <span className="rounded border border-line bg-white px-2 py-0.5 text-[11px] normal-case text-accent">
-          {keys.length ? `${keys.length} ${t("fields")}` : t("empty")}
-        </span>
-      </summary>
-      <pre className="max-h-56 overflow-auto border-t border-line bg-white p-3 text-xs leading-5 text-ink">
-        {JSON.stringify(record, null, 2)}
-      </pre>
-    </details>
-  );
-}
+// M7 Slice 2B (Section 16, frozen decision): the raw logic_json debug
+// panel is removed from normal ChatPanel UX entirely - not hidden behind
+// demo mode, an admin role, a collapsed <details>, or any new end-user
+// debug toggle. Normal users see only ExecutiveReasoningPanel, built from
+// the sanitized meta.context.explainability contract. The existing
+// developer/debug decision-context path (DECISION_CONTEXT_DEBUG) remains
+// the debugging path for engineers - not a UI component.
 
 // --- M7 Slice 2A privacy boundary -------------------------------------
 // The only place a full backend ChatResponse is narrowed down to the

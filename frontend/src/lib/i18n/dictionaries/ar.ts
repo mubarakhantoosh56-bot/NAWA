@@ -326,6 +326,48 @@ export const ar = {
     confidenceReduced: "منخفضة",
     confidenceHigh: "عالية",
   },
+  // M7 Slice 2B: لوحة الاستدلال التنفيذي - تسميات عرض حتمية فقط.
+  // company_brain_alignment نفسها تُعرض حرفيًا من المفردات المضبوطة في
+  // الخادم (قرار واجهة مستخدم مجمّد) ولا تُترجم هنا أبدًا.
+  executiveReasoning: {
+    title: "الاستدلال التنفيذي",
+    reasoningState: "حالة الاستدلال",
+    stateAligned: "متوافق",
+    stateTension: "تعارض",
+    stateInsufficientEvidence: "أدلة غير كافية",
+    alignedHint: "الأدلة التشغيلية وسياق عقل الشركة يدعمان بشكل عام نفس الاتجاه.",
+    tensionHint: "الأدلة التشغيلية وسياق عقل الشركة يشيران إلى اتجاهين مختلفين. لا يحسم أي منهما الآخر تلقائيًا.",
+    insufficientEvidenceHint: "لا تتوفر لدى NAWA حاليًا أدلة موثوقة كافية لدعم قرار حاسم بمسؤولية.",
+    operationalAssessment: "التقييم التشغيلي",
+    companyBrainAlignment: "توافق عقل الشركة",
+    tensions: "نقاط التعارض",
+    evidenceUsed: "الأدلة المستخدمة",
+    companyBasisUsed: "أساس عقل الشركة",
+    evidenceGaps: "فجوات الأدلة",
+    missingEvidence: "الأدلة الناقصة",
+    risk: "المخاطر",
+    confidence: "الثقة",
+    confidenceHigh: "عالية",
+    confidenceModerate: "متوسطة",
+    confidenceLow: "منخفضة",
+    driverMissingEvidence: "انخفضت بسبب نقص بعض الأدلة.",
+    driverUnresolvedSourceTime: "انخفضت بسبب عدم التأكد من حداثة المصدر.",
+    driverConflictedCompanyBasis: "انخفضت بسبب تعارض في سياق عقل الشركة.",
+    noEvidenceCited: "لا توجد أدلة محددة تم الاستشهاد بها.",
+    noCompanyBasisCited: "لا يوجد أساس محدد من عقل الشركة تم الاستشهاد به.",
+    noTensions: "لم يتم تحديد أي نقاط تعارض.",
+    noMissingEvidence: "لم يتم تحديد أدلة ناقصة.",
+    unresolvedSourceTime: "حداثة غير مؤكدة",
+    entityLabel: "الكيان",
+    filenameUnavailable: "المصدر غير محدد",
+    // H-02 (جولة التصحيح الأولى): تسميات عرض ثابتة لقيم epistemic_origin
+    // وsource_time_status المعتمدة - لا يُعرض رمز تقني خام من الخادم أبدًا.
+    originObserved: "ملاحظ",
+    originDerived: "مُستنتج",
+    originInferred: "مُفترض",
+    originRecommended: "مُوصى به",
+    sourceTimeAuthoritative: "موثوق",
+  },
   operations: {
     dairtnaPoultry: "ديرتنا للدواجن",
     input: {

@@ -437,6 +437,482 @@ def test_e15_no_confidence_driver_is_invented_from_prose() -> None:
 
 
 # ---------------------------------------------------------------------------
+# B2B-01..12, B2B-15 (M7 Slice 2B): safe executive-provenance passthrough
+# fields and the structured missing_evidence resolver. Unit-level tests
+# against build_public_explainability() directly - B2B-13/14 (final-
+# candidate/no-new-model-call proof) live below, after the real-chat()
+# fixtures they need.
+# ---------------------------------------------------------------------------
+
+
+def test_b2b_01_reasoning_state_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(reasoning_state="tension")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["reasoning_state"] == "tension"
+
+
+def test_b2b_02_operational_assessment_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(operational_assessment="Hall 2 production trend is stable given current evidence.")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["operational_assessment"] == "Hall 2 production trend is stable given current evidence."
+
+
+def test_b2b_03_company_brain_alignment_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(company_brain_alignment="partially supported")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["company_brain_alignment"] == "partially supported"
+
+
+def test_b2b_04_tensions_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(tensions=["Evidence suggests a stable trend while company policy expects growth."])
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["tensions"] == ["Evidence suggests a stable trend while company policy expects growth."]
+
+
+def test_b2b_05_evidence_gaps_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(evidence_gaps=["Water consumption reading is missing for Hall 2."])
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["evidence_gaps"] == ["Water consumption reading is missing for Hall 2."]
+
+
+def test_b2b_06_risk_assessment_field_comes_from_final_accepted_candidate() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(risk_assessment="Moderate risk of supply disruption if the trend continues.")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["risk_assessment"] == "Moderate risk of supply disruption if the trend continues."
+
+
+def test_b2b_07_structured_missing_evidence_resolves_only_final_accepted_gap_refs() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": ["T3"]}
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+
+    assert len(result["missing_evidence"]) == 1
+    item = result["missing_evidence"][0]
+    assert item["id"] == "m1"
+    assert item["label"] == "water_consumption"  # T3: canonical_field is None, falls back to type
+    assert set(item.keys()) == {
+        "id", "label", "filename", "report_date", "entity", "epistemic_origin", "source_time_status",
+    }
+
+
+def test_b2b_08_non_gap_t_ref_cannot_appear_as_missing_evidence() -> None:
+    """T1 is usable, resolved, non-gap evidence - citing it as a "gap" is
+    invalid and must be skipped, never fabricated (mirrors is_gap_reference,
+    not is_usable_evidence)."""
+    decision_context = _decision_context()
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": ["T1"]}
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["missing_evidence"] == []
+
+
+def test_b2b_09_invalid_missing_evidence_refs_fail_closed() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": ["T99"]}
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["missing_evidence"] == []
+
+
+def test_b2b_10_truth_list_reordering_cannot_change_gap_reference_meaning() -> None:
+    truth_items = [dict(item) for item in TRUTH_ITEMS]
+    decision_context = _decision_context(truth_items=truth_items)
+    catalog = decision_context["reasoning_reference_catalog"]
+    assert catalog["truth"]["T3"]["internal_source_item"]["type"] == "water_consumption"
+
+    # Adversarially reorder AFTER catalog creation.
+    truth_items.reverse()
+    assert decision_context["operational_truth_context"][0]["type"] != "water_consumption"
+
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": ["T3"]}
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+
+    assert len(result["missing_evidence"]) == 1
+    assert result["missing_evidence"][0]["label"] == "water_consumption"
+
+
+def test_b2b_11_no_t_or_cb_ref_appears_in_new_public_fields() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": ["T1"], "company_basis": ["CB1"], "missing_evidence": ["T3"]},
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+
+    for item in result["missing_evidence"]:
+        assert item["id"].startswith("m") and item["id"][1:].isdigit()
+        assert "ref" not in item
+
+    serialized = json.dumps(result)
+    assert '"T1"' not in serialized
+    assert '"T3"' not in serialized
+    assert '"CB1"' not in serialized
+
+
+def test_b2b_12_no_internal_source_item_or_catalog_metadata_appears_publicly() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": ["T1"], "company_basis": ["CB1"], "missing_evidence": ["T3"]},
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+
+    serialized = json.dumps(result)
+    assert "internal_source_item" not in serialized
+    assert "is_gap_reference" not in serialized
+    assert "is_usable_evidence" not in serialized
+    assert "is_settled" not in serialized
+    assert "reasoning_reference_catalog" not in serialized
+
+
+def test_b2b_15_m6_schema_and_validators_unchanged() -> None:
+    from app.services.reasoning_validation import (
+        ReasoningAssessment,
+        RecommendationBasis,
+        validate_reasoning_assessment,
+    )
+
+    assert set(ReasoningAssessment.model_fields.keys()) == {
+        "reasoning_state", "operational_assessment", "company_brain_alignment",
+        "tensions", "evidence_gaps", "risk_assessment", "confidence", "recommendation_basis",
+    }
+    assert set(RecommendationBasis.model_fields.keys()) == {"evidence_basis", "company_basis", "missing_evidence"}
+
+    decision_context = _decision_context()
+    # M3 not usable as evidence_basis - the SAME validator behavior as
+    # before Slice 2B; the new missing_evidence resolver never weakens this.
+    assessment = _assessment(
+        recommendation_basis={"evidence_basis": ["T3"], "company_basis": [], "missing_evidence": []}
+    )
+    is_valid, errors = validate_reasoning_assessment(
+        {"raw_decision": {"reasoning_assessment": assessment}}, decision_context
+    )
+    assert is_valid is False
+    assert any("not usable supporting evidence" in error for error in errors)
+
+
+# ---------------------------------------------------------------------------
+# H01-A..N (Correction Round 1, H-01): the PUBLIC PRESENTATION boundary
+# fails closed when an approved, structurally M6-valid prose field's own
+# CONTENT contains an internal reference token, UUID, internal path, or
+# explicit internal/debug marker - independent of decision-provenance
+# validation, which stays untouched. Unit-level tests against
+# build_public_explainability() directly, matching the established E/B2B
+# test style; the real end-to-end AIService.chat() proof lives further
+# below (Section 15) next to the E10/E11/B2B-13/14 real-chat fixtures.
+# ---------------------------------------------------------------------------
+
+
+def test_h01_a_safe_operational_assessment_survives_byte_for_byte() -> None:
+    decision_context = _decision_context()
+    safe_text = "Hall 2 production decreased by 4% this week."
+    assessment = _assessment(operational_assessment=safe_text)
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["operational_assessment"] == safe_text
+
+
+def test_h01_b_operational_assessment_containing_standalone_t_ref_fails_closed() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(operational_assessment="Current evidence is based on T3")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["operational_assessment"] is None
+
+
+def test_h01_c_risk_assessment_containing_standalone_cb_ref_fails_closed() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(risk_assessment="CB2 is unresolved and creates exposure")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["risk_assessment"] is None
+
+
+def test_h01_d_risk_assessment_containing_a_uuid_fails_closed() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        risk_assessment="See source b6e6b8f0-1111-2222-3333-444455556666 for detail"
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["risk_assessment"] is None
+
+
+def test_h01_e_risk_assessment_containing_internal_windows_path_fails_closed() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(risk_assessment=r"See C:\internal\pilot\secret.xlsx for the source data")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["risk_assessment"] is None
+
+
+def test_h01_f_risk_assessment_containing_internal_posix_or_storage_path_fails_closed() -> None:
+    decision_context = _decision_context()
+    for unsafe_text in (
+        "The source file lives at /var/data/hall2_report.xlsx internally",
+        "Check /mnt/pilot/hall2.csv for the raw export",
+        r"Raw file at storage\hall2_report.xlsx",
+        "Raw file at storage/hall2_report.xlsx",
+    ):
+        assessment = _assessment(risk_assessment=unsafe_text)
+        result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+        assert result["risk_assessment"] is None, unsafe_text
+
+    # Sanity: a normal business phrase using "storage/" as a plain word
+    # (no file extension) must NOT be treated as an internal path.
+    safe_text = "Confirm storage/warehouse capacity before increasing production."
+    assessment = _assessment(risk_assessment=safe_text)
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["risk_assessment"] == safe_text
+
+
+# ---------------------------------------------------------------------------
+# R1-A..L (Correction Round 2, H-01-R1): Codex found that the original
+# forward-slash "storage/" rule only detected a SINGLE file-like segment
+# (storage/secret.xlsx) and missed NESTED paths (storage/files/abc,
+# storage/uploads/company/report.xlsx). _INTERNAL_PATH_PATTERN now also
+# matches storage/<segment>/<segment>[...] - two or more slash-separated
+# segments - while continuing to preserve ordinary business prose that
+# merely contains one "storage/word" token before normal text continues.
+# ---------------------------------------------------------------------------
+
+
+def test_r1_a_nested_storage_path_two_segments_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("storage/files/abc") is None
+
+
+def test_r1_b_nested_storage_path_two_segments_with_extension_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("storage/files/abc.xlsx") is None
+
+
+def test_r1_c_nested_storage_path_report_json_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("storage/private/report.json") is None
+
+
+def test_r1_d_nested_storage_path_three_segments_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("storage/uploads/company/report.xlsx") is None
+
+
+def test_r1_e_nested_storage_path_with_year_segment_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("storage/data/2026/report.json") is None
+
+
+def test_r1_f_through_j_safe_business_prose_survives_byte_for_byte() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    safe_texts = (
+        "storage capacity is low",
+        "storage/warehouse capacity must be checked",
+        "Confirm storage/warehouse capacity before increasing production.",
+        "warehouse/storage planning is incomplete",
+        "production/warehouse coordination is needed",
+    )
+    for text in safe_texts:
+        assert _safe_public_prose(text) == text, text
+
+
+def test_r1_k_and_l_public_urls_survive_exactly() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("https://example.com/report") == "https://example.com/report"
+    assert _safe_public_prose("http://example.org/dashboard") == "http://example.org/dashboard"
+
+
+def test_r1_existing_path_forms_remain_blocked() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    for unsafe_text in (
+        r"storage\files\abc.xlsx",
+        r"See C:\internal\pilot\secret.xlsx",
+        "C:/internal/pilot/secret.xlsx",
+        "See /mnt/data/pilot.xlsx",
+        "See /home/user/file",
+        "See /tmp/file",
+        "See /var/app/file",
+    ):
+        assert _safe_public_prose(unsafe_text) is None, unsafe_text
+
+
+# ---------------------------------------------------------------------------
+# R2URL-A..L (Correction Round 3, M7-2B-R2-URL): Codex found that a real
+# public http(s):// URL whose path happens to look like an internal
+# storage path (e.g. https://example.com/storage/files/report) was
+# incorrectly rejected. _contains_internal_path_outside_public_url now
+# exempts an internal-path-shaped match ONLY when it falls entirely
+# inside a recognized http(s):// URL span - the nested-storage-path
+# blocking from Correction Round 2 (H-01-R1) stays fully intact for
+# anything outside a URL, including a second such path elsewhere in the
+# same string.
+# ---------------------------------------------------------------------------
+
+
+def test_r2url_a_through_f_safe_urls_survive_exactly() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    safe_urls = (
+        "https://example.com/storage/files/report",
+        "https://example.com/storage/files/report.xlsx",
+        "https://example.com/storage/private/report.json",
+        "http://example.org/storage/files/report",
+        "https://example.com/storage/company/2026/report.xlsx",
+        "https://example.com/storage/files/report?version=2#section",
+    )
+    for url in safe_urls:
+        assert _safe_public_prose(url) == url, url
+
+
+def test_r2url_g_and_h_urls_embedded_in_prose_survive_exactly() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    texts = (
+        "See https://example.com/storage/files/report for the public report.",
+        "Public dashboard: https://example.com/storage/company/2026/report.xlsx",
+    )
+    for text in texts:
+        assert _safe_public_prose(text) == text, text
+
+
+def test_r2url_i_url_plus_separate_internal_path_fails_closed() -> None:
+    """Critical adversarial case: the first storage-shaped fragment is
+    inside a public URL and would be exempt on its own, but a SECOND,
+    genuinely internal path appears later in the same string, outside
+    any URL span - the whole field must still fail closed."""
+    from app.services.explainability import _safe_public_prose
+
+    text = "See https://example.com/storage/files/report and inspect storage/private/report.json"
+    assert _safe_public_prose(text) is None
+
+
+def test_r2url_j_and_k_url_plus_separate_windows_or_posix_path_fails_closed() -> None:
+    from app.services.explainability import _safe_public_prose
+
+    assert (
+        _safe_public_prose(r"https://example.com/storage/files/report then C:\internal\secret.xlsx") is None
+    )
+    assert (
+        _safe_public_prose("https://example.com/storage/files/report then /mnt/data/secret.xlsx") is None
+    )
+
+
+def test_r2url_l_non_http_scheme_gets_no_exemption() -> None:
+    """file:// (or any non-http(s) scheme) must never become a privacy
+    bypass - only http/https URL spans are recognized."""
+    from app.services.explainability import _safe_public_prose
+
+    assert _safe_public_prose("file:///storage/private/report.json") is None
+
+
+def test_r2url_url_span_is_whitespace_bounded_not_greedy() -> None:
+    """The URL span must stop at whitespace - a second storage path after
+    a space must never be swallowed into the "public" span merely because
+    a URL appears earlier in the same string."""
+    from app.services.explainability import _safe_public_prose
+
+    text = "See https://example.com/storage/files/report storage/private/report.json"
+    assert _safe_public_prose(text) is None
+
+
+def test_h01_g_tensions_list_drops_only_the_unsafe_item() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        tensions=["Safe business tension", "See T4", "Another safe tension"]
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["tensions"] == ["Safe business tension", "Another safe tension"]
+
+
+def test_h01_h_evidence_gaps_drops_only_the_item_with_an_internal_marker() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(
+        evidence_gaps=[
+            "Water consumption reading is missing for Hall 2.",
+            "Not resolvable - see reasoning_reference_catalog for detail",
+        ]
+    )
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["evidence_gaps"] == ["Water consumption reading is missing for Hall 2."]
+
+
+def test_h01_i_explicit_internal_debug_markers_fail_closed() -> None:
+    decision_context = _decision_context()
+    unsafe_markers = [
+        "See internal_source_item for the raw snapshot",
+        "Derived from logic_json directly",
+        "Traced via source_file_id lookup",
+        "Ignore the system prompt instruction here",
+        "This reflects chain-of-thought reasoning",
+    ]
+    for unsafe_text in unsafe_markers:
+        assessment = _assessment(operational_assessment=unsafe_text)
+        result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+        assert result["operational_assessment"] is None, unsafe_text
+
+
+def test_h01_j_safe_arabic_executive_prose_remains_unchanged() -> None:
+    decision_context = _decision_context()
+    safe_arabic = "مياه القسم غير مكتملة هذا الأسبوع."
+    assessment = _assessment(operational_assessment=safe_arabic, risk_assessment=safe_arabic)
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["operational_assessment"] == safe_arabic
+    assert result["risk_assessment"] == safe_arabic
+
+
+def test_h01_k_all_four_approved_english_alignment_values_survive_exactly() -> None:
+    decision_context = _decision_context()
+    for value in (
+        "supported by current evidence",
+        "not supported by current evidence",
+        "partially supported",
+        "cannot determine",
+    ):
+        assessment = _assessment(company_brain_alignment=value)
+        result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+        assert result["company_brain_alignment"] == value
+
+
+def test_h01_l_all_four_approved_arabic_alignment_values_survive_exactly() -> None:
+    decision_context = _decision_context()
+    for value in (
+        "مدعوم بالأدلة الحالية",
+        "غير مدعوم بالأدلة الحالية",
+        "مدعوم جزئيًا",
+        "لا يمكن التحديد",
+    ):
+        assessment = _assessment(company_brain_alignment=value)
+        result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+        assert result["company_brain_alignment"] == value
+
+
+def test_h01_m_alignment_value_with_extra_trailing_text_does_not_survive() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(company_brain_alignment="supported by current evidence — see T3")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["company_brain_alignment"] is None
+
+
+def test_h01_n_unexpected_alignment_value_fails_closed_never_a_frontend_fallback() -> None:
+    decision_context = _decision_context()
+    assessment = _assessment(company_brain_alignment="somewhat aligned, mostly")
+    result = build_public_explainability(reasoning_assessment=assessment, decision_context=decision_context)
+    assert result["company_brain_alignment"] is None
+
+
+# ---------------------------------------------------------------------------
 # E10/E11: final-candidate placement guarantee, through the REAL
 # AIService.chat() candidate lifecycle. Only the LLM call is faked -
 # matching tests/test_m6_reasoning_layer.py's established convention.
@@ -572,6 +1048,257 @@ def test_e11_rejected_repaired_candidate_refs_never_leak(monkeypatch) -> None:
     labels = [item["label"] for item in explainability["cited_evidence"]]
     assert labels == ["daily_production_rate"]  # T2's label - the REPAIRED candidate's citation
     assert result["logic_json"]["reasoning_assessment"]["recommendation_basis"]["evidence_basis"] == ["T2"]
+
+
+# ---------------------------------------------------------------------------
+# B2B-13/14 (M7 Slice 2B): final-candidate guarantee for the new safe
+# executive-provenance fields, and proof no new model call was introduced -
+# through the SAME real AIService.chat() lifecycle as E10/E11.
+# ---------------------------------------------------------------------------
+
+
+def test_b2b_13_rejected_repaired_candidate_new_fields_never_leak(monkeypatch) -> None:
+    """Mirrors E11 for the Slice 2B fields: the REJECTED first candidate's
+    reasoning_state/operational_assessment/tensions/missing_evidence must
+    never appear in the public response - only the repaired (final
+    accepted) candidate's."""
+    invalid_first_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="tension",
+            operational_assessment="REJECTED-CANDIDATE-TEXT-SHOULD-NEVER-LEAK",
+            tensions=["rejected-tension-should-never-leak"],
+            recommendation_basis={"evidence_basis": ["T99"], "company_basis": [], "missing_evidence": []},
+        )
+    )
+    repaired_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="aligned",
+            operational_assessment="ACCEPTED-CANDIDATE-TEXT",
+            tensions=[],
+            recommendation_basis={"evidence_basis": ["T2"], "company_basis": [], "missing_evidence": ["T3"]},
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(
+        monkeypatch, [invalid_first_response, repaired_response]
+    )
+
+    result = asyncio.run(
+        service.chat(
+            session_id="b2b13", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    assert len(fake_client.chat_completions.messages) == 2
+
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["reasoning_state"] == "aligned"
+    assert explainability["operational_assessment"] == "ACCEPTED-CANDIDATE-TEXT"
+    assert explainability["tensions"] == []
+    assert len(explainability["missing_evidence"]) == 1
+    assert explainability["missing_evidence"][0]["label"] == "water_consumption"
+
+    serialized = json.dumps(explainability)
+    assert "REJECTED-CANDIDATE-TEXT-SHOULD-NEVER-LEAK" not in serialized
+    assert "rejected-tension-should-never-leak" not in serialized
+    assert explainability["reasoning_state"] != "tension"  # the REJECTED candidate's state never surfaces
+
+
+def test_b2b_14_no_new_model_call_introduced_for_slice_2b_fields(monkeypatch) -> None:
+    """A normal valid-on-first-try turn (like E10) makes exactly ONE model
+    call - Slice 2B's new fields are pure passthrough/resolution of data
+    already produced by that single call, never a second model call, never
+    new reasoning."""
+    valid_response = _chat_json(
+        reasoning_assessment=_assessment(
+            recommendation_basis={"evidence_basis": ["T1"], "company_basis": ["CB1"], "missing_evidence": ["T3"]}
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(monkeypatch, [valid_response])
+
+    result = asyncio.run(
+        service.chat(
+            session_id="b2b14", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    assert len(fake_client.chat_completions.messages) == 1
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["reasoning_state"] == "aligned"
+    assert len(explainability["missing_evidence"]) == 1
+
+
+def test_h01_o_real_chat_public_response_fails_closed_for_unsafe_prose_while_m6_stays_valid(monkeypatch) -> None:
+    """Section 15: the fake external model returns a structurally
+    M6-valid FINAL candidate whose free-form prose fields themselves
+    contain internal artifacts (a standalone T3 token, an internal
+    Windows path, a CB7 token inside a tensions list item). M6 accepts
+    it as-is (no repair, exactly one real model call) - the PUBLIC
+    explainability layer is what fails closed for the unsafe fields/
+    items, proving the fix at the actual product boundary rather than
+    only in a unit test of the helper function."""
+    unsafe_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="aligned",
+            operational_assessment="Internal ref T3 should not reach the executive UI",
+            risk_assessment=r"See C:\internal\pilot\secret.xlsx",
+            tensions=["Safe executive tension", "See CB7"],
+            recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": []},
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(monkeypatch, [unsafe_response])
+
+    result = asyncio.run(
+        service.chat(
+            session_id="h01o", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    # Exactly one real model call: M6 accepted the candidate unmodified -
+    # the public-safety filter never triggers a repair/regeneration cycle.
+    assert len(fake_client.chat_completions.messages) == 1
+
+    # M6 stayed valid internally - the raw model-generated fields are
+    # still present, byte-for-byte, in logic_json (internal compatibility
+    # surface, never the public contract, never scanned by this filter).
+    raw_assessment = result["logic_json"]["reasoning_assessment"]
+    assert raw_assessment["operational_assessment"] == "Internal ref T3 should not reach the executive UI"
+    assert raw_assessment["risk_assessment"] == r"See C:\internal\pilot\secret.xlsx"
+    assert raw_assessment["tensions"] == ["Safe executive tension", "See CB7"]
+
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["reasoning_state"] == "aligned"
+    assert explainability["operational_assessment"] is None
+    assert explainability["risk_assessment"] is None
+    assert explainability["tensions"] == ["Safe executive tension"]
+
+    # No forbidden artifact anywhere in the PUBLIC-facing part of the
+    # response (meta.context, which is exactly what the frontend/
+    # allowlist boundary exposes) - logic_json is deliberately excluded
+    # from this check since it is internal-only, never the public surface.
+    public_serialized = json.dumps(result["meta"]["context"])
+    for forbidden in ("Internal ref T3", r"C:\internal\pilot\secret.xlsx", "See CB7", "T3", "CB7"):
+        assert forbidden not in public_serialized, forbidden
+
+
+def test_r1_m_real_chat_public_response_fails_closed_for_nested_storage_path(monkeypatch) -> None:
+    """Correction Round 2 (H-01-R1): the same real-lifecycle proof as
+    test_h01_o, but for the specific nested forward-slash storage-path
+    gap Codex found (storage/private/report.json). M6 accepts the
+    candidate as-is; the public explainability layer omits only the
+    unsafe risk_assessment field, while reasoning_state, the safe
+    operational_assessment, the safe tension, and the exact-allowlisted
+    company_brain_alignment all survive."""
+    unsafe_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="aligned",
+            operational_assessment="Safe operational assessment.",
+            company_brain_alignment="supported by current evidence",
+            risk_assessment="See storage/private/report.json",
+            tensions=["Safe executive tension"],
+            recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": []},
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(monkeypatch, [unsafe_response])
+
+    result = asyncio.run(
+        service.chat(
+            session_id="r1m", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    # Exactly one real model call - the nested-path fix causes no repair/
+    # regeneration cycle; M6 stayed valid internally.
+    assert len(fake_client.chat_completions.messages) == 1
+
+    # Private compatibility surface retains the raw accepted model prose
+    # unmodified (never scanned by this filter).
+    raw_assessment = result["logic_json"]["reasoning_assessment"]
+    assert raw_assessment["risk_assessment"] == "See storage/private/report.json"
+
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["reasoning_state"] == "aligned"
+    assert explainability["operational_assessment"] == "Safe operational assessment."
+    assert explainability["tensions"] == ["Safe executive tension"]
+    assert explainability["company_brain_alignment"] == "supported by current evidence"
+    assert explainability["risk_assessment"] is None
+
+    public_serialized = json.dumps(result["meta"]["context"])
+    assert "storage/private/report.json" not in public_serialized
+    assert "storage/private" not in public_serialized
+
+
+def test_r2url_real_chat_public_response_survives_safe_url(monkeypatch) -> None:
+    """Correction Round 3 (M7-2B-R2-URL), Section 21: a structurally
+    M6-valid final candidate whose operational_assessment contains a real
+    public http(s) URL (which happens to include a storage/-shaped path)
+    must survive EXACTLY, proving the new exemption works at the actual
+    public product boundary, not only in a unit test of the helper."""
+    safe_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="aligned",
+            operational_assessment="Public report: https://example.com/storage/files/report",
+            risk_assessment="Safe operational risk statement.",
+            company_brain_alignment="supported by current evidence",
+            tensions=["Safe executive tension"],
+            recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": []},
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(monkeypatch, [safe_response])
+
+    result = asyncio.run(
+        service.chat(
+            session_id="r2url-safe", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    # Normal model-call count - the URL exemption causes no repair/regeneration.
+    assert len(fake_client.chat_completions.messages) == 1
+
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["reasoning_state"] == "aligned"
+    assert explainability["operational_assessment"] == "Public report: https://example.com/storage/files/report"
+    assert explainability["risk_assessment"] == "Safe operational risk statement."
+    assert explainability["tensions"] == ["Safe executive tension"]
+    assert explainability["company_brain_alignment"] == "supported by current evidence"
+
+
+def test_r2url_real_chat_public_response_mixed_url_and_internal_path(monkeypatch) -> None:
+    """Section 22: the presence of one safe public HTTP URL in
+    operational_assessment must not disable filtering elsewhere in the
+    SAME candidate - risk_assessment's genuinely internal storage path
+    still fails closed even though operational_assessment's URL survives."""
+    mixed_response = _chat_json(
+        reasoning_assessment=_assessment(
+            reasoning_state="aligned",
+            operational_assessment="Public report: https://example.com/storage/files/report",
+            risk_assessment="Inspect storage/private/report.json",
+            company_brain_alignment="supported by current evidence",
+            tensions=[],
+            recommendation_basis={"evidence_basis": [], "company_basis": [], "missing_evidence": []},
+        )
+    )
+    service, fake_client = _service_with_synthetic_m4_m5(monkeypatch, [mixed_response])
+
+    result = asyncio.run(
+        service.chat(
+            session_id="r2url-mixed", message="Status?", context={"aimx_department": POULTRY_DEPARTMENT},
+            company_id=str(uuid4()),
+        )
+    )
+
+    assert len(fake_client.chat_completions.messages) == 1
+
+    explainability = result["meta"]["context"]["explainability"]
+    assert explainability["operational_assessment"] == "Public report: https://example.com/storage/files/report"
+    assert explainability["risk_assessment"] is None
+
+    public_serialized = json.dumps(result["meta"]["context"])
+    assert "storage/private/report.json" not in public_serialized
 
 
 # ---------------------------------------------------------------------------

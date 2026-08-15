@@ -330,6 +330,52 @@ export const en = {
     confidenceReduced: "Reduced",
     confidenceHigh: "High",
   },
+  // M7 Slice 2B: Executive Reasoning panel - deterministic display labels
+  // only. company_brain_alignment itself is rendered verbatim from the
+  // backend controlled vocabulary (frozen UX decision) and is never looked
+  // up here.
+  executiveReasoning: {
+    title: "Executive Reasoning",
+    reasoningState: "Reasoning State",
+    stateAligned: "Aligned",
+    stateTension: "Tension",
+    stateInsufficientEvidence: "Insufficient Evidence",
+    alignedHint: "Operational evidence and Company Brain context broadly support the same direction.",
+    tensionHint:
+      "Operational evidence and Company Brain context point in different directions. Neither automatically wins.",
+    insufficientEvidenceHint:
+      "NAWA does not currently have enough reliable evidence to responsibly support a strong decision.",
+    operationalAssessment: "Operational Assessment",
+    companyBrainAlignment: "Company Brain Alignment",
+    tensions: "Tensions",
+    evidenceUsed: "Evidence Used",
+    companyBasisUsed: "Company Brain Basis",
+    evidenceGaps: "Evidence Gaps",
+    missingEvidence: "Missing Evidence",
+    risk: "Risk",
+    confidence: "Confidence",
+    confidenceHigh: "High",
+    confidenceModerate: "Moderate",
+    confidenceLow: "Low",
+    driverMissingEvidence: "Reduced because evidence is missing.",
+    driverUnresolvedSourceTime: "Reduced because source freshness is unresolved.",
+    driverConflictedCompanyBasis: "Reduced because Company Brain context is conflicted.",
+    noEvidenceCited: "No specific evidence cited.",
+    noCompanyBasisCited: "No specific Company Brain basis cited.",
+    noTensions: "No tensions identified.",
+    noMissingEvidence: "No missing evidence identified.",
+    unresolvedSourceTime: "Freshness unresolved",
+    entityLabel: "Entity",
+    filenameUnavailable: "Source not identified",
+    // H-02 (Correction Round 1): closed-mapping display labels for the
+    // canonical epistemic_origin/source_time_status enums - never a raw
+    // backend technical token rendered directly.
+    originObserved: "Observed",
+    originDerived: "Derived",
+    originInferred: "Inferred",
+    originRecommended: "Recommended",
+    sourceTimeAuthoritative: "Authoritative",
+  },
   operations: {
     dairtnaPoultry: "Dairtna Poultry",
     input: {

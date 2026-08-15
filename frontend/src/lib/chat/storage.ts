@@ -10,6 +10,7 @@ import type {
   ExplainabilityCompanyBasisItem,
   ExplainabilityEntity,
   ExplainabilityEvidenceItem,
+  ReasoningState,
 } from "@/lib/types";
 
 const CHAT_STORAGE_PREFIX = "nawa.chat.";
@@ -52,6 +53,9 @@ const CONFIDENCE_DRIVERS: readonly ConfidenceDriver[] = [
   "unresolved_source_time",
   "conflicted_company_basis",
 ];
+// M7 Slice 2B: the SAME closed enum M6 validates backend-side - never a
+// fourth value, never coerced from an unrecognized string.
+const REASONING_STATES: readonly ReasoningState[] = ["aligned", "tension", "insufficient_evidence"];
 
 function asNullableString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
@@ -101,6 +105,16 @@ function sanitizeCompanyBasisItem(value: unknown): ExplainabilityCompanyBasisIte
     type: asNullableString(record.type),
     statement: asNullableString(record.statement),
   };
+}
+
+function sanitizeReasoningState(value: unknown): ReasoningState | null {
+  return typeof value === "string" && REASONING_STATES.includes(value as ReasoningState)
+    ? (value as ReasoningState)
+    : null;
+}
+
+function sanitizeStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function sanitizeConfidence(value: unknown): Explainability["confidence"] {
@@ -155,9 +169,25 @@ export function sanitizeExplainability(value: unknown): Explainability | null {
         .filter((item): item is ExplainabilityCompanyBasisItem => item !== null)
     : [];
 
+  // M7 Slice 2B: same shape/sanitizer as cited_evidence (backend reuses
+  // _sanitize_evidence_item for missing_evidence too - see
+  // app/services/explainability.py's _resolve_missing_evidence).
+  const missingEvidence = Array.isArray(record.missing_evidence)
+    ? record.missing_evidence
+        .map(sanitizeEvidenceItem)
+        .filter((item): item is ExplainabilityEvidenceItem => item !== null)
+    : [];
+
   return {
     cited_evidence: citedEvidence,
     cited_company_basis: citedCompanyBasis,
     confidence: sanitizeConfidence(record.confidence),
+    reasoning_state: sanitizeReasoningState(record.reasoning_state),
+    operational_assessment: asNullableString(record.operational_assessment),
+    company_brain_alignment: asNullableString(record.company_brain_alignment),
+    tensions: sanitizeStringList(record.tensions),
+    evidence_gaps: sanitizeStringList(record.evidence_gaps),
+    risk_assessment: asNullableString(record.risk_assessment),
+    missing_evidence: missingEvidence,
   };
 }

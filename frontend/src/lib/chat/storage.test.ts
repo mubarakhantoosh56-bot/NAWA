@@ -123,6 +123,13 @@ describe("sanitizeExplainability (2A-F2)", () => {
         { id: "c1", label: "Feed sourcing priority", type: "POLICY", statement: "Prefer local suppliers." },
       ],
       confidence: { value: 80, band: "high", drivers: ["missing_evidence"] },
+      reasoning_state: null,
+      operational_assessment: null,
+      company_brain_alignment: null,
+      tensions: [],
+      evidence_gaps: [],
+      risk_assessment: null,
+      missing_evidence: [],
     });
   });
 
@@ -203,7 +210,128 @@ describe("sanitizeExplainability (2A-F2)", () => {
 
   it("handles missing/malformed arrays without throwing", () => {
     expect(() => sanitizeExplainability({})).not.toThrow();
-    expect(sanitizeExplainability({})).toEqual({ cited_evidence: [], cited_company_basis: [], confidence: null });
+    expect(sanitizeExplainability({})).toEqual({
+      cited_evidence: [],
+      cited_company_basis: [],
+      confidence: null,
+      reasoning_state: null,
+      operational_assessment: null,
+      company_brain_alignment: null,
+      tensions: [],
+      evidence_gaps: [],
+      risk_assessment: null,
+      missing_evidence: [],
+    });
     expect(() => sanitizeExplainability({ cited_evidence: "not-an-array", cited_company_basis: 42 })).not.toThrow();
+  });
+});
+
+describe("sanitizeExplainability - Slice 2B fields (P2B)", () => {
+  it("P2B-01: keeps a valid closed-enum reasoning_state", () => {
+    expect(sanitizeExplainability({ reasoning_state: "tension" })?.reasoning_state).toBe("tension");
+    expect(sanitizeExplainability({ reasoning_state: "aligned" })?.reasoning_state).toBe("aligned");
+    expect(sanitizeExplainability({ reasoning_state: "insufficient_evidence" })?.reasoning_state).toBe(
+      "insufficient_evidence",
+    );
+  });
+
+  it("P2B-09: drops an unrecognized reasoning_state rather than fabricating a fourth state", () => {
+    expect(sanitizeExplainability({ reasoning_state: "very_confident" })?.reasoning_state).toBeNull();
+    expect(sanitizeExplainability({ reasoning_state: 42 })?.reasoning_state).toBeNull();
+    expect(sanitizeExplainability({ reasoning_state: null })?.reasoning_state).toBeNull();
+  });
+
+  it("P2B-02/P2B-03/P2B-04: keeps operational_assessment/company_brain_alignment/risk_assessment strings verbatim", () => {
+    const sanitized = sanitizeExplainability({
+      operational_assessment: "Hall 2 production trend is stable.",
+      company_brain_alignment: "partially supported",
+      risk_assessment: "Moderate risk if trend continues.",
+    });
+    expect(sanitized?.operational_assessment).toBe("Hall 2 production trend is stable.");
+    expect(sanitized?.company_brain_alignment).toBe("partially supported");
+    expect(sanitized?.risk_assessment).toBe("Moderate risk if trend continues.");
+  });
+
+  it("P2B-09: drops non-string operational_assessment/company_brain_alignment/risk_assessment rather than crashing", () => {
+    const sanitized = sanitizeExplainability({
+      operational_assessment: { nested: "object" },
+      company_brain_alignment: 42,
+      risk_assessment: ["not", "a", "string"],
+    });
+    expect(sanitized?.operational_assessment).toBeNull();
+    expect(sanitized?.company_brain_alignment).toBeNull();
+    expect(sanitized?.risk_assessment).toBeNull();
+  });
+
+  it("P2B-04: keeps tensions/evidence_gaps as arrays of safe strings", () => {
+    const sanitized = sanitizeExplainability({
+      tensions: ["Evidence suggests X while policy prefers Y."],
+      evidence_gaps: ["Water consumption reading missing."],
+    });
+    expect(sanitized?.tensions).toEqual(["Evidence suggests X while policy prefers Y."]);
+    expect(sanitized?.evidence_gaps).toEqual(["Water consumption reading missing."]);
+  });
+
+  it("P2B-09: filters non-string entries out of tensions/evidence_gaps rather than crashing", () => {
+    const sanitized = sanitizeExplainability({
+      tensions: ["safe", 42, { nested: "leak" }, null],
+      evidence_gaps: "not-an-array",
+    });
+    expect(sanitized?.tensions).toEqual(["safe"]);
+    expect(sanitized?.evidence_gaps).toEqual([]);
+  });
+
+  it("P2B-05: resolves structured missing_evidence through the SAME evidence sanitizer as cited_evidence", () => {
+    const sanitized = sanitizeExplainability({
+      missing_evidence: [
+        {
+          id: "m1",
+          label: "water_consumption",
+          filename: null,
+          report_date: null,
+          entity: null,
+          epistemic_origin: null,
+          source_time_status: null,
+        },
+      ],
+    });
+    expect(sanitized?.missing_evidence).toEqual([
+      {
+        id: "m1",
+        label: "water_consumption",
+        filename: null,
+        report_date: null,
+        entity: null,
+        epistemic_origin: null,
+        source_time_status: null,
+      },
+    ]);
+  });
+
+  it("P2B-06/P2B-09: strips unapproved extra fields nested inside a missing_evidence item, drops items missing an id", () => {
+    const sanitized = sanitizeExplainability({
+      missing_evidence: [
+        {
+          id: "m1",
+          label: "water_consumption",
+          source_file_id: "b6e6b8f0-1111-2222-3333-444455556666",
+          filesystem_path: "/var/data/hall2.xlsx",
+          T_ref: "T3",
+        },
+        { label: "no id here - dropped" },
+      ],
+    });
+    expect(sanitized?.missing_evidence).toHaveLength(1);
+    const serialized = JSON.stringify(sanitized?.missing_evidence);
+    expect(serialized).not.toContain("source_file_id");
+    expect(serialized).not.toContain("filesystem_path");
+    expect(serialized).not.toContain("b6e6b8f0-1111-2222-3333-444455556666");
+    expect(serialized).not.toContain("T_ref");
+  });
+
+  it("P2B-09: malformed missing_evidence input fails safely without throwing", () => {
+    expect(() => sanitizeExplainability({ missing_evidence: "not-an-array" })).not.toThrow();
+    expect(sanitizeExplainability({ missing_evidence: "not-an-array" })?.missing_evidence).toEqual([]);
+    expect(() => sanitizeExplainability({ missing_evidence: 42 })).not.toThrow();
   });
 });
