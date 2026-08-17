@@ -9,6 +9,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from app.core.config import _env_bool
 from app.oce.models.evidence import Evidence
 from app.oip.loaders.excel_loader import ExcelLoader
 from app.oip.translators.feed_mill_inventory_translator import FeedMillInventoryTranslator
@@ -160,6 +161,18 @@ class FeedMillContextCollector:
         )
 
     def _resolve_workbook_path(self) -> Path | None:
+        # M7 Slice 3A: the sole static-file read boundary for this
+        # collector - both collect_evidence() and
+        # collect_raw_material_inventory_evidence() call only this method
+        # to find a workbook, so gating here protects the feed-mill static
+        # scan regardless of which caller reaches it (including a future
+        # caller other than PoultryContextCollector). Default True (unset
+        # preserves today's behavior); a malformed value fails closed via
+        # the existing _env_bool semantics (only recognized truthy strings
+        # count as enabled). This is a legacy-STATIC-source switch only -
+        # it never touches uploaded Truth, which has no static file to read.
+        if not _env_bool("NAWA_STATIC_PILOT_DATA_SOURCES_ENABLED", True):
+            return None
         if not FEED_MILL_DIR.exists():
             return None
         candidates = sorted(FEED_MILL_DIR.glob("*.xlsx"))

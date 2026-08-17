@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from app.core.config import settings
+from app.core.config import _env_bool, settings
 from app.oce.collectors.poultry_context_collector import PoultryContextCollector
 from app.oce.models.operational_context import OperationalContext
 from app.oip.models.derived_artifacts import OperationalMetric
@@ -216,8 +216,21 @@ def _collect_operational_contexts(
     -named M3 outcome) is skipped with a warning so one bad file cannot
     hide evidence from the rest. Any other exception is a real bug and is
     left to propagate, per Step 12's expected-vs-unexpected distinction.
+
+    M7 Slice 3A: the static poultry workbook scan below participates only
+    when NAWA_STATIC_PILOT_DATA_SOURCES_ENABLED allows it (default True -
+    unset preserves today's behavior; a malformed value fails closed via
+    the existing _env_bool semantics). This governs ONLY legacy/static
+    pilot file participation - the uploaded_records branch further below
+    is a completely separate code path and is never affected by this
+    flag, so disabling static sources cannot disable the M7 Slice 1
+    upload -> Truth bridge.
     """
-    if not POULTRY_OPERATIONS_DIR.exists() and not uploaded_records:
+    static_poultry_scan_active = (
+        _env_bool("NAWA_STATIC_PILOT_DATA_SOURCES_ENABLED", True) and POULTRY_OPERATIONS_DIR.exists()
+    )
+
+    if not static_poultry_scan_active and not uploaded_records:
         return [], []
 
     pipeline = OperationalPipelineService()
@@ -225,7 +238,7 @@ def _collect_operational_contexts(
     contexts: list[OperationalContext] = []
     headline_metrics: list[OperationalMetric] = []
 
-    if POULTRY_OPERATIONS_DIR.exists():
+    if static_poultry_scan_active:
         for path in sorted(POULTRY_OPERATIONS_DIR.glob("*.xlsx")):
             try:
                 records = pipeline.parse_poultry_daily_report(path)
