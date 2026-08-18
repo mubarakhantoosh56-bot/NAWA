@@ -8,6 +8,8 @@ logs/
 frontend/.next/
 frontend/node_modules/
 frontend/tsconfig.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
 
 # Runtime tenant-uploaded file storage -- local/generated, never committed.
 storage/
