@@ -7,7 +7,7 @@ Use the root `render.yaml` blueprint to create the `nawa-backend` web service.
 Render commands:
 
 - Build: `pip install -r requirements.txt`
-- Pre-deploy: `python scripts/migrate.py`
+- Pre-deploy: `python -m scripts.migrate`
 - Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
 

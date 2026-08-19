@@ -19,7 +19,7 @@ The migrations enable required extensions, including `vector` for RAG embeddings
 Run migrations from the repo root:
 
 ```bash
-python scripts/migrate.py
+python -m scripts.migrate
 ```
 
 The Render blueprint also runs the same command as `preDeployCommand`.

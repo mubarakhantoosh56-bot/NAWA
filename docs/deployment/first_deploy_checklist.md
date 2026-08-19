@@ -4,7 +4,7 @@
 2. Copy the Neon connection string with `sslmode=require`.
 3. Add Render backend env vars: `DATABASE_URL`, `OPENAI_API_KEY`, `DEMO_OWNER_PASSWORD`, `FRONTEND_URL`, `ENVIRONMENT`, and `JWT_SECRET_KEY`.
 4. Deploy the Render backend from `render.yaml`.
-5. Run migrations with `python scripts/migrate.py`.
+5. Run migrations with `python -m scripts.migrate`.
 6. Seed the demo tenant with `python scripts/seed_demo.py`.
 7. Add Vercel frontend env var `NEXT_PUBLIC_AIMX_API_URL` with the Render backend URL.
 8. Deploy the Vercel frontend from `frontend/`.
