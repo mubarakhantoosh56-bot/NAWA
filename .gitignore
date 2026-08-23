@@ -11,6 +11,10 @@ frontend/tsconfig.tsbuildinfo
 frontend/playwright-report/
 frontend/test-results/
 
+# M7 Slice 3C: Golden A synthetic fixture is generated fresh by
+# scripts/e2e_orchestrator.py before every E2E run -- never committed.
+frontend/e2e/fixtures/
+
 # Runtime tenant-uploaded file storage -- local/generated, never committed.
 storage/
 

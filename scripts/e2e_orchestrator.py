@@ -447,14 +447,77 @@ def run_migrations(env: dict[str, str]) -> None:
 
 
 def start_backend(port: str, env: dict[str, str]) -> OwnedProcess:
+    # M7 Slice 3C: served through scripts.e2e_backend_app, not app.main,
+    # so the deterministic Golden A fake AI client can be injected at the
+    # ai_engine.client seam before Uvicorn starts accepting connections -
+    # see that module's docstring. app/main.py itself is never modified.
     return spawn_owned_process(
         "backend",
-        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", port],
+        [
+            sys.executable, "-m", "uvicorn", "scripts.e2e_backend_app:app",
+            "--host", "127.0.0.1", "--port", port,
+        ],
         cwd=REPO_ROOT,
         env=env,
         isolate_stdio=True,
         service_port=int(port),
     )
+
+
+def run_seed_jannat(env: dict[str, str]) -> None:
+    """Seed the Jannat Al-Firdaws company/owner/departments into the E2E
+    database, using the existing idempotent scripts/seed_jannat.py.
+
+    `env` is the already-guard-verified backend_env (DATABASE_URL bound to
+    E2E_DATABASE_URL by e2e_db_guard.py in main(), never the ambient/local
+    DATABASE_URL) - seed_jannat.py reads DATABASE_URL and DEMO_OWNER_PASSWORD
+    from exactly this environment, so this can never reach a non-E2E
+    database.
+    """
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.seed_jannat"],
+        cwd=REPO_ROOT,
+        env=env,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise OrchestrationError(
+            f"E2E Jannat seeding failed against the isolated database (exit code {result.returncode})"
+        )
+
+
+def resolve_jannat_company_id(database_url: str) -> str:
+    """Look up the just-seeded Jannat Al-Firdaws company's real id.
+
+    Required because app.services.operational_truth_context.is_jannat_tenant
+    fail-closed-gates the uploaded-file -> Operational Truth Context bridge
+    behind settings.JANNAT_COMPANY_ID matching the authenticated company's
+    id exactly - and seed_jannat.py's company id is only known after it
+    runs (gen_random_uuid(), fresh per database). The backend Golden Journey
+    test achieves the same effect in-process via monkeypatch
+    (_configure_jannat_company_id); this is the equivalent for a real,
+    separately-started backend subprocess - JANNAT_COMPANY_ID is injected
+    into backend_env before Uvicorn starts, exactly once, read-only lookup.
+    """
+    import asyncio
+
+    import asyncpg
+
+    from scripts.seed_jannat import COMPANY_SLUG
+
+    async def _lookup() -> str:
+        conn = await asyncpg.connect(dsn=database_url, timeout=15)
+        try:
+            row = await conn.fetchrow("SELECT id FROM companies WHERE slug = $1", COMPANY_SLUG)
+        finally:
+            await conn.close()
+        if row is None:
+            raise OrchestrationError(
+                f"Jannat Al-Firdaws (slug={COMPANY_SLUG!r}) not found in the E2E database after seeding"
+            )
+        return str(row["id"])
+
+    return asyncio.run(_lookup())
 
 
 def wait_for_backend_health(port: str, owned: OwnedProcess) -> None:
@@ -495,6 +558,12 @@ def run_playwright(env: dict[str, str]) -> int:
 
 def main() -> int:
     from scripts.e2e_db_guard import UnsafeE2EDatabaseError, assert_safe_e2e_database_url
+    from scripts.e2e_golden_fixture import (
+        GOLDEN_FIXTURE_FILENAME,
+        GOLDEN_HALL_NUMBER,
+        GOLDEN_MARKER,
+        write_golden_workbook,
+    )
 
     e2e_database_url = os.environ.get("E2E_DATABASE_URL", "")
     ambient_url = _ambient_database_url()
@@ -503,6 +572,15 @@ def main() -> int:
         assert_safe_e2e_database_url(e2e_database_url, ambient_default_url=ambient_url)
     except UnsafeE2EDatabaseError as error:
         print(f"[e2e] REFUSING TO PROCEED: {error}", file=sys.stderr)
+        return 1
+
+    # Fail closed before any migration/seed/backend/Playwright step - no
+    # fallback password literal exists anywhere in this file. The real
+    # seeded Jannat owner's password must come only from the operator's
+    # environment (never printed here or anywhere else in this module).
+    demo_owner_password = os.environ.get("DEMO_OWNER_PASSWORD", "").strip()
+    if not demo_owner_password:
+        print("[e2e] REFUSING TO PROCEED: DEMO_OWNER_PASSWORD is required for E2E", file=sys.stderr)
         return 1
 
     backend_port = os.environ.get("E2E_BACKEND_PORT", DEFAULT_BACKEND_PORT)
@@ -514,8 +592,17 @@ def main() -> int:
     backend_env["NAWA_STATIC_PILOT_DATA_SOURCES_ENABLED"] = "false"
     backend_env.setdefault("OPENAI_API_KEY", "sk-e2e-placeholder-not-a-real-key")
     backend_env.setdefault("JWT_SECRET_KEY", "e2e-local-only-placeholder-secret")
-    backend_env.setdefault("DEMO_OWNER_PASSWORD", "e2e-local-only-placeholder-password")
+    backend_env["DEMO_OWNER_PASSWORD"] = demo_owner_password
     backend_env.setdefault("FRONTEND_URL", f"http://127.0.0.1:{frontend_port}")
+    # M7 Slice 3C: Golden A browser E2E needs a deterministic AI response
+    # (Founder Decision 3) - DECISION_CONTEXT_DEBUG feeds the fake client
+    # the real reasoning reference catalog (see scripts/e2e_fake_ai_client.py)
+    # and E2E_GOLDEN_MARKER is the one shared value tying the uploaded
+    # fixture, the fake client's citation match, and the Playwright spec's
+    # chat question together (see scripts/e2e_golden_fixture.py).
+    backend_env["DECISION_CONTEXT_DEBUG"] = "true"
+    backend_env["E2E_GOLDEN_MARKER"] = GOLDEN_MARKER
+    backend_env["E2E_GOLDEN_HALL_NUMBER"] = GOLDEN_HALL_NUMBER
 
     frontend_env = os.environ.copy()
     frontend_env["NEXT_PUBLIC_AIMX_API_URL"] = f"http://127.0.0.1:{backend_port}"
@@ -523,6 +610,14 @@ def main() -> int:
     playwright_env = os.environ.copy()
     playwright_env["E2E_FRONTEND_PORT"] = frontend_port
     playwright_env["E2E_BACKEND_PORT"] = backend_port
+    playwright_env["E2E_GOLDEN_MARKER"] = GOLDEN_MARKER
+    golden_fixture_path = FRONTEND_DIR / "e2e" / "fixtures" / GOLDEN_FIXTURE_FILENAME
+    playwright_env["E2E_GOLDEN_FIXTURE_PATH"] = str(golden_fixture_path)
+    # Golden A logs in as the real seeded Jannat owner - propagate the exact
+    # same environment-only DEMO_OWNER_PASSWORD validated above, so the
+    # spec never needs (and must never contain) its own fallback or a
+    # hardcoded password.
+    playwright_env["DEMO_OWNER_PASSWORD"] = demo_owner_password
 
     print("[e2e] Building production frontend (NEXT_PUBLIC_AIMX_API_URL baked in now)...")
     try:
@@ -537,6 +632,19 @@ def main() -> int:
     except OrchestrationError as error:
         print(f"[e2e] {error}", file=sys.stderr)
         return 1
+
+    print("[e2e] Seeding Jannat Al-Firdaws into the isolated E2E database...")
+    try:
+        run_seed_jannat(backend_env)
+        jannat_company_id = resolve_jannat_company_id(e2e_database_url)
+    except OrchestrationError as error:
+        print(f"[e2e] {error}", file=sys.stderr)
+        return 1
+    backend_env["JANNAT_COMPANY_ID"] = jannat_company_id
+    print(f"[e2e] Jannat Al-Firdaws company_id resolved for this run: {jannat_company_id}")
+
+    print(f"[e2e] Writing Golden A synthetic fixture workbook to {golden_fixture_path}...")
+    write_golden_workbook(golden_fixture_path)
 
     backend_owned: OwnedProcess | None = None
     frontend_owned: OwnedProcess | None = None
