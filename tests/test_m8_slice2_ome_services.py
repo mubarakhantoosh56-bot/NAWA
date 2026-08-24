@@ -129,7 +129,7 @@ def test_receipt_service_verifies_file_evidence_ref_in_company(db_available) -> 
                 evidence_refs=[EvidenceRef(type="file", id=UUID(file_id))],
             )
             assert isinstance(receipt, ReasoningReceipt)
-            assert receipt.evidence_refs == [{"type": "file", "id": file_id}]
+            assert receipt.evidence_refs == [{"category": "truth", "type": "file", "id": file_id}]
             async with pool.acquire() as conn:
                 await _wipe_company(conn, company_id)
                 await conn.execute("DELETE FROM users WHERE id=$1", user_id)
