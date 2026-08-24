@@ -698,13 +698,21 @@ async def _always_valid_no_citation_completion(**kwargs):
 # (items 32-33)
 # ---------------------------------------------------------------------------
 
-def test_no_decision_recording_api_added() -> None:
+def test_no_outcome_recording_api_added() -> None:
+    """Historical note: before M8 Slice 3B-1, this test also asserted no
+    app/api/*.py file referenced record_decision - proving the whole human
+    decision-recording surface was dormant. M8 Slice 3B-1 is the
+    Founder-authorized round that adds exactly that API
+    (app/api/decisions.py) - so that half of the old assertion is now
+    obsolete by design, not a regression. Outcome recording remains
+    genuinely out of scope and unimplemented, so that half of the
+    invariant still holds and is kept here."""
     import pathlib
 
     for path in pathlib.Path("app/api").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
-        assert "record_decision" not in text
         assert "record_outcome" not in text
+        assert "OutcomeMemoryService" not in text
 
 
 def test_no_migration_015() -> None:

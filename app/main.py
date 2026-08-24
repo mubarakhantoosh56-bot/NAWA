@@ -9,6 +9,7 @@ from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.company_profile import router as company_profile_router
 from app.api.decision_debug import router as decision_debug_router
+from app.api.decisions import router as decisions_router
 from app.api.departments import router as departments_router
 from app.api.files import router as files_router
 from app.api.health import router as health_router
@@ -69,6 +70,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(chat_router, prefix="/ai")
 app.include_router(decision_debug_router)
+app.include_router(decisions_router)
 app.include_router(company_profile_router)
 app.include_router(departments_router)
 app.include_router(files_router)
