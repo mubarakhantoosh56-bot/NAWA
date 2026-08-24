@@ -414,3 +414,26 @@ export type DecisionResponse = {
   decided_at: string;
   created_at: string;
 };
+
+// M8 Slice 3C-2: mirrors the closed backend contract (app/api/outcomes.py)
+// exactly - no field beyond these four is ever client-authorable.
+// company_id/recorded_by_user_id/status/created_at/evidence/provenance/
+// supersession fields are never part of this type.
+export type OutcomeResultState = "positive" | "negative" | "mixed" | "unknown";
+
+export type OutcomeCreateRequest = {
+  decision_memory_id: string;
+  outcome_summary: string;
+  result_state: OutcomeResultState;
+  observed_at?: string;
+};
+
+export type OutcomeResponse = {
+  id: string;
+  decision_memory_id: string;
+  outcome_summary: string;
+  result_state: OutcomeResultState;
+  status: string;
+  observed_at: string;
+  created_at: string;
+};

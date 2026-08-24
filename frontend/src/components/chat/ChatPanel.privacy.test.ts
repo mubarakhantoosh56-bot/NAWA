@@ -532,3 +532,78 @@ describe("parseStoredTurns (P8: legacy payload safety)", () => {
     expect(serialized).not.toContain("T_ref");
   });
 });
+
+// ---------------------------------------------------------------------------
+// M8 Slice 3C-2 (Founder Correction - local Outcome state): Outcome recording
+// success is TRANSIENT COMPONENT-LOCAL UI STATE ONLY inside RecordOutcome -
+// it is never reported to ChatPanel and never reaches
+// toPersistedChatResponse/buildPersistedTurns/parseStoredTurns at all (no
+// onRecorded callback exists on RecordOutcome, unlike RecordDecision). These
+// tests prove the PersistedChatMeta allowlist genuinely gained NO new key for
+// Outcome state, and that a live or legacy payload containing outcome-shaped
+// data (a hypothetical future regression) still cannot smuggle it through.
+// ---------------------------------------------------------------------------
+
+describe("M8 Slice 3C-2: PersistedChatMeta carries no Outcome state", () => {
+  it("the persisted meta allowlist is unchanged from Slice 3B-2 - no outcome key was added", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponse());
+    expect(Object.keys(persisted.meta).sort()).toEqual(
+      [
+        "events_count",
+        "explainability",
+        "memory_injected",
+        "parse_ok",
+        "reasoning_receipt_id",
+        "recorded_decision_id",
+      ].sort(),
+    );
+  });
+
+  it("a legacy/adversarial stored payload carrying outcome-shaped fields never resurfaces them after reparse", () => {
+    const raw = JSON.stringify({
+      ceo: [
+        {
+          id: "t1",
+          userMessage: "Status?",
+          response: {
+            ceo_text: "answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 0,
+              recorded_decision_id: "decision-1",
+              // Hypothetical regression: a future backend/localStorage
+              // payload that carries outcome data alongside decision data.
+              // toStoredChatTurn must not have any code path that copies
+              // these into the reconstructed turn.
+              outcome_id: "outcome-999",
+              recorded_outcome_id: "outcome-999",
+              outcome_summary: "Expansion delivered 12% lift.",
+              result_state: "positive",
+              observed_at: "2026-01-01T10:30:00.000Z",
+            },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(raw);
+    expect(parsed.ceo).toHaveLength(1);
+    expect(Object.keys(parsed.ceo[0].response.meta).sort()).toEqual(
+      [
+        "events_count",
+        "explainability",
+        "memory_injected",
+        "parse_ok",
+        "reasoning_receipt_id",
+        "recorded_decision_id",
+      ].sort(),
+    );
+    const serialized = JSON.stringify(parsed);
+    expect(serialized).not.toContain("outcome-999");
+    expect(serialized).not.toContain("Expansion delivered 12% lift.");
+    expect(serialized).not.toContain("result_state");
+    expect(serialized).not.toContain("2026-01-01T10:30:00.000Z");
+  });
+});

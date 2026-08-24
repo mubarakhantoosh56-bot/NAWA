@@ -8,6 +8,7 @@ import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { chatStorageKey, sanitizeExplainability } from "@/lib/chat/storage";
 import { ExecutiveReasoningPanel } from "@/components/chat/ExecutiveReasoningPanel";
 import { RecordDecision } from "@/components/chat/RecordDecision";
+import { RecordOutcome } from "@/components/chat/RecordOutcome";
 import { getDemoChatTurns } from "@/lib/demo-data";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { ChatResponse, ChatTurn, Department, PersistedChatResponse, PersistedChatTurn } from "@/lib/types";
@@ -185,6 +186,13 @@ export function ChatPanel({
                   recordedDecisionId={turn.response.meta.recorded_decision_id}
                   onRecorded={(decisionId) => handleDecisionRecorded(turn.id, decisionId)}
                 />
+              ) : null}
+              {/* M8 Slice 3C-2: the existing memory.write-derived permission
+                  prop is reused unchanged - it already exactly represents
+                  the same permission POST /outcomes requires, so no new
+                  canRecordOutcomes prop or RBAC plumbing is introduced. */}
+              {canRecordDecisions && turn.response.meta.recorded_decision_id ? (
+                <RecordOutcome token={token} decisionMemoryId={turn.response.meta.recorded_decision_id} />
               ) : null}
             </div>
           </article>

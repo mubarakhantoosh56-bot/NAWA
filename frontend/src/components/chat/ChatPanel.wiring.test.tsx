@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,8 +22,13 @@ vi.mock("@/lib/api/decisions", () => ({
   recordDecision: vi.fn(),
 }));
 
+vi.mock("@/lib/api/outcomes", () => ({
+  recordOutcome: vi.fn(),
+}));
+
 import { sendChatMessage } from "@/lib/api/chat";
 import { recordDecision } from "@/lib/api/decisions";
+import { recordOutcome } from "@/lib/api/outcomes";
 import { ApiError } from "@/lib/api/client";
 
 function overBroadResponse(): ChatResponse {
@@ -540,5 +545,402 @@ describe("ChatPanel Record Decision (M8 Slice 3B-2)", () => {
 
       unmount();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// M8 Slice 3C-2: Record Outcome
+// ---------------------------------------------------------------------------
+
+const RECORDED_DECISION_RESPONSE = {
+  id: "decision-1",
+  reasoning_receipt_id: "receipt-1",
+  situation_id: null,
+  decision_text: "Approve the plan.",
+  rationale: null,
+  status: "active",
+  decided_at: "2026-08-25T00:00:00Z",
+  created_at: "2026-08-25T00:00:00Z",
+};
+
+const OUTCOME_RESPONSE = {
+  id: "outcome-999",
+  decision_memory_id: "decision-1",
+  outcome_summary: "Expansion delivered 12% lift.",
+  result_state: "positive" as const,
+  status: "active",
+  observed_at: "2026-08-25T00:00:00Z",
+  created_at: "2026-08-25T00:00:00Z",
+};
+
+function renderChatPanel(canRecordDecisions = true) {
+  return render(
+    <LanguageProvider>
+      <ChatPanel
+        token="tok"
+        companyId="company-123"
+        workspaceKey="ceo"
+        title="CEO"
+        department={null}
+        canRecordDecisions={canRecordDecisions}
+      />
+    </LanguageProvider>,
+  );
+}
+
+async function recordADecision(user: ReturnType<typeof userEvent.setup>) {
+  vi.mocked(recordDecision).mockResolvedValue(RECORDED_DECISION_RESPONSE);
+  await sendOneMessage(user);
+  await user.click(await screen.findByRole("button", { name: "Record Decision" }));
+  await user.type(screen.getByLabelText("Decision"), "Approve the plan.");
+  await user.click(screen.getByRole("button", { name: "Record Decision" }));
+  await waitFor(() => {
+    expect(screen.getByText("Decision recorded")).toBeInTheDocument();
+  });
+}
+
+describe("ChatPanel Record Outcome (M8 Slice 3C-2)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.mocked(sendChatMessage).mockReset();
+    vi.mocked(recordDecision).mockReset();
+    vi.mocked(recordOutcome).mockReset();
+  });
+
+  // VISIBILITY ---------------------------------------------------------------
+
+  it("does not show Record Outcome when no decision is recorded yet (item 1)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await sendOneMessage(user);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record Decision" })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "Record Outcome" })).not.toBeInTheDocument();
+  });
+
+  it("shows Record Outcome once a decision is recorded and permission is present (item 2)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+
+    expect(screen.getByRole("button", { name: "Record Outcome" })).toBeInTheDocument();
+  });
+
+  it("does not show Record Outcome without memory.write, even if a decision existed (item 3)", async () => {
+    // canRecordDecisions=false also hides Record Decision itself, so a
+    // decision can never be recorded through the UI in that case - the
+    // no-permission path is proven by the absence of both actions.
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(false);
+
+    await sendOneMessage(user);
+
+    await waitFor(() => {
+      expect(screen.getByText("Approve the focused expansion plan.")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "Record Decision" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Record Outcome" })).not.toBeInTheDocument();
+  });
+
+  it("never shows the action on the user's own message bubble (item 4)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+
+    expect(screen.getAllByRole("button", { name: "Record Outcome" })).toHaveLength(1);
+  });
+
+  // FORM -----------------------------------------------------------------
+
+  it("opens a blank form on click - summary empty, no result preselected, no AI prefill (items 5, 6, 11)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    const summaryField = screen.getByLabelText("Outcome Summary") as HTMLTextAreaElement;
+    expect(summaryField.value).toBe("");
+    expect(summaryField.value).not.toContain("Approve the focused expansion plan.");
+    for (const label of ["Positive", "Negative", "Mixed", "Unknown"]) {
+      expect(screen.getByRole("button", { name: label })).toHaveAttribute("aria-pressed", "false");
+    }
+  });
+
+  it("submit is disabled with a blank summary even when a result is selected (item 7)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+
+    expect(screen.getByRole("button", { name: "Record Outcome" })).toBeDisabled();
+  });
+
+  it("submit is disabled with no result selection even when summary is filled (item 8)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+
+    expect(screen.getByRole("button", { name: "Record Outcome" })).toBeDisabled();
+  });
+
+  it("selecting Unknown enables submission and is distinct from no selection (items 9, 10)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    expect(screen.getByRole("button", { name: "Record Outcome" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Outcome Summary"), "Result is not yet clear.");
+    expect(screen.getByRole("button", { name: "Record Outcome" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Unknown" }));
+    expect(screen.getByRole("button", { name: "Unknown" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Record Outcome" })).not.toBeDisabled();
+  });
+
+  // OBSERVED AT ------------------------------------------------------------
+
+  it("blank observed_at sends no observed_at key in the payload (item 12)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    vi.mocked(recordOutcome).mockResolvedValue(OUTCOME_RESPONSE);
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(recordOutcome).toHaveBeenCalledTimes(1);
+    });
+    const [, payload] = vi.mocked(recordOutcome).mock.calls[0];
+    expect(Object.keys(payload).sort()).toEqual(["decision_memory_id", "outcome_summary", "result_state"].sort());
+    expect(payload).not.toHaveProperty("observed_at");
+  });
+
+  it("a datetime-local value converts to a timezone-aware ISO string, never a naive one (items 13, 14)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    vi.mocked(recordOutcome).mockResolvedValue(OUTCOME_RESPONSE);
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+
+    const observedAtField = screen.getByLabelText("Observed At") as HTMLInputElement;
+    fireEvent.change(observedAtField, { target: { value: "2026-01-01T10:30" } });
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(recordOutcome).toHaveBeenCalledTimes(1);
+    });
+    const [, payload] = vi.mocked(recordOutcome).mock.calls[0];
+    expect(payload.observed_at).toBe(new Date("2026-01-01T10:30").toISOString());
+    expect(payload.observed_at).toMatch(/Z$/);
+    expect(payload.observed_at).not.toBe("2026-01-01T10:30");
+  });
+
+  // REQUEST BOUNDARY -------------------------------------------------------
+
+  it("submits exactly the allowed fields, trims the summary, and uses the exact backend result_state value (items 15-24)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    vi.mocked(recordOutcome).mockResolvedValue(OUTCOME_RESPONSE);
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "  Expansion delivered a lift.  ");
+    await user.click(screen.getByRole("button", { name: "Mixed" }));
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(recordOutcome).toHaveBeenCalledTimes(1);
+    });
+    const [token, payload] = vi.mocked(recordOutcome).mock.calls[0];
+    expect(token).toBe("tok");
+    expect(payload).toEqual({
+      decision_memory_id: "decision-1",
+      outcome_summary: "Expansion delivered a lift.",
+      result_state: "mixed",
+    });
+    for (const forbidden of [
+      "company_id",
+      "recorded_by_user_id",
+      "user_id",
+      "status",
+      "created_at",
+      "evidence_refs",
+      "company_brain_refs",
+      "response_snapshot",
+      "superseded_by",
+      "supersedes_id",
+      "old_outcome_id",
+    ]) {
+      expect(payload).not.toHaveProperty(forbidden);
+    }
+  });
+
+  // PENDING ----------------------------------------------------------------
+
+  it("a rapid double click while pending fires exactly one POST /outcomes (item 25)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    let resolveRecord: (value: typeof OUTCOME_RESPONSE) => void = () => undefined;
+    vi.mocked(recordOutcome).mockReturnValue(
+      new Promise((resolve) => {
+        resolveRecord = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+
+    const submitButton = screen.getByRole("button", { name: "Record Outcome" });
+    await user.click(submitButton);
+    await user.click(submitButton);
+
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
+    resolveRecord(OUTCOME_RESPONSE);
+    await waitFor(() => {
+      expect(screen.getByText("Outcome recorded")).toBeInTheDocument();
+    });
+  });
+
+  // SUCCESS ------------------------------------------------------------------
+
+  it("shows a non-final confirmation and Record another outcome, never exposes the outcome id, and never permanently locks (items 26-32)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    vi.mocked(recordOutcome).mockResolvedValue(OUTCOME_RESPONSE);
+    const user = userEvent.setup();
+    const { container } = renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Outcome recorded")).toBeInTheDocument();
+    });
+    expect(container.textContent).not.toContain("outcome-999");
+    expect(screen.queryByLabelText("Outcome Summary")).not.toBeInTheDocument();
+    const recordAnother = screen.getByRole("button", { name: "Record another outcome" });
+    expect(recordAnother).toBeInTheDocument();
+
+    await user.click(recordAnother);
+    const summaryField = screen.getByLabelText("Outcome Summary") as HTMLTextAreaElement;
+    expect(summaryField.value).toBe("");
+    for (const label of ["Positive", "Negative", "Mixed", "Unknown"]) {
+      expect(screen.getByRole("button", { name: label })).toHaveAttribute("aria-pressed", "false");
+    }
+
+    await user.type(summaryField, "A second, independent observation.");
+    await user.click(screen.getByRole("button", { name: "Negative" }));
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(recordOutcome).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText("Outcome recorded")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record another outcome" })).toBeInTheDocument();
+  });
+
+  // FAILURE ------------------------------------------------------------------
+
+  it("maps 403/404/422/generic failures to safe messages, preserves typed input, and stays retryable (items 33-39)", async () => {
+    const cases: [unknown, string][] = [
+      [new ApiError(403, "internal 403 detail"), "You don't have permission to record outcomes."],
+      [new ApiError(404, "internal 404 detail"), "This decision is no longer available to record an outcome against."],
+      [new ApiError(422, "internal 422 detail"), "Please check the outcome details."],
+      [new Error("network down"), "Unable to record outcome. Please try again."],
+    ];
+
+    for (const [rejection, expectedMessage] of cases) {
+      window.localStorage.clear();
+      vi.mocked(sendChatMessage).mockReset();
+      vi.mocked(recordDecision).mockReset();
+      vi.mocked(recordOutcome).mockReset();
+      vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+      vi.mocked(recordOutcome).mockRejectedValue(rejection);
+
+      const user = userEvent.setup();
+      const { unmount } = renderChatPanel(true);
+
+      await recordADecision(user);
+      await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+      await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+      await user.click(screen.getByRole("button", { name: "Positive" }));
+      await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(expectedMessage)).toBeInTheDocument();
+      });
+      expect(document.body.textContent).not.toContain("internal");
+      expect(screen.queryByText("Outcome recorded")).not.toBeInTheDocument();
+      expect((screen.getByLabelText("Outcome Summary") as HTMLTextAreaElement).value).toBe(
+        "Expansion delivered a lift.",
+      );
+      expect(screen.getByRole("button", { name: "Positive" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Record Outcome" })).not.toBeDisabled();
+
+      unmount();
+    }
+  });
+
+  // PRIVACY --------------------------------------------------------------
+
+  it("never persists the outcome id, summary, result_state, or observed_at to localStorage (items 40-43)", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValue(minimalResponse());
+    vi.mocked(recordOutcome).mockResolvedValue(OUTCOME_RESPONSE);
+    const user = userEvent.setup();
+    renderChatPanel(true);
+
+    await recordADecision(user);
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+    await user.type(screen.getByLabelText("Outcome Summary"), "Expansion delivered a lift.");
+    await user.click(screen.getByRole("button", { name: "Positive" }));
+    const observedAtField = screen.getByLabelText("Observed At") as HTMLInputElement;
+    fireEvent.change(observedAtField, { target: { value: "2026-01-01T10:30" } });
+    await user.click(screen.getByRole("button", { name: "Record Outcome" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Outcome recorded")).toBeInTheDocument();
+    });
+
+    const raw = window.localStorage.getItem(chatStorageKey("company-123"));
+    expect(raw).toBeTruthy();
+    expect(raw).not.toContain("outcome-999");
+    expect(raw).not.toContain("Expansion delivered a lift.");
+    expect(raw).not.toContain("positive");
+    expect(raw).not.toContain("2026-01-01T10:30");
   });
 });
