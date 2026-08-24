@@ -367,6 +367,11 @@ export function WorkspaceShell() {
   const canUploadFiles = hasPermission(permissions, "files.upload");
   const canSubmitOperationalForms = hasPermission(permissions, "operational.forms.submit");
   const canUseCeoWorkspace = hasPermission(permissions, "workspace.ceo");
+  // M8 Slice 3B-2: existing, already-defined backend permission (reused
+  // as-is, no new RBAC concept) - gates the Record Decision action inside
+  // ChatPanel. The backend's own 403 remains authoritative regardless;
+  // this only avoids showing an action that would predictably fail.
+  const canRecordDecisions = hasPermission(permissions, "memory.write");
 
   useEffect(() => {
     if (!token || !canReadDepartments) {
@@ -524,6 +529,7 @@ export function WorkspaceShell() {
               canSubmit={canSubmitInWorkspace}
               canUpload={Boolean(token && canUploadFiles)}
               canUseCeoWorkspace={canUseCeoWorkspace}
+              canRecordDecisions={canRecordDecisions}
               workspaceKey={activeWorkspaceKey}
               chatTitle={chatTitle}
               awarenessRefreshKey={awarenessRefreshKey}
@@ -540,6 +546,7 @@ export function WorkspaceShell() {
               canSubmit={canSubmitInWorkspace}
               canUpload={Boolean(token && canUploadFiles)}
               canUseCeoWorkspace={canUseCeoWorkspace}
+              canRecordDecisions={canRecordDecisions}
               awarenessRefreshKey={awarenessRefreshKey}
               companyProfileActive={companyProfile.is_active}
               onNavigateDivision={(divisionKey) => setActiveWorkspace({ kind: "division", divisionKey })}
@@ -564,6 +571,7 @@ export function WorkspaceShell() {
                     workspaceKey={activeWorkspaceKey}
                     title={chatTitle}
                     department={activeDepartment}
+                    canRecordDecisions={canRecordDecisions}
                   />
                 </>
               ) : null}
@@ -743,6 +751,7 @@ function ExecutiveCommandCenter({
   canSubmit,
   canUpload,
   canUseCeoWorkspace,
+  canRecordDecisions,
   awarenessRefreshKey,
   companyProfileActive,
   onNavigateDivision,
@@ -756,6 +765,7 @@ function ExecutiveCommandCenter({
   canSubmit: boolean;
   canUpload: boolean;
   canUseCeoWorkspace: boolean;
+  canRecordDecisions: boolean;
   awarenessRefreshKey: number;
   companyProfileActive: boolean;
   onNavigateDivision: (key: DivisionKey) => void;
@@ -830,6 +840,7 @@ function ExecutiveCommandCenter({
               workspaceKey={workspaceKey}
               title={chatTitle}
               department={activeDepartment}
+              canRecordDecisions={canRecordDecisions}
             />
           ) : null)}
 
@@ -1193,6 +1204,7 @@ function DivisionCommandCenter({
   canSubmit,
   canUpload,
   canUseCeoWorkspace,
+  canRecordDecisions,
   workspaceKey,
   chatTitle,
   awarenessRefreshKey,
@@ -1208,6 +1220,7 @@ function DivisionCommandCenter({
   canSubmit: boolean;
   canUpload: boolean;
   canUseCeoWorkspace: boolean;
+  canRecordDecisions: boolean;
   workspaceKey: string;
   chatTitle: string;
   awarenessRefreshKey: number;
@@ -1256,6 +1269,7 @@ function DivisionCommandCenter({
               workspaceKey={workspaceKey}
               title={chatTitle}
               department={activeDepartment}
+              canRecordDecisions={canRecordDecisions}
             />
           ) : null)}
 

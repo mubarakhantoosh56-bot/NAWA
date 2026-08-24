@@ -190,6 +190,13 @@ export type ChatMeta = {
   parse_ok: boolean;
   memory_injected: boolean;
   events_count: number;
+  // M8 Slice 3A: the immutable OME reasoning receipt id for this response
+  // (null only for internal/test construction that predates live receipt
+  // creation - a real successful /ai/chat response always sets it). This
+  // is the RAW backend field only - never confuse with the frontend-local
+  // recordedDecisionId annotation on PersistedChatMeta below, which the
+  // backend never returns.
+  reasoning_receipt_id: string | null;
 };
 
 export type ChatResponse = {
@@ -215,6 +222,17 @@ export type PersistedChatMeta = {
   memory_injected: boolean;
   events_count: number;
   explainability: Explainability | null;
+  // M8 Slice 3B-2: safe opaque UUID annotations only - never a policy,
+  // provenance catalog, or free-text field. reasoning_receipt_id is
+  // copied verbatim from the live ChatMeta field above.
+  // recorded_decision_id is FRONTEND-LOCAL ONLY - the backend /ai/chat
+  // response never returns it; it is set here only after a successful,
+  // separate POST /decisions call (see components/chat/RecordDecision.tsx)
+  // and stays null until then. Founder Correction 1 (M8 Slice 3B-2): this
+  // is deliberately NOT part of raw ChatMeta above, so the raw backend
+  // response type never blurs with frontend-local UI state.
+  reasoning_receipt_id: string | null;
+  recorded_decision_id: string | null;
 };
 
 export type PersistedChatResponse = {
@@ -373,4 +391,26 @@ export type EventDraftListResponse = {
 export type DraftConfirmResponse = {
   draft: EventDraft;
   event: OperationalEvent;
+};
+
+// M8 Slice 3B-2: mirrors the closed backend contract
+// (app/api/decisions.py) exactly - no field beyond these four is ever
+// client-authorable. company_id/created_by_user_id/status/timestamps/
+// provenance/supersession fields are never part of this type.
+export type DecisionCreateRequest = {
+  reasoning_receipt_id: string;
+  decision_text: string;
+  rationale: string | null;
+  situation_id: string | null;
+};
+
+export type DecisionResponse = {
+  id: string;
+  reasoning_receipt_id: string;
+  situation_id: string | null;
+  decision_text: string;
+  rationale: string | null;
+  status: string;
+  decided_at: string;
+  created_at: string;
 };

@@ -106,9 +106,18 @@ describe("toPersistedChatResponse", () => {
   it("P1: does not contain the broad meta.context object", () => {
     const persisted = toPersistedChatResponse(fakeBackendResponse());
     expect(persisted).not.toHaveProperty("meta.context");
-    // The persisted meta only ever has these four keys.
+    // The persisted meta only ever has these six keys (M8 Slice 3B-2 added
+    // reasoning_receipt_id/recorded_decision_id - both safe opaque UUID
+    // annotations, never provenance).
     expect(Object.keys(persisted.meta).sort()).toEqual(
-      ["events_count", "explainability", "memory_injected", "parse_ok"].sort(),
+      [
+        "events_count",
+        "explainability",
+        "memory_injected",
+        "parse_ok",
+        "reasoning_receipt_id",
+        "recorded_decision_id",
+      ].sort(),
     );
   });
 
@@ -176,6 +185,19 @@ describe("toPersistedChatResponse", () => {
   it("does not carry logic_json at all", () => {
     const persisted = toPersistedChatResponse(fakeBackendResponse());
     expect(persisted).not.toHaveProperty("logic_json");
+  });
+
+  it("M8 Slice 3B-2 (item 1/2): copies a live reasoning_receipt_id verbatim and always initializes recorded_decision_id to null", () => {
+    const withReceipt = fakeBackendResponse();
+    (withReceipt.meta as Record<string, unknown>).reasoning_receipt_id = "11111111-2222-3333-4444-555555555555";
+    const persisted = toPersistedChatResponse(withReceipt);
+    expect(persisted.meta.reasoning_receipt_id).toBe("11111111-2222-3333-4444-555555555555");
+    expect(persisted.meta.recorded_decision_id).toBeNull();
+  });
+
+  it("M8 Slice 3B-2: a response with no reasoning_receipt_id persists it as null", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponse());
+    expect(persisted.meta.reasoning_receipt_id).toBeNull();
   });
 
   it("2A-F2: sanitizes a malformed/over-broad LIVE explainability payload via the runtime sanitizer, not a TypeScript cast", () => {
@@ -301,6 +323,53 @@ describe("parseStoredTurns (P8: legacy payload safety)", () => {
     expect(serialized).not.toContain("legacy internal data");
     expect(serialized).not.toContain("should not resurface");
     expect(serialized).not.toContain("legacy_internal");
+  });
+
+  it("M8 Slice 3B-2 (item 4): a legacy turn with neither reasoning_receipt_id nor recorded_decision_id safely defaults both to null", () => {
+    const legacyRaw = JSON.stringify({
+      ceo: [
+        {
+          id: "legacy-1",
+          userMessage: "old question",
+          response: {
+            ceo_text: "old answer",
+            followup_question: null,
+            meta: { parse_ok: true, memory_injected: false, events_count: 1 },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(legacyRaw);
+    expect(parsed.ceo).toHaveLength(1);
+    expect(parsed.ceo[0].response.meta.reasoning_receipt_id).toBeNull();
+    expect(parsed.ceo[0].response.meta.recorded_decision_id).toBeNull();
+  });
+
+  it("M8 Slice 3B-2 (item 3): reasoning_receipt_id and recorded_decision_id survive a persist -> reparse round-trip", () => {
+    const raw = JSON.stringify({
+      ceo: [
+        {
+          id: "t1",
+          userMessage: "Status?",
+          response: {
+            ceo_text: "answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 0,
+              reasoning_receipt_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              recorded_decision_id: "11111111-bbbb-cccc-dddd-eeeeeeeeeeee",
+            },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(raw);
+    expect(parsed.ceo[0].response.meta.reasoning_receipt_id).toBe("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    expect(parsed.ceo[0].response.meta.recorded_decision_id).toBe("11111111-bbbb-cccc-dddd-eeeeeeeeeeee");
   });
 
   it("round-trips a freshly persisted turn back into the same sanitized shape", () => {

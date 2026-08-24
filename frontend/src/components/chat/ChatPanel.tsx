@@ -7,6 +7,7 @@ import { sendChatMessage } from "@/lib/api/chat";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { chatStorageKey, sanitizeExplainability } from "@/lib/chat/storage";
 import { ExecutiveReasoningPanel } from "@/components/chat/ExecutiveReasoningPanel";
+import { RecordDecision } from "@/components/chat/RecordDecision";
 import { getDemoChatTurns } from "@/lib/demo-data";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
 import type { ChatResponse, ChatTurn, Department, PersistedChatResponse, PersistedChatTurn } from "@/lib/types";
@@ -17,6 +18,11 @@ type ChatPanelProps = {
   workspaceKey: string;
   title: string;
   department: Department | null;
+  // M8 Slice 3B-2: existing memory.write permission, computed once by the
+  // caller (WorkspaceShell) from the already-fetched me.role.permissions -
+  // no new RBAC fetch/cache is introduced here. Backend 403 remains
+  // authoritative regardless of this flag.
+  canRecordDecisions: boolean;
 };
 
 export function ChatPanel({
@@ -25,6 +31,7 @@ export function ChatPanel({
   workspaceKey,
   title,
   department,
+  canRecordDecisions,
 }: ChatPanelProps) {
   const { language, t } = useLanguage();
   const [draft, setDraft] = useState("");
@@ -103,6 +110,22 @@ export function ChatPanel({
     }
   }
 
+  // M8 Slice 3B-2: updates ONLY the matching turn's recorded_decision_id,
+  // immutably - flows automatically into the existing persistence effect
+  // above (buildPersistedTurns/localStorage) exactly like any other
+  // turnsByWorkspace update. Never mutates the raw backend ChatResponse
+  // shape (Founder Correction 1).
+  function handleDecisionRecorded(turnId: string, decisionId: string) {
+    setTurnsByWorkspace((current) => ({
+      ...current,
+      [workspaceKey]: (current[workspaceKey] ?? []).map((turn) =>
+        turn.id === turnId
+          ? { ...turn, response: { ...turn.response, meta: { ...turn.response.meta, recorded_decision_id: decisionId } } }
+          : turn,
+      ),
+    }));
+  }
+
   return (
     <section className="panel flex min-h-[640px] flex-col overflow-hidden">
       <div className="border-b border-line bg-white px-4 py-3">
@@ -155,6 +178,14 @@ export function ChatPanel({
                 <MetaIndicators response={turn.response} />
               </div>
               <ExecutiveReasoningPanel explainability={turn.response.meta.explainability} />
+              {canRecordDecisions && turn.response.meta.reasoning_receipt_id ? (
+                <RecordDecision
+                  token={token}
+                  reasoningReceiptId={turn.response.meta.reasoning_receipt_id}
+                  recordedDecisionId={turn.response.meta.recorded_decision_id}
+                  onRecorded={(decisionId) => handleDecisionRecorded(turn.id, decisionId)}
+                />
+              ) : null}
             </div>
           </article>
         ))}
@@ -295,6 +326,15 @@ export function toPersistedChatResponse(response: ChatResponse): PersistedChatRe
       // response must not be able to smuggle extra fields into persisted
       // state (defense in depth on top of the backend's own allowlist).
       explainability: sanitizeExplainability(response.meta.context?.explainability),
+      // M8 Slice 3B-2: reasoning_receipt_id is copied verbatim from the
+      // live backend field. recorded_decision_id is ALWAYS null here - it
+      // is frontend-local state that can only be set later, after a
+      // separate, successful POST /decisions call (see
+      // handleDecisionRecorded below) - never something a raw ChatResponse
+      // itself ever carries (Founder Correction 1, M8 Slice 3B-2).
+      reasoning_receipt_id:
+        typeof response.meta.reasoning_receipt_id === "string" ? response.meta.reasoning_receipt_id : null,
+      recorded_decision_id: null,
     },
   };
 }
@@ -387,6 +427,12 @@ export function toStoredChatTurn(entry: unknown): ChatTurn | null {
         // valid-looking item, unapproved confidence drivers, ...) back
         // into React state via an unchecked TypeScript cast.
         explainability: sanitizeExplainability(explainability),
+        // M8 Slice 3B-2: a legacy payload written before this slice simply
+        // lacks these keys - both safely default to null (no receipt
+        // known, nothing recorded), which is exactly correct: no
+        // Record Decision action can ever appear on such a turn.
+        reasoning_receipt_id: typeof metaRecord.reasoning_receipt_id === "string" ? metaRecord.reasoning_receipt_id : null,
+        recorded_decision_id: typeof metaRecord.recorded_decision_id === "string" ? metaRecord.recorded_decision_id : null,
       },
     },
   };

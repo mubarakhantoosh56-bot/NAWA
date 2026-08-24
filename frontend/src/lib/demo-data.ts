@@ -254,6 +254,10 @@ function demoResponse(ceoText: string): PersistedChatResponse {
       memory_injected: true,
       events_count: 12,
       explainability: null,
+      // M8 Slice 3B-2: demo turns are synthetic and have no real reasoning
+      // receipt - Record Decision correctly never appears on them.
+      reasoning_receipt_id: null,
+      recorded_decision_id: null,
     },
   };
 }
