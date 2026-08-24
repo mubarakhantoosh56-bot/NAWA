@@ -22,6 +22,19 @@ def _clamp_limit(limit: int) -> int:
     return max(1, min(int(limit), MAX_LIST_LIMIT))
 
 
+def _require_valid_offset(offset: int) -> int:
+    """Fail closed on a malformed offset (M8 Slice 4A required fix): unlike
+    _clamp_limit's silent clamping, an out-of-domain offset is a caller bug
+    (a negative page position, or `bool` - a subclass of `int` in Python -
+    silently being accepted as 0/1) that must never resolve to a
+    plausible-looking page result. Raises ValueError, matching the existing
+    fail-closed convention used elsewhere in the OME model layer (e.g.
+    DecisionMemory/OutcomeMemory's own _required_uuid)."""
+    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+        raise ValueError(f"offset must be a non-negative integer, got {offset!r}")
+    return offset
+
+
 class DecisionMemoryRepository:
     """Database access for tenant-scoped human decision memories."""
 
@@ -92,13 +105,28 @@ class DecisionMemoryRepository:
         situation_id: UUID,
         include_superseded: bool = False,
         limit: int = DEFAULT_LIST_LIMIT,
+        offset: int = 0,
     ) -> list[DecisionMemory]:
-        """Return decisions linked to one situation, newest decided_at first."""
+        """Return decisions linked to one situation, newest decided_at
+        first, with an explicit id ASC tie-break for a fully deterministic
+        row order (M8 Slice 4A required fix: stable pagination requires a
+        deterministic order, not just an ORDER BY that happens to usually
+        behave consistently).
+
+        offset defaults to 0 - every existing caller remains valid
+        unchanged. It exists so a caller (M8 Slice 4A's
+        OrganizationalMemoryRetrievalService, in exact-situation mode) can
+        page through one situation's FULL decision history rather than
+        being capped at one MAX_LIST_LIMIT-sized page - a decision outside
+        the first page must remain reachable, never silently invisible.
+        """
         query = "SELECT * FROM ome_decision_memories WHERE company_id = $1 AND situation_id = $2"
         if not include_superseded:
             query += " AND status = 'active'"
-        query += " ORDER BY decided_at DESC LIMIT $3"
-        rows = await self.db.fetch(query, company_id, situation_id, _clamp_limit(limit))
+        query += " ORDER BY decided_at DESC, id ASC LIMIT $3 OFFSET $4"
+        rows = await self.db.fetch(
+            query, company_id, situation_id, _clamp_limit(limit), _require_valid_offset(offset)
+        )
         return [DecisionMemory.from_row(dict(row)) for row in rows]
 
     async def list_by_receipt(
