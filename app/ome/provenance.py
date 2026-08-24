@@ -1,17 +1,21 @@
-"""Server-internal Company Brain provenance extraction (pre-Slice-3
-Company Brain provenance foundation).
+"""Server-internal provenance extraction for live reasoning receipts (M8
+Slice 3A).
 
-Pure, server-only helper: resolves the CB# labels a reasoning turn's FINAL
+Two pure, server-only helpers - one per provenance category persisted in
+ome_reasoning_receipts.evidence_refs (see app/ome/types.py):
+build_truth_evidence_refs (Truth, category="truth") and
+build_company_brain_provenance_refs (Company Brain, category=
+"company_brain"). Both resolve ONLY the labels a reasoning turn's FINAL
 accepted assessment actually cited
-(reasoning_assessment.recommendation_basis.company_basis) against that SAME
-turn's already-built, server-owned reasoning_reference_catalog
-(app/services/decision_context.py) - never rereads a knowledge file, never
-queries current Company Brain source state, never trusts any client-supplied
-field.
+(reasoning_assessment.recommendation_basis.evidence_basis /
+.company_basis) against that SAME turn's already-built, server-owned
+reasoning_reference_catalog (app/services/decision_context.py) - never
+rereads a knowledge file or an uploaded file's content, never queries
+current source state, never trusts any client-supplied field.
 
-Dormant by design: nothing in app/api or app/services/openai_client.py calls
-this yet - wiring a live caller is separate, later Slice 3 work, gated
-independently by the Founder.
+Wired live from app/services/openai_client.py's AIService.chat() - see
+that module's _create_live_reasoning_receipt for the exact call site and
+ordering guarantees.
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ from typing import Any
 from uuid import UUID
 
 from app.ome.errors import InvalidMemoryInput
-from app.ome.types import CompanyBrainProvenanceRef
+from app.ome.types import CompanyBrainProvenanceRef, EvidenceRef
 
 
 def build_company_brain_provenance_refs(
@@ -82,5 +86,83 @@ def build_company_brain_provenance_refs(
                 display_label=cb_label,
             )
         )
+
+    return refs
+
+
+def build_truth_evidence_refs(
+    *,
+    cited_evidence_basis_refs: list[str],
+    reasoning_reference_catalog: dict[str, Any],
+) -> list[EvidenceRef]:
+    """Resolve every cited T# label into a durable EvidenceRef(type="file").
+
+    ``cited_evidence_basis_refs`` must be exactly the FINAL accepted
+    reasoning_assessment.recommendation_basis.evidence_basis list for this
+    turn - order and duplicates are preserved exactly as given, since a
+    genuinely repeated citation in the real reasoning result is real data,
+    not an error.
+
+    FAIL CLOSED (Founder Correction 1, M8 Slice 3A): EvidenceRef currently
+    supports only file-backed Truth provenance (type="file" - see
+    app/ome/types.py's EVIDENCE_REF_TYPES). A cited T# that cannot be
+    represented this way - missing from the catalog, no
+    internal_source_item, no source_file_id, or a malformed
+    source_file_id - is NEVER silently skipped. A persisted receipt whose
+    response_snapshot.reasoning_assessment.recommendation_basis.
+    evidence_basis claims a citation that durable evidence_refs cannot
+    prove is silent provenance loss, which OME must never produce -
+    receipt creation for that turn fails entirely rather than persisting
+    a partial, misleading proof. A future, currently-unsupported Truth
+    source type (e.g. an operational-event-derived claim) is explicitly
+    deferred, not solved by skipping here.
+
+    If the final reasoning cites no Truth refs at all, an empty
+    cited_evidence_basis_refs list returns an empty result - that is
+    valid, not an error.
+    """
+    if not isinstance(reasoning_reference_catalog, dict):
+        raise InvalidMemoryInput("reasoning_reference_catalog must be an object")
+
+    truth_catalog = reasoning_reference_catalog.get("truth")
+    if not isinstance(truth_catalog, dict):
+        raise InvalidMemoryInput("reasoning_reference_catalog.truth must be an object")
+
+    refs: list[EvidenceRef] = []
+    for t_label in cited_evidence_basis_refs:
+        if not isinstance(t_label, str):
+            raise InvalidMemoryInput(
+                f"cited evidence_basis reference must be a string, got {type(t_label).__name__}"
+            )
+
+        catalog_entry = truth_catalog.get(t_label)
+        if not isinstance(catalog_entry, dict):
+            raise InvalidMemoryInput(
+                f"cited evidence_basis reference {t_label!r} was not supplied in this turn's "
+                "Operational Truth Context"
+            )
+
+        internal_source_item = catalog_entry.get("internal_source_item")
+        if not isinstance(internal_source_item, dict):
+            raise InvalidMemoryInput(
+                f"cited evidence_basis reference {t_label!r} has no resolvable source item"
+            )
+
+        source_file_id = internal_source_item.get("source_file_id")
+        if not source_file_id:
+            raise InvalidMemoryInput(
+                f"cited evidence_basis reference {t_label!r} has no source_file_id - it cannot be "
+                "represented by the currently-supported file EvidenceRef, and a receipt must never "
+                "silently persist a partial Truth provenance set"
+            )
+        try:
+            file_id = source_file_id if isinstance(source_file_id, UUID) else UUID(str(source_file_id))
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise InvalidMemoryInput(
+                f"cited evidence_basis reference {t_label!r} has a malformed source_file_id: "
+                f"{source_file_id!r}"
+            ) from exc
+
+        refs.append(EvidenceRef(type="file", id=file_id))
 
     return refs

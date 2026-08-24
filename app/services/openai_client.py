@@ -51,6 +51,9 @@ from app.services.company_brain_context import (
     DAIRTNA_POULTRY_DEPARTMENT_SLUG,
 )
 from app.oip.models.operational_record import PoultryOperationalRecord
+from app.ome.models import ReasoningReceipt
+from app.ome.provenance import build_company_brain_provenance_refs, build_truth_evidence_refs
+from app.ome.services.reasoning_receipt_service import ReasoningReceiptService
 
 logger = logging.getLogger(__name__)
 
@@ -1304,7 +1307,17 @@ class AIService:
         message: str,
         context: Optional[Dict[str, Any]] = None,
         company_id: Optional[str] = None,
+        created_by_user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        # M8 Slice 3A: created_by_user_id is the trusted, authenticated
+        # caller identity (app/api/chat.py passes auth_context.user_id -
+        # never a request body/context value). It is optional here only
+        # for backward compatibility with this method's many existing
+        # direct, non-authenticated test call sites (isolated
+        # decision_context/prompt-construction tests with no real DB) -
+        # a real live call from the authenticated /ai/chat route always
+        # supplies it, and a live reasoning receipt is created if and only
+        # if it is present (see the end of this method).
 
         context = context or {}
         company_id = company_id or "default"
@@ -1884,6 +1897,58 @@ class AIService:
                 decision_context=decision_context,
             )
 
+            result = format_ai_response(
+                answer_text=answer_text,
+                # M7 Slice 2A: the public response only ever sees the
+                # explicit meta.context allowlist - the full internal
+                # `context` dict (already used above for logging/prompt
+                # construction) is never echoed back wholesale.
+                context=public_context_allowlist(context),
+                session_id=session_id,
+                company_id=company_id,
+                followup_question=None,
+                parsed=parsed,
+                memory_injected=memory_injected,
+                events_count=events_count,
+                language=response_language,
+            )
+
+            # M8 Slice 3A (Founder Correction 2): the immutable reasoning
+            # receipt is created HERE - after `result` (the final,
+            # client-visible response) is fully formed, and BEFORE any of
+            # the legacy memory-event logging / fact extraction / session-
+            # history append below. response_snapshot is read directly off
+            # `result` itself (never reconstructed separately), so it can
+            # never diverge from what the client actually receives. A
+            # receipt failure raises and aborts the whole request (never
+            # swallowed - see _create_live_reasoning_receipt) rather than
+            # let any durable side effect record, or the client receive, a
+            # response with no receipt to anchor it.
+            #
+            # created_by_user_id is only ever supplied by the real
+            # authenticated /ai/chat route (app/api/chat.py passes
+            # auth_context.user_id). A direct, non-authenticated caller
+            # (this method's many existing isolated unit-test call sites)
+            # skips receipt creation entirely - exactly as it already
+            # skips every other DB-backed feature in this method (e.g.
+            # `if self.repo is not None`) - never as a live-path shortcut.
+            if created_by_user_id is not None:
+                live_reasoning_assessment = (result.get("logic_json") or {}).get("reasoning_assessment")
+                if not isinstance(live_reasoning_assessment, dict):
+                    raise RuntimeError(
+                        "M8 Slice 3A: final result has no reasoning_assessment - cannot create a "
+                        "reasoning receipt for a live authenticated chat call"
+                    )
+                receipt = await self._create_live_reasoning_receipt(
+                    company_id=company_id,
+                    created_by_user_id=created_by_user_id,
+                    session_id=session_id,
+                    ceo_text=result["ceo_text"],
+                    reasoning_assessment=live_reasoning_assessment,
+                    decision_context=decision_context,
+                )
+                result["meta"]["reasoning_receipt_id"] = str(receipt.id)
+
             try:
                 log_decision_event(
                     company_id=company_id,
@@ -1937,21 +2002,7 @@ class AIService:
             if len(self.sessions[key]) > self.max_history * 2:
                 self.sessions[key] = self.sessions[key][-self.max_history * 2:]
 
-            return format_ai_response(
-                answer_text=answer_text,
-                # M7 Slice 2A: the public response only ever sees the
-                # explicit meta.context allowlist - the full internal
-                # `context` dict (already used above for logging/prompt
-                # construction) is never echoed back wholesale.
-                context=public_context_allowlist(context),
-                session_id=session_id,
-                company_id=company_id,
-                followup_question=None,
-                parsed=parsed,
-                memory_injected=memory_injected,
-                events_count=events_count,
-                language=response_language,
-            )
+            return result
 
         except Exception as e:
             logger.error(
@@ -1960,6 +2011,68 @@ class AIService:
                 exc_info=True,
             )
             raise HTTPException(status_code=500, detail="NAWA engine failed") from e
+
+    async def _create_live_reasoning_receipt(
+        self,
+        *,
+        company_id: str,
+        created_by_user_id: str,
+        session_id: str,
+        ceo_text: str,
+        reasoning_assessment: Dict[str, Any],
+        decision_context: Dict[str, Any],
+    ) -> ReasoningReceipt:
+        """M8 Slice 3A: create the immutable OME reasoning receipt for one
+        real, authenticated /ai/chat response.
+
+        Called exactly once, after format_ai_response() has produced the
+        FINAL client-visible result - ceo_text/reasoning_assessment are
+        passed in from that final `result` dict itself (see chat()'s call
+        site), never reconstructed separately, so the persisted snapshot
+        can never diverge from what the client actually receives.
+
+        Truth/Company Brain provenance is resolved ONLY from this same
+        turn's already-built, server-owned
+        decision_context["reasoning_reference_catalog"] - see
+        app/ome/provenance.py's build_truth_evidence_refs (fails closed on
+        any cited T# that cannot be represented by the currently-supported
+        file EvidenceRef - Founder Correction 1, M8 Slice 3A) and
+        build_company_brain_provenance_refs (fails closed on any
+        unresolved cited CB#, unchanged from the closed provenance
+        foundation round). Neither ever rereads a file or trusts
+        client-supplied input.
+
+        Raises on any failure - an unresolved Truth/Company Brain
+        citation, a tenant mismatch, or a DB failure. Never swallowed: a
+        receipt failure must abort the whole request rather than return a
+        response with no durable proof (Founder Correction 2, M8 Slice
+        3A) - the caller (chat()) lets this exception propagate to the
+        existing outer except-Exception -> HTTPException(500) handler.
+        """
+        recommendation_basis = reasoning_assessment.get("recommendation_basis") or {}
+        truth_labels = recommendation_basis.get("evidence_basis") or []
+        company_labels = recommendation_basis.get("company_basis") or []
+        reasoning_reference_catalog = decision_context.get("reasoning_reference_catalog") or {}
+
+        truth_refs = build_truth_evidence_refs(
+            cited_evidence_basis_refs=truth_labels,
+            reasoning_reference_catalog=reasoning_reference_catalog,
+        )
+        company_brain_refs = build_company_brain_provenance_refs(
+            company_id=UUID(company_id),
+            cited_company_basis_refs=company_labels,
+            reasoning_reference_catalog=reasoning_reference_catalog,
+        )
+
+        receipt_service = ReasoningReceiptService(self.db_pool)
+        return await receipt_service.create_receipt(
+            company_id=UUID(company_id),
+            created_by_user_id=UUID(created_by_user_id),
+            session_id=session_id,
+            response_snapshot={"ceo_text": ceo_text, "reasoning_assessment": reasoning_assessment},
+            evidence_refs=truth_refs,
+            company_brain_refs=company_brain_refs,
+        )
 
 
 ai_engine = AIService()

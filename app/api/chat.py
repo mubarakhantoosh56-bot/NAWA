@@ -55,6 +55,10 @@ async def chat_endpoint(
             message=request.message,
             context=context,
             company_id=auth_context.company_id,
+            # M8 Slice 3A: trusted, authenticated caller identity for live
+            # reasoning-receipt creation - only ever from the JWT-derived
+            # AuthContext, never the request body.
+            created_by_user_id=auth_context.user_id,
         )
         return ChatResponse.model_validate(result)
     except HTTPException as e:

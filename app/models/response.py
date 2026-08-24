@@ -15,6 +15,15 @@ class ChatMeta(BaseModel):
     parse_ok: bool
     memory_injected: bool
     events_count: int
+    # M8 Slice 3A: the stable identity of the immutable OME reasoning
+    # receipt created for this response - the same UUID a future human
+    # decision API binds to via DecisionMemoryService's
+    # reasoning_receipt_id contract (no separate response_id; the receipt
+    # UUID already is what a response is durably known as). Optional only
+    # for compatibility with internal/test construction that predates
+    # live receipt creation - a real, successful /ai/chat response always
+    # sets this (see AIService.chat()).
+    reasoning_receipt_id: UUID | None = None
 
 
 class ChatResponse(BaseModel):

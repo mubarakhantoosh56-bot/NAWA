@@ -8,8 +8,16 @@ resolves ONLY already-cited CB# labels against a trusted
 reasoning_reference_catalog, failing closed on anything unresolved;
 ReasoningReceiptService.create_receipt persists Truth and Company Brain
 provenance distinctly in the same evidence_refs JSONB array, enforcing
-tenant safety and CB-citation completeness; and the whole foundation stays
-dormant (no API/openai_client wiring, no migration 015).
+tenant safety and CB-citation completeness; and (no migration 015) this
+foundation layer itself needs no schema change. Historical note: this
+suite originally also proved the whole foundation was dormant (no
+app/services/openai_client.py wiring at all) - M8 Slice 3A is the
+Founder-authorized round that wires the live call inside
+AIService.chat(); see test_api_route_never_directly_references_ome_
+provenance_internals below for the narrower, still-true invariant that
+replaced the old blanket dormancy assertion, and
+tests/test_m8_slice3a_live_reasoning_receipts.py for the live-wiring
+tests themselves.
 """
 from __future__ import annotations
 
@@ -716,13 +724,27 @@ def test_no_api_module_imports_provenance_helper() -> None:
         assert "build_company_brain_provenance_refs" not in text
 
 
-def test_no_openai_client_live_call() -> None:
+def test_api_route_never_directly_references_ome_provenance_internals() -> None:
+    """Historical note: before M8 Slice 3A, this test asserted
+    app/services/openai_client.py never referenced create_receipt/
+    CompanyBrainProvenanceRef/build_company_brain_provenance_refs at all -
+    proving the whole foundation was dormant. M8 Slice 3A is exactly the
+    Founder-authorized round that wires that live call inside
+    AIService.chat() (see that module's _create_live_reasoning_receipt),
+    so that specific assertion is now obsolete by design, not a
+    regression - the real, still-load-bearing invariant this test
+    protects is narrower and remains true: the API ROUTE layer
+    (app/api/chat.py) itself never references these OME internals
+    directly - it only ever calls ai_engine.chat(...), keeping all
+    provenance extraction/receipt-creation logic encapsulated in the
+    service layer, never spread into the route/API surface."""
     import pathlib
 
-    text = pathlib.Path("app/services/openai_client.py").read_text(encoding="utf-8")
+    text = pathlib.Path("app/api/chat.py").read_text(encoding="utf-8")
     assert "build_company_brain_provenance_refs" not in text
     assert "CompanyBrainProvenanceRef" not in text
     assert "create_receipt" not in text
+    assert "ReasoningReceiptService" not in text
 
 
 def test_no_migration_015() -> None:

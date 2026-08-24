@@ -1603,6 +1603,12 @@ async def _cleanup_golden(pool, *, company_id: str, user_id: str, file_id: str |
     await pool.execute("DELETE FROM raw_inputs WHERE company_id = $1", _UUID(company_id))
     await pool.execute("DELETE FROM memory_events WHERE company_id = $1", company_id)
     await pool.execute("DELETE FROM memory_facts WHERE company_id = $1", company_id)
+    # M8 Slice 3A: a real /ai/chat call through this test's real, JWT-
+    # authenticated route now creates a real, immutable reasoning receipt
+    # (fk_ome_reasoning_receipts_company / _created_by_user reference
+    # companies/users respectively) - must be deleted before the
+    # companies/users rows below or their DELETEs would violate those FKs.
+    await pool.execute("DELETE FROM ome_reasoning_receipts WHERE company_id = $1", _UUID(company_id))
     await pool.execute("DELETE FROM files WHERE company_id = $1", _UUID(company_id))
     await pool.execute("DELETE FROM departments WHERE company_id = $1", _UUID(company_id))
     await pool.execute("DELETE FROM companies WHERE id = $1", _UUID(company_id))
