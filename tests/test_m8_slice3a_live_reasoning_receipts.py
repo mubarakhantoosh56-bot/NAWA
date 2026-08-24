@@ -698,21 +698,27 @@ async def _always_valid_no_citation_completion(**kwargs):
 # (items 32-33)
 # ---------------------------------------------------------------------------
 
-def test_no_outcome_recording_api_added() -> None:
+def test_no_outcome_supersession_api_added() -> None:
     """Historical note: before M8 Slice 3B-1, this test also asserted no
     app/api/*.py file referenced record_decision - proving the whole human
-    decision-recording surface was dormant. M8 Slice 3B-1 is the
-    Founder-authorized round that adds exactly that API
-    (app/api/decisions.py) - so that half of the old assertion is now
-    obsolete by design, not a regression. Outcome recording remains
-    genuinely out of scope and unimplemented, so that half of the
-    invariant still holds and is kept here."""
+    decision-recording surface was dormant; that assertion became obsolete
+    when Slice 3B-1 added app/api/decisions.py. Before M8 Slice 3C-1, this
+    test ALSO asserted no app/api/*.py file referenced record_outcome/
+    OutcomeMemoryService at all - proving outcome recording itself was
+    still fully dormant. M8 Slice 3C-1 is the Founder-authorized round
+    that adds exactly that API (app/api/outcomes.py, CREATE-only), so that
+    assertion is now obsolete by design too, not a regression. What
+    remains genuinely true and load-bearing is narrower: outcome
+    SUPERSESSION specifically stays unexposed - no app/api/*.py file may
+    CALL supersede_outcome. (The substring "supersede_outcome" legitimately
+    appears in app/api/outcomes.py's own explanatory docstring, describing
+    what stays deliberately unexposed - so this checks actual call-site
+    usage, not prose.)"""
     import pathlib
 
     for path in pathlib.Path("app/api").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
-        assert "record_outcome" not in text
-        assert "OutcomeMemoryService" not in text
+        assert ".supersede_outcome(" not in text
 
 
 def test_no_migration_015() -> None:

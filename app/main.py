@@ -16,6 +16,7 @@ from app.api.health import router as health_router
 from app.api.integrations import router as integrations_router
 from app.api.operational_events import router as operational_events_router
 from app.api.operational_inputs import router as operational_inputs_router
+from app.api.outcomes import router as outcomes_router
 from app.api.situations import router as situations_router
 from app.core.config import settings
 
@@ -71,6 +72,7 @@ app.include_router(auth_router)
 app.include_router(chat_router, prefix="/ai")
 app.include_router(decision_debug_router)
 app.include_router(decisions_router)
+app.include_router(outcomes_router)
 app.include_router(company_profile_router)
 app.include_router(departments_router)
 app.include_router(files_router)
