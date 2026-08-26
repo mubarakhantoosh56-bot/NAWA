@@ -30,10 +30,13 @@ branch (if any) has fully settled `parsed`.
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
 from app.services.reasoning_validation import REASONING_STATES
+
+logger = logging.getLogger(__name__)
 
 CONFIDENCE_BAND_LOW = "low"
 CONFIDENCE_BAND_MODERATE = "moderate"
@@ -65,9 +68,15 @@ COMPANY_BASIS_PUBLIC_FIELDS = ("id", "label", "type", "statement")
 # M7 Slice 2B: the complete top-level public explainability contract - the
 # ONLY keys build_public_explainability() may ever return. Documented here
 # for the same auditability reason as the field allowlists above.
+#
+# M8 Slice 4C-1: cited_organizational_memory added - a THIRD, distinct
+# citation category alongside cited_evidence (current Truth) and
+# cited_company_basis (current Company Brain policy). Additive only: every
+# pre-existing key/behavior above is unchanged.
 PUBLIC_EXPLAINABILITY_FIELDS = (
     "cited_evidence",
     "cited_company_basis",
+    "cited_organizational_memory",
     "confidence",
     "reasoning_state",
     "operational_assessment",
@@ -385,6 +394,127 @@ def _sanitize_company_basis_item(item: dict[str, Any], presentation_id: str) -> 
     }
 
 
+def _sanitize_organizational_memory_outcome(outcome: dict[str, Any]) -> dict[str, Any] | None:
+    """One rendered (already model-visible, already-truncated) outcome
+    from an OM# rendered_snapshot, passed through the same
+    _safe_public_prose boundary as every other free-form public string.
+    `result_state`/`observed_at` are structural facts, not prose - they
+    pass through verbatim, exactly like `epistemic_origin`/
+    `source_time_status` already do for cited_evidence."""
+    summary = _safe_public_prose(outcome.get("summary"))
+    if summary is None:
+        return None
+    return {
+        "result_state": outcome.get("result_state"),
+        "summary": summary,
+        "observed_at": outcome.get("observed_at"),
+    }
+
+
+def _sanitize_organizational_memory_item(
+    rendered_snapshot: dict[str, Any], presentation_id: str
+) -> dict[str, Any] | None:
+    """M8 Slice 4C-1 (Founder Correction 1): every public Organizational
+    Memory text value derives ONLY from the already-model-visible
+    rendered_snapshot (see decision_context.py's
+    _build_organizational_memory_rendered_snapshot - never the full
+    persisted OME text) and is THEN passed through the existing
+    _safe_public_prose boundary, the same one operational_assessment/
+    risk_assessment/tensions/evidence_gaps already use. This sanitization
+    step may only narrow (redact/drop) what was already model-visible -
+    it never authorizes expanding back toward full persisted text.
+
+    Fail-closed granularity (M8 Slice 4C-1 fix round - Codex blocker):
+    `decision` is the item's mandatory identity - if it fails
+    sanitization, the WHOLE item is skipped (there is no safe partial item
+    without it). `rationale` is optional supplementary content - if
+    present but unsafe, it degrades to None rather than dropping the
+    item. Each outcome's `summary` is part of the cited model-visible
+    aggregate that `omitted_outcomes_count` describes as a whole - dropping
+    only the unsafe outcome while keeping `omitted_outcomes_count`
+    unchanged would let a public 4-of-5-shown item plus
+    omitted_outcomes_count=3 be misread as "4 shown + 3 omitted = 7
+    total" when the AI actually saw 5. So ANY unsafe outcome summary
+    drops the ENTIRE item atomically - never a partial outcomes list -
+    preserving omitted_outcomes_count's single meaning (outcomes omitted
+    from the AI's context for budgeting, never outcomes hidden by public
+    sanitization) for every item that IS returned."""
+    decision = _safe_public_prose(rendered_snapshot.get("decision"))
+    if decision is None:
+        return None
+
+    raw_rationale = rendered_snapshot.get("rationale")
+    rationale = _safe_public_prose(raw_rationale) if raw_rationale is not None else None
+
+    outcomes: list[dict[str, Any]] = []
+    for outcome in rendered_snapshot.get("outcomes") or []:
+        if not isinstance(outcome, dict):
+            continue
+        sanitized_outcome = _sanitize_organizational_memory_outcome(outcome)
+        if sanitized_outcome is None:
+            return None
+        outcomes.append(sanitized_outcome)
+
+    return {
+        "id": presentation_id,
+        "decision": decision,
+        "rationale": rationale,
+        "decided_at": rendered_snapshot.get("decided_at"),
+        "outcomes": outcomes,
+        "omitted_outcomes_count": rendered_snapshot.get("omitted_outcomes_count") or 0,
+    }
+
+
+def _resolve_cited_organizational_memory(
+    *,
+    organizational_memory_basis: Any,
+    organizational_memory_reference_catalog: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """M8 Slice 4C-1: resolve the FINAL accepted candidate's cited OM#
+    refs against THIS SAME TURN'S organizational_memory_reference_catalog
+    - never a second DB read, never the raw organizational_memory_context
+    list (which would risk the exact position-based fragility class
+    already fixed for T#/CB# in Correction Round 1, 2A-F4 - the catalog
+    entry is the only authoritative source of what an OM# means).
+
+    Only EXPLICITLY CITED OM# labels ever appear here (Founder Correction
+    1, M8 Slice 4B/4C): Organizational Memory present in the prompt
+    without being cited produces nothing. Presentation ids ("h1", "h2",
+    ...) are freshly generated from CITED iteration order - the internal
+    OM# label itself is never exposed (same law as T#/CB# never reaching
+    the public contract).
+
+    Fail-closed per item, never fail the whole explainability object: an
+    OM# absent from the catalog, a catalog entry with no rendered_snapshot,
+    or an item that fails public-safety sanitization is skipped with a
+    server-side warning (an internal invariant concern, not a user-facing
+    failure - see this module's docstring on defensive reinforcement,
+    same reasoning already applied to cited_evidence/cited_company_basis).
+    """
+    if not isinstance(organizational_memory_basis, list):
+        return []
+
+    cited_organizational_memory: list[dict[str, Any]] = []
+    for position, ref in enumerate(organizational_memory_basis, start=1):
+        if not isinstance(ref, str):
+            continue
+        catalog_entry = organizational_memory_reference_catalog.get(ref)
+        if not isinstance(catalog_entry, dict):
+            logger.warning("cited_organizational_memory: ref not found in this turn's catalog")
+            continue
+        rendered_snapshot = catalog_entry.get("rendered_snapshot")
+        if not isinstance(rendered_snapshot, dict):
+            logger.warning("cited_organizational_memory: ref has no resolvable rendered_snapshot")
+            continue
+        sanitized_item = _sanitize_organizational_memory_item(rendered_snapshot, f"h{position}")
+        if sanitized_item is None:
+            logger.warning("cited_organizational_memory: ref failed public-safety sanitization")
+            continue
+        cited_organizational_memory.append(sanitized_item)
+
+    return cited_organizational_memory
+
+
 def build_public_explainability(
     *,
     reasoning_assessment: dict[str, Any] | None,
@@ -464,9 +594,21 @@ def build_public_explainability(
             ),
         }
 
+    # M8 Slice 4C-1: a SEPARATE catalog from reasoning_reference_catalog
+    # (see decision_context.py's build_decision_context) - never nested
+    # inside it, matching how the two catalogs are already kept as
+    # sibling top-level decision_context keys.
+    organizational_memory_reference_catalog = decision_context.get("organizational_memory_reference_catalog")
+    if not isinstance(organizational_memory_reference_catalog, dict):
+        organizational_memory_reference_catalog = {}
+
     return {
         "cited_evidence": cited_evidence,
         "cited_company_basis": cited_company_basis,
+        "cited_organizational_memory": _resolve_cited_organizational_memory(
+            organizational_memory_basis=recommendation_basis.get("organizational_memory_basis"),
+            organizational_memory_reference_catalog=organizational_memory_reference_catalog,
+        ),
         "confidence": confidence,
         # M7 Slice 2B: safe executive-provenance passthrough from the SAME
         # final accepted reasoning_assessment - never recomputed, never

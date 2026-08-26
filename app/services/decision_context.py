@@ -467,7 +467,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
     if reasoning_signals_section:
         lines.append(reasoning_signals_section)
     organizational_memory_section = _build_organizational_memory_section(
-        decision_context.get("organizational_memory_context")
+        decision_context.get("organizational_memory_reference_catalog")
     )
     if organizational_memory_section:
         lines.append(organizational_memory_section)
@@ -844,6 +844,58 @@ def _truncate_for_prompt(text: str | None, max_chars: int) -> str:
     return text[:max_chars] + "... [truncated for prompt budget]"
 
 
+def _build_organizational_memory_rendered_snapshot(item: dict[str, Any]) -> dict[str, Any]:
+    """M8 Slice 4C-1 (Founder Correction 2): the ONE canonical model-visible
+    rendering of one Organizational Memory item - computed exactly once per
+    OM#, stored on its reference-catalog entry, and consumed by BOTH the
+    [Historical Organizational Memory] prompt section
+    (_build_organizational_memory_section) and public explainability
+    (app/services/explainability.py). This is what prevents any drift
+    between "what the AI received" and "what the human is later told the
+    AI cited" - selection/truncation logic exists in exactly one place.
+
+    Contains ONLY rendering output - no durable id of any kind (those live
+    separately, in the catalog entry's own decision_memory_id/
+    rendered_outcome_memory_ids fields, unchanged from Slice 4B).
+    `rationale` is None when the source has none - never the literal
+    string "n/a" - so a consumer can distinguish "no rationale" from an
+    actual rationale that happens to read "n/a"; the prompt's own "n/a"
+    placeholder is applied at prompt-build time instead (see
+    _build_organizational_memory_section), not baked into this canonical
+    snapshot.
+    """
+    decision_text = _truncate_for_prompt(item.get("decision_text"), MAX_DECISION_TEXT_CHARS)
+    raw_rationale = item.get("rationale")
+    rationale = _truncate_for_prompt(raw_rationale, MAX_RATIONALE_CHARS) if raw_rationale else None
+    decided_at = item.get("decided_at") or "unknown"
+    outcomes = item.get("outcomes") if isinstance(item.get("outcomes"), list) else []
+    selected_outcomes = _select_rendered_outcomes(outcomes)
+    omitted_outcomes_count = len(outcomes) - len(selected_outcomes)
+
+    rendered_outcomes: list[dict[str, Any]] = []
+    for outcome in selected_outcomes:
+        if not isinstance(outcome, dict):
+            continue
+        rendered_outcomes.append(
+            {
+                # result_state is rendered verbatim, including "unknown" -
+                # it is a real recorded state, never omitted/zeroed/
+                # neutralized (Founder Step 11, M8 Slice 4B).
+                "result_state": outcome.get("result_state") or "unknown",
+                "summary": _truncate_for_prompt(outcome.get("outcome_summary"), MAX_OUTCOME_SUMMARY_CHARS),
+                "observed_at": outcome.get("observed_at") or "unknown",
+            }
+        )
+
+    return {
+        "decision": decision_text,
+        "rationale": rationale,
+        "decided_at": decided_at,
+        "outcomes": rendered_outcomes,
+        "omitted_outcomes_count": omitted_outcomes_count,
+    }
+
+
 def _build_organizational_memory_reference_catalog(
     organizational_memory_context: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -859,6 +911,12 @@ def _build_organizational_memory_reference_catalog(
     app/ome/provenance.py's build_organizational_memory_provenance_refs
     (and therefore receipt provenance) truthful about what the model
     actually received under this OM# label.
+
+    rendered_snapshot (M8 Slice 4C-1) is the same item's canonical
+    model-visible display text - see
+    _build_organizational_memory_rendered_snapshot's own docstring. Both
+    the prompt section renderer and public explainability read this one
+    snapshot; neither recomputes selection/truncation independently.
     """
     catalog: dict[str, Any] = {}
     for index, item in enumerate(organizational_memory_context[:MAX_OM_ITEMS], start=1):
@@ -877,6 +935,7 @@ def _build_organizational_memory_reference_catalog(
         catalog[f"OM{index}"] = {
             "decision_memory_id": decision_memory_id,
             "rendered_outcome_memory_ids": rendered_outcome_memory_ids,
+            "rendered_snapshot": _build_organizational_memory_rendered_snapshot(item),
         }
     return catalog
 
@@ -904,41 +963,54 @@ _ORGANIZATIONAL_MEMORY_SECTION_CONTRACT_LINES = [
 ]
 
 
-def _build_organizational_memory_section(organizational_memory_context: list[dict[str, Any]]) -> str:
+def _build_organizational_memory_section(organizational_memory_reference_catalog: dict[str, Any]) -> str:
     """Render the bounded M8 Slice 4B Historical Organizational Memory
     context as its own dedicated text section - conceptually separate from
     [Operational Truth Context]/[Company Brain Context] (see
     _build_truth_context_section/_build_company_brain_section above).
     Company-wide [] (Slice 4A's own bounded-candidate-set semantic) omits
     this section entirely rather than rendering a misleading "no
-    organizational memory exists" line (Founder Step 9)."""
-    if not organizational_memory_context:
+    organizational memory exists" line (Founder Step 9).
+
+    M8 Slice 4C-1: reads each entry's already-computed
+    rendered_snapshot (see _build_organizational_memory_rendered_snapshot)
+    rather than recomputing truncation/outcome-selection independently -
+    this single-source-of-truth is what guarantees the prompt text and any
+    later same-turn public explainability can never drift apart. Iterates
+    the catalog dict in insertion order (OM1, OM2, ... - guaranteed by
+    _build_organizational_memory_reference_catalog's own construction
+    order), producing byte-identical output to the pre-refactor
+    implementation that iterated organizational_memory_context directly.
+    """
+    if not organizational_memory_reference_catalog:
         return ""
 
     lines = list(_ORGANIZATIONAL_MEMORY_SECTION_CONTRACT_LINES)
-    for index, item in enumerate(organizational_memory_context[:MAX_OM_ITEMS], start=1):
-        if not isinstance(item, dict):
+    for ref, catalog_entry in organizational_memory_reference_catalog.items():
+        if not isinstance(catalog_entry, dict):
             continue
-        ref = f"OM{index}"
-        decision_text = _truncate_for_prompt(item.get("decision_text"), MAX_DECISION_TEXT_CHARS)
-        rationale = _truncate_for_prompt(item.get("rationale"), MAX_RATIONALE_CHARS)
-        decided_at = item.get("decided_at") or "unknown"
-        outcomes = item.get("outcomes") if isinstance(item.get("outcomes"), list) else []
-        selected_outcomes = _select_rendered_outcomes(outcomes)
-        omitted_count = len(outcomes) - len(selected_outcomes)
+        snapshot = catalog_entry.get("rendered_snapshot")
+        if not isinstance(snapshot, dict):
+            continue
+
+        decision_text = snapshot.get("decision")
+        # The prompt's own "n/a" placeholder is applied here, at
+        # prompt-build time - never baked into the canonical snapshot
+        # itself, so a consumer (e.g. public explainability) can still
+        # distinguish "no rationale" (None) from an actual rationale that
+        # happens to read "n/a".
+        rationale = snapshot.get("rationale") or "n/a"
+        decided_at = snapshot.get("decided_at")
 
         lines.append(f"[{ref}] Decision: {decision_text} | Rationale: {rationale} | Decided at: {decided_at}")
         lines.append("Recorded outcomes after this decision:")
-        for outcome in selected_outcomes:
+        for outcome in snapshot.get("outcomes") or []:
             if not isinstance(outcome, dict):
                 continue
-            summary = _truncate_for_prompt(outcome.get("outcome_summary"), MAX_OUTCOME_SUMMARY_CHARS)
-            observed_at = outcome.get("observed_at") or "unknown"
-            # result_state is rendered verbatim, including "unknown" - it
-            # is a real recorded state, never omitted/zeroed/neutralized
-            # (Founder Step 11).
-            result_state = outcome.get("result_state") or "unknown"
-            lines.append(f"- {observed_at} — {result_state} — {summary}")
+            lines.append(
+                f"- {outcome.get('observed_at')} — {outcome.get('result_state')} — {outcome.get('summary')}"
+            )
+        omitted_count = snapshot.get("omitted_outcomes_count") or 0
         if omitted_count > 0:
             lines.append(f"Earlier active outcomes omitted from this prompt for context budgeting: {omitted_count}")
 

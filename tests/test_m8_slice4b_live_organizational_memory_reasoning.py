@@ -306,11 +306,11 @@ _SAMPLE_ITEM = {
 
 
 def test_section_omitted_when_empty() -> None:
-    assert _build_organizational_memory_section([]) == ""
+    assert _build_organizational_memory_section({}) == ""
 
 
 def test_section_heading_and_wording_contract_present() -> None:
-    section = _build_organizational_memory_section([_SAMPLE_ITEM])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([_SAMPLE_ITEM]))
     assert section.startswith("[Historical Organizational Memory]")
     assert "These are prior HUMAN decisions and human-recorded outcomes" in section
     assert "not current Operational Truth" in section
@@ -337,12 +337,12 @@ def test_full_prompt_block_contains_om_citation_legality_rule() -> None:
 
 def test_om_labels_deterministic_om1_through_omn() -> None:
     items = [{**_SAMPLE_ITEM, "decision_memory_id": f"did-{i}"} for i in range(3)]
-    section = _build_organizational_memory_section(items)
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog(items))
     assert "[OM1]" in section and "[OM2]" in section and "[OM3]" in section
 
 
 def test_raw_durable_uuids_absent_from_dedicated_section() -> None:
-    section = _build_organizational_memory_section([_SAMPLE_ITEM])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([_SAMPLE_ITEM]))
     assert "did-1" not in section
     assert "oid-1" not in section
 
@@ -350,7 +350,7 @@ def test_raw_durable_uuids_absent_from_dedicated_section() -> None:
 def test_decision_text_truncates_only_in_rendering_not_source() -> None:
     long_text = "x" * (MAX_DECISION_TEXT_CHARS + 200)
     item = {**_SAMPLE_ITEM, "decision_text": long_text}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     assert "[truncated for prompt budget]" in section
     # Source object passed in is never mutated.
     assert item["decision_text"] == long_text
@@ -359,7 +359,7 @@ def test_decision_text_truncates_only_in_rendering_not_source() -> None:
 def test_rationale_truncates_only_in_rendering() -> None:
     long_text = "y" * (MAX_RATIONALE_CHARS + 200)
     item = {**_SAMPLE_ITEM, "rationale": long_text}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     assert "[truncated for prompt budget]" in section
     assert item["rationale"] == long_text
 
@@ -367,7 +367,7 @@ def test_rationale_truncates_only_in_rendering() -> None:
 def test_outcome_summary_truncates_only_in_rendering() -> None:
     long_summary = "z" * (MAX_OUTCOME_SUMMARY_CHARS + 200)
     item = {**_SAMPLE_ITEM, "outcomes": [{**_SAMPLE_ITEM["outcomes"][0], "outcome_summary": long_summary}]}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     assert "[truncated for prompt budget]" in section
     assert item["outcomes"][0]["outcome_summary"] == long_summary
 
@@ -383,7 +383,7 @@ def test_truncate_for_prompt_deterministic_and_never_mutates() -> None:
 def test_source_4a_style_dict_unchanged_after_rendering() -> None:
     item = dict(_SAMPLE_ITEM)
     original = dict(item)
-    _build_organizational_memory_section([item])
+    _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     _build_organizational_memory_reference_catalog([item])
     assert item == original
 
@@ -428,7 +428,7 @@ def test_selected_latest_five_rendered_chronologically() -> None:
 
 def test_omitted_outcome_count_stated_accurately() -> None:
     item = {**_SAMPLE_ITEM, "outcomes": _outcomes(8)}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     assert "Earlier active outcomes omitted from this prompt for context budgeting: 3" in section
 
 
@@ -440,7 +440,7 @@ def test_catalog_contains_exactly_rendered_outcome_ids() -> None:
 
 def test_multiple_selected_outcomes_preserved_not_collapsed() -> None:
     item = {**_SAMPLE_ITEM, "outcomes": _outcomes(3)}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     for i in range(3):
         assert f"Summary {i}" in section
     assert "Final outcome" not in section
@@ -453,7 +453,7 @@ def test_multiple_selected_outcomes_preserved_not_collapsed() -> None:
 
 def test_explicit_unknown_renders_literally() -> None:
     item = {**_SAMPLE_ITEM, "outcomes": [{**_SAMPLE_ITEM["outcomes"][0], "result_state": "unknown"}]}
-    section = _build_organizational_memory_section([item])
+    section = _build_organizational_memory_section(_build_organizational_memory_reference_catalog([item]))
     assert "— unknown —" in section
 
 
@@ -1200,10 +1200,18 @@ def test_no_scoring_or_confidence_field_on_provenance_ref() -> None:
 # Protected-boundary dormancy proofs (items 43-46, 59-62)
 # ---------------------------------------------------------------------------
 
-def test_no_explainability_file_change() -> None:
-    text = pathlib.Path("app/services/explainability.py").read_text(encoding="utf-8")
-    assert "organizational_memory" not in text
-    assert "cited_organizational_memory" not in text
+# Historical note: before M8 Slice 4C-1, this test asserted
+# app/services/explainability.py contained no "organizational_memory"/
+# "cited_organizational_memory" text at all - proving the whole public
+# explainability surface for Organizational Memory was dormant. M8 Slice
+# 4C-1 is the Founder-authorized round that adds exactly that public field
+# (see app/services/explainability.py's cited_organizational_memory and
+# tests/test_m8_slice4c1_organizational_memory_explainability.py for its
+# behavior proofs), so that assertion is now obsolete by design, not a
+# regression - removed rather than kept as a hollow check, since no
+# narrower true statement survives it (the whole point of the retired
+# test was "zero Organizational Memory content in this file," and
+# Organizational Memory content is now this file's actual feature).
 
 
 def test_no_live_situation_resolution_in_chat_api() -> None:
