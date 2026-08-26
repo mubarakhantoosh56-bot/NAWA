@@ -347,9 +347,25 @@ def _valid_assessment(**overrides) -> dict:
         "evidence_gaps": [],
         "risk_assessment": "Low.",
         "confidence": 70,
-        "recommendation_basis": {"evidence_basis": ["T1"], "company_basis": ["CB1"], "missing_evidence": []},
+        # M8 Slice 4B: organizational_memory_basis is now a required
+        # RecommendationBasis field (empty by default - no live Slice 4B
+        # scenario is under test in this M6-focused file).
+        "recommendation_basis": {
+            "evidence_basis": ["T1"],
+            "company_basis": ["CB1"],
+            "missing_evidence": [],
+            "organizational_memory_basis": [],
+        },
     }
     base.update(overrides)
+    # M8 Slice 4B: organizational_memory_basis is a required
+    # RecommendationBasis field. Many call sites in this file override
+    # recommendation_basis wholesale (e.g.
+    # _valid_assessment(recommendation_basis={"evidence_basis": [...], ...}))
+    # without knowing about the new field - back-fill it here, in the one
+    # shared helper, rather than editing every individual call site.
+    if "organizational_memory_basis" not in base["recommendation_basis"]:
+        base["recommendation_basis"] = {**base["recommendation_basis"], "organizational_memory_basis": []}
     return base
 
 

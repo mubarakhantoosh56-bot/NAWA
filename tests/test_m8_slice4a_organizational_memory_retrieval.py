@@ -1120,19 +1120,31 @@ def test_retrieve_performs_no_mutation(db_available) -> None:
 # Dormancy (item 38)
 # ---------------------------------------------------------------------------
 
-def test_dormancy_not_referenced_from_live_chat_pipeline() -> None:
-    """Checks actual import/instantiation usage in the three live-reasoning
-    files, not a bare substring across the whole codebase (which would
-    false-positive against this test file's own imports)."""
-    live_pipeline_files = [
-        "app/api/chat.py",
-        "app/services/openai_client.py",
-        "app/services/decision_context.py",
-    ]
-    for path in live_pipeline_files:
+def test_dormancy_not_referenced_from_chat_api_or_decision_context() -> None:
+    """Historical note: before M8 Slice 4B, this test also asserted
+    app/services/openai_client.py never referenced
+    OrganizationalMemoryRetrievalService - proving the whole live-wiring
+    surface was dormant. M8 Slice 4B is the Founder-authorized round that
+    adds exactly that live wiring (via a new
+    _load_organizational_memory_context method), so that half of the old
+    assertion is now obsolete by design, not a regression - see
+    tests/test_m8_slice4b_live_organizational_memory_reasoning.py for the
+    live-wiring proofs that replace it. What remains genuinely true and
+    load-bearing: app/api/chat.py never imports/instantiates the retrieval
+    service directly (all live retrieval flows through
+    AIService._load_organizational_memory_context), and
+    app/services/decision_context.py never imports/instantiates it either
+    (it only ever receives an already-loaded, plain-dict
+    organizational_memory_context parameter - it has no DB access of its
+    own). Checks actual import/instantiation usage, never a bare substring
+    (decision_context.py's own MAX_OM_ITEMS comment legitimately mentions
+    "OrganizationalMemoryRetrievalService" in prose, explaining why that
+    constant's value stays in sync with the service's DEFAULT_LIMIT - the
+    same docstring-vs-usage distinction this session has drawn before)."""
+    for path in ["app/api/chat.py", "app/services/decision_context.py"]:
         text = pathlib.Path(path).read_text(encoding="utf-8")
-        assert "organizational_memory_retrieval_service" not in text
-        assert "OrganizationalMemoryRetrievalService" not in text
+        assert "from app.ome.services.organizational_memory_retrieval_service import" not in text
+        assert "OrganizationalMemoryRetrievalService(" not in text
 
 
 # ---------------------------------------------------------------------------

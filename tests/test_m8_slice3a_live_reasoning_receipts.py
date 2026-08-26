@@ -225,6 +225,10 @@ class _ConfigurableFakeChatCompletions:
                 "evidence_basis": [self.chosen_truth_ref],
                 "company_basis": company_basis,
                 "missing_evidence": [],
+                # M8 Slice 4B: organizational_memory_basis is now a
+                # required RecommendationBasis field - no Slice 4B
+                # scenario is under test in this Slice 3A-focused file.
+                "organizational_memory_basis": [],
             },
         }
         return _valid_ai_response(reasoning_assessment)
@@ -688,7 +692,12 @@ async def _always_valid_no_citation_completion(**kwargs):
         "evidence_gaps": [],
         "risk_assessment": "x",
         "confidence": 40,
-        "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []},
+        "recommendation_basis": {
+            "evidence_basis": [],
+            "company_basis": [],
+            "missing_evidence": [],
+            "organizational_memory_basis": [],
+        },
     }
     return _valid_ai_response(reasoning_assessment)
 

@@ -25,8 +25,10 @@ from uuid import UUID
 
 from app.ome.errors import InvalidMemoryInput
 from app.ome.models import ReasoningReceipt
+from app.ome.repositories.decision_memory_repository import DecisionMemoryRepository
+from app.ome.repositories.outcome_memory_repository import OutcomeMemoryRepository
 from app.ome.repositories.reasoning_receipt_repository import ReasoningReceiptRepository
-from app.ome.types import CompanyBrainProvenanceRef, EvidenceRef
+from app.ome.types import CompanyBrainProvenanceRef, EvidenceRef, OrganizationalMemoryProvenanceRef
 from app.repositories.file_repository import FileRepository
 
 
@@ -37,6 +39,14 @@ class ReasoningReceiptService:
         """Initialize the service with its repositories."""
         self.receipt_repo = ReasoningReceiptRepository(db)
         self.file_repo = FileRepository(db)
+        # M8 Slice 4B required fix: the receipt service boundary itself
+        # must independently verify Organizational Memory provenance
+        # referential/tenant integrity - never trust that a caller's
+        # OrganizationalMemoryProvenanceRef genuinely resolves inside this
+        # company just because it was built from a (trusted) turn-local
+        # catalog. Both repositories are read-only here - never mutated.
+        self.decision_repo = DecisionMemoryRepository(db)
+        self.outcome_repo = OutcomeMemoryRepository(db)
 
     async def create_receipt(
         self,
@@ -47,6 +57,7 @@ class ReasoningReceiptService:
         response_snapshot: dict[str, Any],
         evidence_refs: list[EvidenceRef],
         company_brain_refs: list[CompanyBrainProvenanceRef] | None = None,
+        organizational_memory_refs: list[OrganizationalMemoryProvenanceRef] | None = None,
     ) -> ReasoningReceipt:
         """Validate and create one immutable reasoning receipt.
 
@@ -117,6 +128,10 @@ class ReasoningReceiptService:
         )
         persisted_refs.extend(ref.to_dict() for ref in cb_refs)
 
+        om_refs = list(organizational_memory_refs) if organizational_memory_refs is not None else []
+        await self._verify_organizational_memory_refs(company_id=company_id, om_refs=om_refs)
+        persisted_refs.extend(ref.to_dict() for ref in om_refs)
+
         return await self.receipt_repo.create(
             company_id=company_id,
             created_by_user_id=created_by_user_id,
@@ -163,6 +178,28 @@ class ReasoningReceiptService:
         Brain provenance entries than the reasoning result actually cited.
         If company_basis is absent/empty, an empty company_brain_refs is
         valid - most turns cite no company policy at all.
+
+        organizational_memory_refs (Organizational Memory, M8 Slice 4B) are
+        server-derived OrganizationalMemoryProvenanceRef values - see
+        app/ome/provenance.py's build_organizational_memory_provenance_refs,
+        the only intended way to construct them. Required-fix round: this
+        service boundary no longer merely trusts that a caller's ref
+        genuinely resolves inside this company - _verify_organizational_
+        memory_refs independently re-loads the referenced DecisionMemory
+        and every referenced OutcomeMemory through the existing
+        company-scoped repository get_by_id methods (never a fresh,
+        unscoped lookup) and confirms the Outcome->Decision relationship,
+        fully re-deriving referential + tenant integrity at the persistence
+        boundary itself rather than trusting the turn-local catalog that
+        originally built the ref. citation-completeness (which OM# labels
+        were actually cited) remains guaranteed by construction at the one
+        intended call site instead (build_organizational_memory_provenance_
+        refs is always invoked with cited_om_refs taken directly from the
+        FINAL accepted reasoning_assessment.recommendation_basis.
+        organizational_memory_basis) - this service verifies WHAT was cited
+        resolves to real, same-company, correctly-related rows, not WHICH
+        labels were cited. Joins the same SHARED evidence_refs JSONB array
+        as Truth/Company Brain, tagged with category="organizational_memory".
         """
         for ref in company_brain_refs:
             if not isinstance(ref, CompanyBrainProvenanceRef):
@@ -190,3 +227,65 @@ class ReasoningReceiptService:
                 "every cited CB# must be represented by exactly one company_brain_refs entry, in "
                 "the same order, with no extras"
             )
+
+    async def _verify_organizational_memory_refs(
+        self, *, company_id: UUID, om_refs: list[OrganizationalMemoryProvenanceRef]
+    ) -> None:
+        """Required-fix round (Codex Blocker 1): ReasoningReceipt is an
+        audit record - the service boundary itself must independently
+        re-verify referential and tenant integrity for every OM provenance
+        ref, never merely trust that the caller's ref was honestly built
+        from a trusted catalog. For EACH ref: (1) confirm the type; (2)
+        load DecisionMemory via the existing company-scoped
+        DecisionMemoryRepository.get_by_id(company_id=..., decision_id=
+        ref.decision_memory_id) - a decision that does not exist, or that
+        belongs to another company, resolves identically to None (Founder
+        Correction 3, unchanged repository behavior) and fails closed
+        here; (3) for every id in ref.outcome_memory_ids, load OutcomeMemory
+        via the existing company-scoped OutcomeMemoryRepository.get_by_id -
+        same fail-closed-on-None behavior; (4) confirm
+        outcome.decision_memory_id == ref.decision_memory_id - an outcome
+        that exists in this company but belongs to a DIFFERENT decision is
+        rejected too.
+
+        Status is deliberately NOT part of this check: a Decision/Outcome
+        legitimately cited when active may be superseded later, and the
+        historical receipt must remain valid and resolvable regardless -
+        this verifies durable historical identity/integrity (existence +
+        tenant ownership + Outcome->Decision relationship), never current
+        retrieval eligibility. Live Slice 4A retrieval remains solely
+        responsible for selecting active, eligible memory at generation
+        time; superseded rows are never hard-deleted (M8 OME schema), so
+        they remain genuinely resolvable here by design.
+
+        Every failure raises the SAME generic message regardless of which
+        specific check failed (nonexistent vs. cross-company vs. wrong-
+        decision) - never distinguishing "does not exist" from "exists in
+        another company" or naming the foreign company, matching this
+        service's existing Founder Correction 3 discipline (see
+        DecisionMemoryRepository/OutcomeMemoryRepository's own docstrings).
+        Read-only: never mutates a Decision/Outcome row, never reads a
+        ReasoningReceipt (old or new), never touches
+        response_snapshot/evidence_refs/ceo_text/reasoning_assessment of
+        any prior receipt, never traverses
+        DecisionMemory.reasoning_receipt_id.
+        """
+        for ref in om_refs:
+            if not isinstance(ref, OrganizationalMemoryProvenanceRef):
+                raise InvalidMemoryInput(
+                    "organizational_memory_refs entries must be OrganizationalMemoryProvenanceRef, "
+                    f"got {type(ref).__name__}"
+                )
+
+            decision = await self.decision_repo.get_by_id(
+                company_id=company_id, decision_id=ref.decision_memory_id
+            )
+            if decision is None:
+                raise InvalidMemoryInput("invalid organizational memory provenance")
+
+            for outcome_id in ref.outcome_memory_ids:
+                outcome = await self.outcome_repo.get_by_id(company_id=company_id, outcome_id=outcome_id)
+                if outcome is None:
+                    raise InvalidMemoryInput("invalid organizational memory provenance")
+                if outcome.decision_memory_id != ref.decision_memory_id:
+                    raise InvalidMemoryInput("invalid organizational memory provenance")

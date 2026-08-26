@@ -52,7 +52,12 @@ from app.services.company_brain_context import (
 )
 from app.oip.models.operational_record import PoultryOperationalRecord
 from app.ome.models import ReasoningReceipt
-from app.ome.provenance import build_company_brain_provenance_refs, build_truth_evidence_refs
+from app.ome.provenance import (
+    build_company_brain_provenance_refs,
+    build_organizational_memory_provenance_refs,
+    build_truth_evidence_refs,
+)
+from app.ome.services.organizational_memory_retrieval_service import OrganizationalMemoryRetrievalService
 from app.ome.services.reasoning_receipt_service import ReasoningReceiptService
 
 logger = logging.getLogger(__name__)
@@ -1087,6 +1092,67 @@ class AIService:
             )
         return result.items, {"status": result.status, "evidence_count": result.evidence_count}
 
+    async def _load_organizational_memory_context(self, company_id: str) -> List[Dict[str, Any]]:
+        """M8 Slice 4B: bridge Slice 4A's dormant retrieval foundation into
+        live chat.
+
+        Company-wide mode only (situation_id=None) - live chat has no
+        trusted current situation_id anywhere in this file (confirmed by
+        inspection; nothing here resolves one), and inventing one from
+        department/message text/session/AI interpretation/operational-
+        event heuristics is explicitly forbidden. Exact-situation live
+        integration is a separate, later architectural decision.
+
+        Supplementary historical context, not authoritative current
+        evidence: any failure here is caught, logged, and degrades to an
+        empty list - it must never fail the chat request, mirroring
+        _load_truth_context's exact established pattern above (unlike
+        ReasoningReceipt creation, which remains fatal under the existing
+        audit guarantee - this is a context-loading step, not the receipt
+        itself).
+
+        Converts OrganizationalMemoryRetrievalService's dataclass results
+        into a plain, JSON-safe dict shape (UUIDs/datetimes -> str) for
+        app/services/decision_context.py's build_decision_context, exactly
+        matching how Truth/Company Brain items already arrive as plain
+        dicts by the time they reach that function. reasoning_receipt_id
+        is deliberately never included here - the model must never see it
+        (M8 Slice 4B Founder contract, Step 7).
+        """
+        if self.db_pool is None:
+            return []
+
+        try:
+            service = OrganizationalMemoryRetrievalService(self.db_pool)
+            items = await service.retrieve(company_id=UUID(company_id), situation_id=None, limit=5)
+        except Exception:
+            logger.warning(
+                "organizational_memory_context_load_failed",
+                extra={"company_id": company_id},
+                exc_info=True,
+            )
+            return []
+
+        return [
+            {
+                "decision_memory_id": str(item.decision_memory_id),
+                "situation_id": str(item.situation_id) if item.situation_id else None,
+                "decision_text": item.decision_text,
+                "rationale": item.rationale,
+                "decided_at": item.decided_at.isoformat(),
+                "outcomes": [
+                    {
+                        "outcome_memory_id": str(outcome.outcome_memory_id),
+                        "outcome_summary": outcome.outcome_summary,
+                        "result_state": outcome.result_state,
+                        "observed_at": outcome.observed_at.isoformat(),
+                    }
+                    for outcome in item.outcomes
+                ],
+            }
+            for item in items
+        ]
+
     async def _load_company_brain_context(
         self,
         company_id: str,
@@ -1512,6 +1578,13 @@ class AIService:
             )
             context["company_brain_bridge"] = company_brain_status
 
+            # M8 Slice 4B: company-wide-only, situation_id=None always (see
+            # _load_organizational_memory_context's own docstring) -
+            # non-fatal on failure, matching Truth/Company Brain above.
+            organizational_memory_context = await self._load_organizational_memory_context(
+                company_id=company_id
+            )
+
             decision_context = build_decision_context(
                 context=context,
                 response_language=response_language,
@@ -1522,6 +1595,7 @@ class AIService:
                 operational_truth_context=truth_context_items,
                 company_brain_context=company_brain_items,
                 operational_semantics_topics=operational_semantics_topics,
+                organizational_memory_context=organizational_memory_context,
             )
             # M6 Part 6: reasoning_signals/reasoning_reference_catalog are
             # internal prompt-control/validation metadata, not auditable
@@ -2042,17 +2116,41 @@ class AIService:
         foundation round). Neither ever rereads a file or trusts
         client-supplied input.
 
-        Raises on any failure - an unresolved Truth/Company Brain
-        citation, a tenant mismatch, or a DB failure. Never swallowed: a
-        receipt failure must abort the whole request rather than return a
-        response with no durable proof (Founder Correction 2, M8 Slice
-        3A) - the caller (chat()) lets this exception propagate to the
-        existing outer except-Exception -> HTTPException(500) handler.
+        Organizational Memory provenance (M8 Slice 4B) follows the exact
+        same law, resolved from decision_context["organizational_memory_
+        reference_catalog"] via app/ome/provenance.py's
+        build_organizational_memory_provenance_refs - fails closed on any
+        cited OM# that cannot be resolved. Per Founder Correction 1, this
+        represents explicit CITED basis only: Organizational Memory may
+        have been present in the prompt without being cited, and only OM#
+        labels the FINAL accepted assessment actually declared in
+        recommendation_basis.organizational_memory_basis become receipt
+        provenance - an empty list there means no Organizational Memory
+        provenance is persisted for this turn.
+
+        Raises on any failure - an unresolved Truth/Company Brain/
+        Organizational Memory citation, a tenant mismatch, or a DB
+        failure. Never swallowed: a receipt failure must abort the whole
+        request rather than return a response with no durable proof
+        (Founder Correction 2, M8 Slice 3A) - the caller (chat()) lets
+        this exception propagate to the existing outer except-Exception ->
+        HTTPException(500) handler. This fatal-on-failure guarantee is
+        unweakened by Slice 4B - only the earlier, supplementary
+        _load_organizational_memory_context context-loading step is
+        allowed to fail non-fatally.
         """
         recommendation_basis = reasoning_assessment.get("recommendation_basis") or {}
         truth_labels = recommendation_basis.get("evidence_basis") or []
         company_labels = recommendation_basis.get("company_basis") or []
+        # M8 Slice 4B (Founder Correction 1): explicit CITED basis only -
+        # Organizational Memory may have been present in the prompt without
+        # being cited; only OM# labels the FINAL accepted assessment
+        # actually declared become receipt provenance.
+        organizational_memory_labels = recommendation_basis.get("organizational_memory_basis") or []
         reasoning_reference_catalog = decision_context.get("reasoning_reference_catalog") or {}
+        organizational_memory_reference_catalog = (
+            decision_context.get("organizational_memory_reference_catalog") or {}
+        )
 
         truth_refs = build_truth_evidence_refs(
             cited_evidence_basis_refs=truth_labels,
@@ -2063,6 +2161,10 @@ class AIService:
             cited_company_basis_refs=company_labels,
             reasoning_reference_catalog=reasoning_reference_catalog,
         )
+        organizational_memory_refs = build_organizational_memory_provenance_refs(
+            cited_om_refs=organizational_memory_labels,
+            organizational_memory_reference_catalog=organizational_memory_reference_catalog,
+        )
 
         receipt_service = ReasoningReceiptService(self.db_pool)
         return await receipt_service.create_receipt(
@@ -2072,6 +2174,7 @@ class AIService:
             response_snapshot={"ceo_text": ceo_text, "reasoning_assessment": reasoning_assessment},
             evidence_refs=truth_refs,
             company_brain_refs=company_brain_refs,
+            organizational_memory_refs=organizational_memory_refs,
         )
 
 

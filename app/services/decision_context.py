@@ -30,6 +30,18 @@ REASONING_STATES = (
 # app/services/company_brain_context.py). Reused, not redefined: this is the
 # same frozen Layer-2 type vocabulary M5 already established, not a new
 # taxonomy invented for M6.
+# M8 Slice 4B (Founder Correction 2): prompt-rendering-only budget for
+# Historical Organizational Memory - never applied to Slice 4A's own
+# persisted/domain objects, only to the plain-text prompt this module
+# builds. MAX_OM_ITEMS mirrors OrganizationalMemoryRetrievalService's own
+# DEFAULT_LIMIT=5 (not imported here, to avoid a services->ome->services
+# coupling for one constant - both intentionally stay in sync at 5).
+MAX_OM_ITEMS = 5
+MAX_DECISION_TEXT_CHARS = 500
+MAX_RATIONALE_CHARS = 500
+MAX_OUTCOME_SUMMARY_CHARS = 300
+MAX_RENDERED_OUTCOMES_PER_ITEM = 5
+
 COMPANY_BRAIN_POLICY_TYPES = frozenset(
     {
         "POLICY",
@@ -149,6 +161,13 @@ def build_decision_context(
     operational_truth_context: list[dict[str, Any]] | None = None,
     company_brain_context: list[dict[str, Any]] | None = None,
     operational_semantics_topics: list[str] | None = None,
+    # M8 Slice 4B: bounded, JSON-safe historical Decision+Outcome aggregates
+    # (see app/services/openai_client.py's _load_organizational_memory_context,
+    # which converts OrganizationalMemoryRetrievalService.retrieve()'s
+    # dataclass results into this plain-dict shape). A THIRD sibling
+    # semantic layer alongside operational_truth_context/company_brain_context
+    # - never merged into either.
+    organizational_memory_context: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Assemble a compact operational context object before AI generation."""
 
@@ -186,6 +205,14 @@ def build_decision_context(
         company_brain_context=company_brain_context or [],
     )
     reasoning_signals = _build_reasoning_signals(reasoning_reference_catalog)
+    # M8 Slice 4B: a SEPARATE catalog from reasoning_reference_catalog -
+    # Organizational Memory eligibility is already fully decided by Slice
+    # 4A's retrieval (active/outcome-backed/non-superseded), so this
+    # catalog needs no per-item classification flags, only durable pointer
+    # identity for citation validation and receipt provenance.
+    organizational_memory_reference_catalog = _build_organizational_memory_reference_catalog(
+        organizational_memory_context or []
+    )
 
     return {
         "department": department,
@@ -219,6 +246,14 @@ def build_decision_context(
         # Company Brain can disagree in the prompt without one silently
         # overwriting the other.
         "company_brain_context": company_brain_context or [],
+        # M8 Slice 4B: bounded historical Decision+Outcome aggregates - a
+        # THIRD, distinct concept from both Truth ("what is happening now")
+        # and Company Brain ("what the company prefers/requires now").
+        # Never merged into operational_truth_context, company_brain_context,
+        # memory_events, or operational_events. Internal-only (see
+        # INTERNAL_ONLY_DECISION_CONTEXT_KEYS below) - carries durable OME
+        # ids, never exposed to the frontend/public API.
+        "organizational_memory_context": organizational_memory_context or [],
         # Operational Semantics topic labels only (never full content, never
         # classified as policy - Founder instruction, Step 6): terminology/
         # meaning context is a third, distinct concept from both Truth and
@@ -242,6 +277,12 @@ def build_decision_context(
         # only classifies the operational_truth_context/company_brain_context
         # already supplied above.
         "reasoning_reference_catalog": reasoning_reference_catalog,
+        # M8 Slice 4B: turn-local OM# reference handles for decision
+        # provenance (recommendation_basis.organizational_memory_basis) -
+        # same internal-only/never-persisted/never-reloaded discipline as
+        # reasoning_reference_catalog above, kept as its own sibling key
+        # rather than nested inside it.
+        "organizational_memory_reference_catalog": organizational_memory_reference_catalog,
         "detected_patterns": detected_patterns,
         "root_cause_reasoning": root_cause_reasoning,
         "uploaded_file_summaries": _uploaded_file_summaries(context, rag_knowledge_available),
@@ -260,7 +301,17 @@ def build_decision_context(
 # copy placed into the public response is reduced. This is distinct from
 # the model-generated logic_json.reasoning_assessment, which is the
 # auditable executive reasoning OUTPUT and does remain public.
-INTERNAL_ONLY_DECISION_CONTEXT_KEYS = frozenset({"reasoning_signals", "reasoning_reference_catalog"})
+INTERNAL_ONLY_DECISION_CONTEXT_KEYS = frozenset(
+    {
+        "reasoning_signals",
+        "reasoning_reference_catalog",
+        # M8 Slice 4B: both carry durable OME UUIDs (decision_memory_id/
+        # outcome_memory_id) - never exposed to the frontend/public API,
+        # same discipline as reasoning_reference_catalog's internal_source_item.
+        "organizational_memory_context",
+        "organizational_memory_reference_catalog",
+    }
+)
 
 
 def public_decision_context(decision_context: dict[str, Any]) -> dict[str, Any]:
@@ -415,6 +466,11 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
     )
     if reasoning_signals_section:
         lines.append(reasoning_signals_section)
+    organizational_memory_section = _build_organizational_memory_section(
+        decision_context.get("organizational_memory_context")
+    )
+    if organizational_memory_section:
+        lines.append(organizational_memory_section)
     lines.extend(
         [
             "MANDATORY OPERATIONAL RESPONSE ENFORCEMENT:",
@@ -456,6 +512,7 @@ def build_decision_context_prompt_block(decision_context: dict[str, Any]) -> str
             "- Populate raw_decision.reasoning_assessment on every response: reasoning_state (one of aligned/tension/insufficient_evidence - see Reasoning Signals for the allowed values), operational_assessment, company_brain_alignment, tensions, evidence_gaps, risk_assessment, confidence, and recommendation_basis (evidence_basis, company_basis, missing_evidence). These are auditable decision provenance, never hidden chain-of-thought - do not write step-by-step internal deliberation into any field.",
             reasoning_prose_language_instruction(decision_context.get("response_language")),
             "- Every Operational Truth Context item shown below is labeled with a reference ID (T1, T2, ...) and every Company Brain Context item shown below is labeled (CB1, CB2, ...). recommendation_basis.evidence_basis may ONLY cite a T# that is USABLE evidence (AVAILABLE with an OBSERVED or DERIVED origin - never missing, never inferred-only). recommendation_basis.company_basis may ONLY cite a CB# that is AUTHORITATIVE settled company doctrine (a curated policy-type item, not INSTITUTIONAL_MEMORY, whose authority is exactly 'authoritative' and which is not conflicted - never a merely-not-conflicted or unlabeled item). missing_evidence may only cite a T# that is itself missing or has unresolved source time. Never invent a reference ID, never cite a reference from the wrong section, and never cite a prose source (e.g. 'a report' or a made-up document name) - only these exact IDs are valid, and this is validated at runtime.",
+            "- If [Historical Organizational Memory] items are shown below, each is labeled with its own reference ID (OM1, OM2, ...) - a namespace separate from T#/CB#. recommendation_basis.organizational_memory_basis may ONLY contain OM# IDs shown below, and ONLY when you materially rely on that historical record. Never put a T#/CB# into organizational_memory_basis, never put an OM# into evidence_basis/company_basis, and never invent an OM# - this is validated at runtime, same as T#/CB#.",
             "- Reason in this order every time: first determine what the Operational Truth Context evidence actually supports; only then relate that to Company Brain Context; only then decide what action is justified. Never start from a Company Brain preference and search for supporting facts - that is confirmation bias.",
             "- Neither Operational Truth Context nor Company Brain Context automatically wins when they point in different directions. Do not say 'continue because this is company policy' and do not say 'ignore company strategy because evidence changed.' State the evidence, state the company position, name the tension explicitly, and evaluate whether current evidence supports acting on the company position now.",
             "- You may explicitly say current evidence does not support executing a Company Brain preference right now. This is an evidence-based recommendation about timing/conditions, not a claim that company policy is wrong - never mark a Company Brain item as incorrect.",
@@ -758,6 +815,134 @@ def _build_reasoning_signals_section(reasoning_signals: Any) -> str:
             f"- Allowed reasoning_state values: {', '.join(reasoning_signals.get('allowed_reasoning_states', []))}",
         ]
     )
+
+
+def _select_rendered_outcomes(outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Founder Correction 2 (M8 Slice 4B): if a Decision has more than
+    MAX_RENDERED_OUTCOMES_PER_ITEM active outcomes, select the most RECENT
+    ones and keep them in chronological order - never all of them, never
+    collapsed to one "final" outcome. `outcomes` is already
+    observed_at ASC (M8 Slice 4A's own ordering contract, preserved
+    verbatim by app/services/openai_client.py's loader), so "5 most
+    recent, chronological" is simply the last MAX_RENDERED_OUTCOMES_PER_ITEM
+    entries of that already-ascending list - already in the right order,
+    no re-sort needed."""
+    if len(outcomes) <= MAX_RENDERED_OUTCOMES_PER_ITEM:
+        return outcomes
+    return outcomes[-MAX_RENDERED_OUTCOMES_PER_ITEM:]
+
+
+def _truncate_for_prompt(text: str | None, max_chars: int) -> str:
+    """Prompt-rendering-only truncation (M8 Slice 4B, Founder Correction 2):
+    operates on an already-copied plain string, never the source
+    OrganizationalMemoryContextItem/OutcomeContext - Slice 4A's own
+    no-truncation law for persisted/domain objects is untouched by this."""
+    if not text:
+        return "n/a"
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "... [truncated for prompt budget]"
+
+
+def _build_organizational_memory_reference_catalog(
+    organizational_memory_context: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """M8 Slice 4B: bounded turn-local OM# reference catalog - existence in
+    this catalog IS eligibility (Slice 4A's retrieval already enforced the
+    outcome-backed/active/non-superseded rules before this list was ever
+    built), so unlike truth_refs/company_brain_refs above, no per-item
+    classification flags are needed here - only durable pointer identity.
+
+    rendered_outcome_memory_ids is the EXACT outcome id subset
+    _select_rendered_outcomes chose for this item (Founder Correction 2) -
+    never the full source aggregate if it was larger. This is what makes
+    app/ome/provenance.py's build_organizational_memory_provenance_refs
+    (and therefore receipt provenance) truthful about what the model
+    actually received under this OM# label.
+    """
+    catalog: dict[str, Any] = {}
+    for index, item in enumerate(organizational_memory_context[:MAX_OM_ITEMS], start=1):
+        if not isinstance(item, dict):
+            continue
+        decision_memory_id = item.get("decision_memory_id")
+        outcomes = item.get("outcomes") if isinstance(item.get("outcomes"), list) else []
+        selected_outcomes = _select_rendered_outcomes(outcomes)
+        rendered_outcome_memory_ids = tuple(
+            outcome.get("outcome_memory_id")
+            for outcome in selected_outcomes
+            if isinstance(outcome, dict) and outcome.get("outcome_memory_id")
+        )
+        if not decision_memory_id or not rendered_outcome_memory_ids:
+            continue
+        catalog[f"OM{index}"] = {
+            "decision_memory_id": decision_memory_id,
+            "rendered_outcome_memory_ids": rendered_outcome_memory_ids,
+        }
+    return catalog
+
+
+# M8 Slice 4B, Founder Step 9: exact required semantic contract - wording
+# may be polished, but every one of these 12 statements' meaning must
+# remain exact. Rendered verbatim as the fixed opening of the dedicated
+# section, before any per-item [OM#] content.
+_ORGANIZATIONAL_MEMORY_SECTION_CONTRACT_LINES = [
+    "[Historical Organizational Memory]",
+    "- These are prior HUMAN decisions and human-recorded outcomes for this company.",
+    "- These are historical organizational records, not current Operational Truth.",
+    "- They are not current Company Brain policy.",
+    "- An Outcome was recorded AFTER a Decision; this does not prove the Decision CAUSED the Outcome.",
+    "- Historical success does not require repeating an action.",
+    "- Historical failure does not blacklist an action.",
+    "- Current Operational Truth remains authoritative when current conditions differ from this history.",
+    "- Current Company Brain remains authoritative current company policy.",
+    "- These company-wide records are bounded recent history. They are NOT similarity-matched to the "
+    "current issue - they are not evidence that the past case resembles the current case.",
+    "- Use a historical record only if its content is directly relevant to the current conditions or "
+    "question.",
+    "- If you materially rely on a historical record, include its OM# in "
+    "recommendation_basis.organizational_memory_basis. Never invent an OM# that is not shown below.",
+]
+
+
+def _build_organizational_memory_section(organizational_memory_context: list[dict[str, Any]]) -> str:
+    """Render the bounded M8 Slice 4B Historical Organizational Memory
+    context as its own dedicated text section - conceptually separate from
+    [Operational Truth Context]/[Company Brain Context] (see
+    _build_truth_context_section/_build_company_brain_section above).
+    Company-wide [] (Slice 4A's own bounded-candidate-set semantic) omits
+    this section entirely rather than rendering a misleading "no
+    organizational memory exists" line (Founder Step 9)."""
+    if not organizational_memory_context:
+        return ""
+
+    lines = list(_ORGANIZATIONAL_MEMORY_SECTION_CONTRACT_LINES)
+    for index, item in enumerate(organizational_memory_context[:MAX_OM_ITEMS], start=1):
+        if not isinstance(item, dict):
+            continue
+        ref = f"OM{index}"
+        decision_text = _truncate_for_prompt(item.get("decision_text"), MAX_DECISION_TEXT_CHARS)
+        rationale = _truncate_for_prompt(item.get("rationale"), MAX_RATIONALE_CHARS)
+        decided_at = item.get("decided_at") or "unknown"
+        outcomes = item.get("outcomes") if isinstance(item.get("outcomes"), list) else []
+        selected_outcomes = _select_rendered_outcomes(outcomes)
+        omitted_count = len(outcomes) - len(selected_outcomes)
+
+        lines.append(f"[{ref}] Decision: {decision_text} | Rationale: {rationale} | Decided at: {decided_at}")
+        lines.append("Recorded outcomes after this decision:")
+        for outcome in selected_outcomes:
+            if not isinstance(outcome, dict):
+                continue
+            summary = _truncate_for_prompt(outcome.get("outcome_summary"), MAX_OUTCOME_SUMMARY_CHARS)
+            observed_at = outcome.get("observed_at") or "unknown"
+            # result_state is rendered verbatim, including "unknown" - it
+            # is a real recorded state, never omitted/zeroed/neutralized
+            # (Founder Step 11).
+            result_state = outcome.get("result_state") or "unknown"
+            lines.append(f"- {observed_at} — {result_state} — {summary}")
+        if omitted_count > 0:
+            lines.append(f"Earlier active outcomes omitted from this prompt for context budgeting: {omitted_count}")
+
+    return "\n".join(lines)
 
 
 def _response_enforcement() -> dict[str, Any]:

@@ -24,7 +24,7 @@ from typing import Any
 from uuid import UUID
 
 from app.ome.errors import InvalidMemoryInput
-from app.ome.types import CompanyBrainProvenanceRef, EvidenceRef
+from app.ome.types import CompanyBrainProvenanceRef, EvidenceRef, OrganizationalMemoryProvenanceRef
 
 
 def build_company_brain_provenance_refs(
@@ -164,5 +164,97 @@ def build_truth_evidence_refs(
             ) from exc
 
         refs.append(EvidenceRef(type="file", id=file_id))
+
+    return refs
+
+
+def build_organizational_memory_provenance_refs(
+    *,
+    cited_om_refs: list[str],
+    organizational_memory_reference_catalog: dict[str, Any],
+) -> list[OrganizationalMemoryProvenanceRef]:
+    """Resolve every cited OM# label into a durable
+    OrganizationalMemoryProvenanceRef (M8 Slice 4B).
+
+    Founder Correction 1: this represents explicit CITED basis only -
+    ``cited_om_refs`` must be exactly the FINAL accepted
+    reasoning_assessment.recommendation_basis.organizational_memory_basis
+    list for this turn. Organizational Memory may be present in the
+    prompt without being cited; only cited OM# labels ever become receipt
+    provenance. Order and duplicates are preserved exactly as given,
+    matching build_truth_evidence_refs/build_company_brain_provenance_refs'
+    existing convention (a genuinely repeated citation is real data, not
+    an error).
+
+    Each ref is resolved ONLY through
+    organizational_memory_reference_catalog[ref] - the exact
+    (decision_memory_id, rendered_outcome_memory_ids) pair captured when
+    this turn's OM# was assigned (see
+    app/services/decision_context.py's
+    _build_organizational_memory_reference_catalog) - never by rereading
+    the database, never by parsing the numeric suffix out of the ref
+    string. A cited ref that cannot be resolved this way fails closed: a
+    receipt must never silently claim to represent fewer citations than
+    the reasoning result actually made.
+
+    outcome_memory_ids on the returned ref is EXACTLY the outcome id
+    subset actually rendered to the model for that OM# (Founder
+    Correction 2) - never the full source aggregate if it was larger than
+    the prompt-rendering budget allowed.
+
+    If the final reasoning cites no Organizational Memory at all, an
+    empty cited_om_refs list returns an empty result - that is valid, not
+    an error.
+    """
+    if not isinstance(organizational_memory_reference_catalog, dict):
+        raise InvalidMemoryInput("organizational_memory_reference_catalog must be an object")
+
+    refs: list[OrganizationalMemoryProvenanceRef] = []
+    for om_label in cited_om_refs:
+        if not isinstance(om_label, str):
+            raise InvalidMemoryInput(
+                f"cited organizational_memory_basis reference must be a string, got {type(om_label).__name__}"
+            )
+
+        catalog_entry = organizational_memory_reference_catalog.get(om_label)
+        if not isinstance(catalog_entry, dict):
+            raise InvalidMemoryInput(
+                f"cited organizational_memory_basis reference {om_label!r} was not supplied in this "
+                "turn's Historical Organizational Memory context"
+            )
+
+        raw_decision_id = catalog_entry.get("decision_memory_id")
+        raw_outcome_ids = catalog_entry.get("rendered_outcome_memory_ids")
+        if not raw_decision_id or not raw_outcome_ids:
+            raise InvalidMemoryInput(
+                f"cited organizational_memory_basis reference {om_label!r} has no resolvable source item"
+            )
+
+        try:
+            decision_memory_id = raw_decision_id if isinstance(raw_decision_id, UUID) else UUID(str(raw_decision_id))
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise InvalidMemoryInput(
+                f"cited organizational_memory_basis reference {om_label!r} has a malformed "
+                f"decision_memory_id: {raw_decision_id!r}"
+            ) from exc
+
+        outcome_ids: list[UUID] = []
+        for raw_outcome_id in raw_outcome_ids:
+            try:
+                outcome_ids.append(
+                    raw_outcome_id if isinstance(raw_outcome_id, UUID) else UUID(str(raw_outcome_id))
+                )
+            except (ValueError, AttributeError, TypeError) as exc:
+                raise InvalidMemoryInput(
+                    f"cited organizational_memory_basis reference {om_label!r} has a malformed "
+                    f"rendered outcome id: {raw_outcome_id!r}"
+                ) from exc
+
+        refs.append(
+            OrganizationalMemoryProvenanceRef(
+                decision_memory_id=decision_memory_id,
+                outcome_memory_ids=tuple(outcome_ids),
+            )
+        )
 
     return refs

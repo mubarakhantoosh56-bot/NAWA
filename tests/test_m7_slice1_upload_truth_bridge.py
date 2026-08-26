@@ -1005,6 +1005,7 @@ def test_t6_m6_accepts_surviving_upload_t_ref_under_large_static_volume(tmp_path
                     "evidence_basis": [usable_upload_refs[0]],
                     "company_basis": [],
                     "missing_evidence": [],
+                    "organizational_memory_basis": [],
                 },
             }
         }
@@ -1324,6 +1325,7 @@ def test_u11_m6_provenance_validation_accepts_real_uploaded_t_ref(tmp_path, monk
                     "evidence_basis": [chosen_ref],
                     "company_basis": [],
                     "missing_evidence": [],
+                    "organizational_memory_basis": [],
                 },
             }
         }
@@ -1517,6 +1519,7 @@ class _CitationAwareFakeChatCompletions:
             "confidence": 65,
             "recommendation_basis": {
                 "evidence_basis": [self.chosen_ref], "company_basis": [], "missing_evidence": [],
+                "organizational_memory_basis": [],
             },
         }
         ai_json = json.dumps({

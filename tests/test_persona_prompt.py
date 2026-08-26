@@ -17,7 +17,7 @@ _REASONING_ASSESSMENT_JSON = """"reasoning_assessment": {
       "evidence_gaps": [],
       "risk_assessment": "n/a",
       "confidence": 50,
-      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []}
+      "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": [], "organizational_memory_basis": []}
     }"""
 
 VALID_AI_JSON = (

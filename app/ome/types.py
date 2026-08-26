@@ -230,3 +230,120 @@ class CompanyBrainProvenanceRef:
             text_snapshot=value.get("text_snapshot"),
             display_label=value.get("display_label"),
         )
+
+
+# The Organizational Memory-category discriminator (M8 Slice 4B), the third
+# variant of the discriminated provenance union persisted in
+# ome_reasoning_receipts.evidence_refs alongside EvidenceRef (category=
+# "truth") and CompanyBrainProvenanceRef (category="company_brain").
+ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY: Literal["organizational_memory"] = "organizational_memory"
+
+
+@dataclass(frozen=True)
+class OrganizationalMemoryProvenanceRef:
+    """One durable reference to human-authored Organizational Memory
+    actually CITED by the final accepted reasoning result via a
+    request-local OM# label (M8 Slice 4B).
+
+    Founder Correction 1: this represents explicit CITED basis, never
+    unverifiable hidden model influence - Organizational Memory may be
+    present in a prompt without being cited, and only cited OM# labels
+    ever become receipt provenance (see app/ome/provenance.py's
+    build_organizational_memory_provenance_refs, the only intended way to
+    construct these).
+
+    Deliberately references only durable, already-persisted, append-only
+    OME ids - no text_snapshot, no content hash, no reasoning_receipt_id,
+    no situation_id, no AI response text, no company_id, no user id, no
+    score, no confidence. Unlike CompanyBrainProvenanceRef (whose source
+    can be edited/deleted at its origin, requiring a frozen text snapshot
+    to prove exactly what was shown), DecisionMemory/OutcomeMemory rows
+    are themselves already immutable/append-only persisted historical
+    objects with no hard-delete path (M8 OME schema) - the id alone
+    remains a durable, permanently-resolvable reference to the exact
+    content cited, even after supersession.
+
+    outcome_memory_ids carries ONLY the outcome ids actually RENDERED to
+    the model for this OM# (Founder Correction 2) - if the source
+    aggregate had more active outcomes than the prompt-rendering budget
+    allowed, this tuple equals exactly the rendered subset, never the full
+    aggregate. This is what keeps receipt provenance truthful about what
+    the model actually received under this OM# label.
+    """
+
+    decision_memory_id: UUID
+    outcome_memory_ids: tuple[UUID, ...]
+    category: Literal["organizational_memory"] = ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.decision_memory_id, UUID):
+            raise InvalidMemoryInput("OrganizationalMemoryProvenanceRef.decision_memory_id must be a UUID")
+        if not isinstance(self.outcome_memory_ids, tuple) or not self.outcome_memory_ids:
+            raise InvalidMemoryInput(
+                "OrganizationalMemoryProvenanceRef.outcome_memory_ids must be a non-empty tuple of UUIDs"
+            )
+        for outcome_id in self.outcome_memory_ids:
+            if not isinstance(outcome_id, UUID):
+                raise InvalidMemoryInput(
+                    "OrganizationalMemoryProvenanceRef.outcome_memory_ids entries must all be UUIDs"
+                )
+        if self.category != ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY:
+            raise InvalidMemoryInput(
+                f"OrganizationalMemoryProvenanceRef.category must be "
+                f"{ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY!r}, got {self.category!r}"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        """JSON-friendly representation for JSONB persistence, sharing
+        ome_reasoning_receipts.evidence_refs with Truth/Company Brain
+        entries via the "category" discriminator."""
+        return {
+            "category": self.category,
+            "decision_memory_id": str(self.decision_memory_id),
+            "outcome_memory_ids": [str(outcome_id) for outcome_id in self.outcome_memory_ids],
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, object]) -> "OrganizationalMemoryProvenanceRef":
+        """Parse one Organizational Memory provenance ref from a plain
+        dict. Fails closed on any malformed entry - never guesses.
+        Requires category == "organizational_memory" exactly, same
+        discipline as EvidenceRef.from_dict/CompanyBrainProvenanceRef.from_dict."""
+        if not isinstance(value, dict):
+            raise InvalidMemoryInput(
+                f"OrganizationalMemoryProvenanceRef must be an object, got {type(value).__name__}"
+            )
+        raw_category = value.get("category")
+        if raw_category != ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY:
+            raise InvalidMemoryInput(
+                f"OrganizationalMemoryProvenanceRef.category must be "
+                f"{ORGANIZATIONAL_MEMORY_PROVENANCE_CATEGORY!r}, got {raw_category!r}"
+            )
+        raw_decision_id = value.get("decision_memory_id")
+        try:
+            decision_memory_id = (
+                raw_decision_id if isinstance(raw_decision_id, UUID) else UUID(str(raw_decision_id))
+            )
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise InvalidMemoryInput(
+                f"OrganizationalMemoryProvenanceRef.decision_memory_id is not a valid UUID: {raw_decision_id!r}"
+            ) from exc
+
+        raw_outcome_ids = value.get("outcome_memory_ids")
+        if not isinstance(raw_outcome_ids, list) or not raw_outcome_ids:
+            raise InvalidMemoryInput(
+                "OrganizationalMemoryProvenanceRef.outcome_memory_ids must be a non-empty list"
+            )
+        outcome_ids: list[UUID] = []
+        for raw_outcome_id in raw_outcome_ids:
+            try:
+                outcome_ids.append(
+                    raw_outcome_id if isinstance(raw_outcome_id, UUID) else UUID(str(raw_outcome_id))
+                )
+            except (ValueError, AttributeError, TypeError) as exc:
+                raise InvalidMemoryInput(
+                    "OrganizationalMemoryProvenanceRef.outcome_memory_ids entry is not a valid UUID: "
+                    f"{raw_outcome_id!r}"
+                ) from exc
+
+        return cls(decision_memory_id=decision_memory_id, outcome_memory_ids=tuple(outcome_ids))

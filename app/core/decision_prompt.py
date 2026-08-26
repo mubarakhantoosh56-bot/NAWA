@@ -256,9 +256,9 @@ sections already provided:
   lower when evidence is missing, source time is unresolved, or Company
   Brain context is internally conflicted.
 - recommendation_basis: {"evidence_basis": [...], "company_basis": [...],
-  "missing_evidence": [...]} - the auditable provenance for the final
-  recommendation. Never chain-of-thought; only reference IDs, never prose
-  citations:
+  "missing_evidence": [...], "organizational_memory_basis": [...]} - the
+  auditable provenance for the final recommendation. Never chain-of-thought;
+  only reference IDs, never prose citations:
   * evidence_basis: ONLY T# reference IDs (e.g. "T1", "T3") that are USABLE
     supporting evidence - AVAILABLE with an OBSERVED or DERIVED origin.
     Never a missing, inferred-only, or unavailable T#. An unresolved
@@ -270,6 +270,10 @@ sections already provided:
     "unresolved", "institutional", or anything else) is never valid here.
   * missing_evidence: ONLY T# reference IDs that are themselves missing or
     have unresolved source time.
+  * organizational_memory_basis: ONLY OM# reference IDs (e.g. "OM1") from a
+    [Historical Organizational Memory] section, when shown - include an
+    OM# only if you materially relied on that historical record. Never put
+    a T#/CB# here, and never put an OM# into evidence_basis/company_basis.
   Every reference must already exist in the sections provided to you this
   turn. NEVER invent a reference ID, cite a reference from the wrong
   section, or cite a prose source such as "a report", "Policy 99", or any
@@ -337,7 +341,8 @@ REQUIRED OUTPUT
       "recommendation_basis": {
         "evidence_basis": [],
         "company_basis": [],
-        "missing_evidence": []
+        "missing_evidence": [],
+        "organizational_memory_basis": []
       }
     }
   }

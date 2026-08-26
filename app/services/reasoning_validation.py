@@ -37,6 +37,7 @@ REASONING_STATES = ("aligned", "tension", "insufficient_evidence")
 
 _TRUTH_REF_RE = re.compile(r"^T\d+$")
 _COMPANY_BRAIN_REF_RE = re.compile(r"^CB\d+$")
+_ORGANIZATIONAL_MEMORY_REF_RE = re.compile(r"^OM\d+$")
 
 
 class RecommendationBasis(BaseModel):
@@ -47,6 +48,11 @@ class RecommendationBasis(BaseModel):
     evidence_basis: list[str]
     company_basis: list[str]
     missing_evidence: list[str]
+    # M8 Slice 4B: request-local OM# citations of Historical Organizational
+    # Memory - a disjoint namespace from evidence_basis (T#)/company_basis
+    # (CB#), required (not defaulted) so every response must explicitly
+    # state what it relied on, even if that is an empty list.
+    organizational_memory_basis: list[str]
 
 
 class ReasoningAssessment(BaseModel):
@@ -119,6 +125,17 @@ def validate_reasoning_assessment(
     reference_catalog = (decision_context or {}).get("reasoning_reference_catalog") or {}
     truth_refs: dict[str, Any] = reference_catalog.get("truth") or {}
     company_brain_refs: dict[str, Any] = reference_catalog.get("company_brain") or {}
+    # M8 Slice 4B: a SEPARATE, sibling top-level catalog (not nested inside
+    # reasoning_reference_catalog) - see
+    # app/services/decision_context.py's
+    # _build_organizational_memory_reference_catalog. Existence in this
+    # catalog IS eligibility: 4A's own retrieval already enforced the
+    # outcome-backed/active/non-superseded rules before this catalog was
+    # ever built, so unlike Truth's is_usable_evidence or Company Brain's
+    # is_settled, no further per-item classification check is needed here.
+    organizational_memory_refs: dict[str, Any] = (
+        decision_context or {}
+    ).get("organizational_memory_reference_catalog") or {}
 
     errors: list[str] = []
     basis = assessment.recommendation_basis
@@ -179,6 +196,22 @@ def validate_reasoning_assessment(
                 "not a gap - missing_evidence may only reference missing or unresolved-source-time items"
             )
 
+    # M8 Slice 4B: OM# citations of Historical Organizational Memory - a
+    # disjoint namespace from T#/CB# (the regex alone rejects cross-
+    # namespace use in either direction: a "T1"/"CB1" string never matches
+    # _ORGANIZATIONAL_MEMORY_REF_RE, and an "OM1" string never matches
+    # _TRUTH_REF_RE/_COMPANY_BRAIN_REF_RE).
+    for ref in basis.organizational_memory_basis:
+        if not _ORGANIZATIONAL_MEMORY_REF_RE.match(ref):
+            errors.append(
+                f"recommendation_basis.organizational_memory_basis: '{ref}' is not a valid OM# reference"
+            )
+        elif ref not in organizational_memory_refs:
+            errors.append(
+                f"recommendation_basis.organizational_memory_basis: '{ref}' was not supplied in this "
+                "turn's Historical Organizational Memory context"
+            )
+
     return (not errors, errors)
 
 
@@ -208,6 +241,10 @@ def build_reasoning_assessment_repair_instruction(
         "'unresolved', 'institutional', or anything else) may never be used as company_basis.\n"
         "- recommendation_basis.missing_evidence may ONLY reference T# items that are themselves "
         "missing or have unresolved source time.\n"
+        "- recommendation_basis.organizational_memory_basis may ONLY contain OM# reference IDs that "
+        "were supplied in this turn's Historical Organizational Memory context. Do NOT put a T#/CB# "
+        "reference into organizational_memory_basis, and do NOT put an OM# reference into "
+        "evidence_basis/company_basis - these are separate namespaces.\n"
         "- Do NOT invent a reference ID that was not already supplied to you - if no valid reference "
         "applies, use an empty list for that field instead.\n"
         "- Do NOT explain your reasoning process outside the JSON fields; only populate the structured "

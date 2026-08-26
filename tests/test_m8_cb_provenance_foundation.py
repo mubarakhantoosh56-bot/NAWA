@@ -121,6 +121,9 @@ def _reasoning_assessment(*, company_basis: list[str] | None = None) -> dict[str
             "evidence_basis": [],
             "company_basis": company_basis or [],
             "missing_evidence": [],
+            # M8 Slice 4B: organizational_memory_basis is now a required
+            # RecommendationBasis field.
+            "organizational_memory_basis": [],
         },
     }
 

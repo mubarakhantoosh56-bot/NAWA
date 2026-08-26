@@ -101,6 +101,9 @@ class E2EGoldenFakeChatCompletions:
             "confidence": 65,
             "recommendation_basis": {
                 "evidence_basis": [chosen_ref], "company_basis": [], "missing_evidence": [],
+                # M8 Slice 4B: organizational_memory_basis is now a
+                # required RecommendationBasis field.
+                "organizational_memory_basis": [],
             },
         }
         ai_json = json.dumps({

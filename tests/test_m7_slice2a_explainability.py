@@ -113,6 +113,12 @@ def _assessment(**overrides) -> dict:
         "recommendation_basis": {"evidence_basis": [], "company_basis": [], "missing_evidence": []},
     }
     base.update(overrides)
+    # M8 Slice 4B: organizational_memory_basis is a required
+    # RecommendationBasis field. Many call sites in this file override
+    # recommendation_basis wholesale - back-fill it here, in the one
+    # shared helper, rather than editing every individual call site.
+    if "organizational_memory_basis" not in base["recommendation_basis"]:
+        base["recommendation_basis"] = {**base["recommendation_basis"], "organizational_memory_basis": []}
     return base
 
 
@@ -586,7 +592,11 @@ def test_b2b_15_m6_schema_and_validators_unchanged() -> None:
         "reasoning_state", "operational_assessment", "company_brain_alignment",
         "tensions", "evidence_gaps", "risk_assessment", "confidence", "recommendation_basis",
     }
-    assert set(RecommendationBasis.model_fields.keys()) == {"evidence_basis", "company_basis", "missing_evidence"}
+    # M8 Slice 4B: organizational_memory_basis is now a required
+    # RecommendationBasis field alongside the original three.
+    assert set(RecommendationBasis.model_fields.keys()) == {
+        "evidence_basis", "company_basis", "missing_evidence", "organizational_memory_basis",
+    }
 
     decision_context = _decision_context()
     # M3 not usable as evidence_basis - the SAME validator behavior as
@@ -1599,4 +1609,8 @@ def test_ar5_reference_id_and_confidence_semantics_unchanged() -> None:
     from app.services.reasoning_validation import RecommendationBasis
 
     basis_fields = RecommendationBasis.model_fields
-    assert set(basis_fields.keys()) == {"evidence_basis", "company_basis", "missing_evidence"}
+    # M8 Slice 4B: organizational_memory_basis is now a required
+    # RecommendationBasis field alongside the original three.
+    assert set(basis_fields.keys()) == {
+        "evidence_basis", "company_basis", "missing_evidence", "organizational_memory_basis",
+    }
