@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildPersistedTurns,
@@ -605,5 +605,302 @@ describe("M8 Slice 3C-2: PersistedChatMeta carries no Outcome state", () => {
     expect(serialized).not.toContain("Expansion delivered 12% lift.");
     expect(serialized).not.toContain("result_state");
     expect(serialized).not.toContain("2026-01-01T10:30:00.000Z");
+  });
+});
+
+// M8 Slice 4C-2: cited_organizational_memory persistence/reload contract.
+// Proves the already-public backend field survives the SAME live-response
+// -> localStorage -> reload round-trip as cited_evidence/cited_company_basis
+// (Step 8: no new persistence function, no network re-fetch, no client OM
+// database), and that the frontend's own atomic malformed-Outcome law
+// (sanitizeCitedOrganizationalMemoryItem) holds across a reload, not just a
+// live response.
+function fakeBackendResponseWithOrganizationalMemory(): ChatResponse {
+  const payload = {
+    ceo_text: "Approve the expansion.",
+    logic_json: {},
+    followup_question: null,
+    meta: {
+      company_id: "company-123",
+      session_id: "session-456",
+      parse_ok: true,
+      memory_injected: true,
+      events_count: 1,
+      context: {
+        explainability: {
+          cited_evidence: [],
+          cited_company_basis: [],
+          cited_organizational_memory: [
+            {
+              id: "h1",
+              decision: "Approve expansion for 14 accounts.",
+              rationale: "Cash coverage supports it.",
+              decided_at: "2020-01-01T00:00:00Z",
+              outcomes: [
+                { result_state: "positive", summary: "Delivered a real lift.", observed_at: "2020-02-01T00:00:00Z" },
+              ],
+              omitted_outcomes_count: 0,
+              // A hypothetical backend regression leaking internal fields
+              // alongside the public shape - must never survive sanitization.
+              decision_memory_id: "did-1",
+              reasoning_receipt_id: "receipt-1",
+            },
+          ],
+          confidence: null,
+        },
+      },
+    },
+  };
+  return payload as unknown as ChatResponse;
+}
+
+describe("toPersistedChatResponse - cited_organizational_memory (M8 Slice 4C-2)", () => {
+  it("1: a safe cited_organizational_memory item survives live-response sanitization", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponseWithOrganizationalMemory());
+    expect(persisted.meta.explainability?.cited_organizational_memory).toEqual([
+      {
+        id: "h1",
+        decision: "Approve expansion for 14 accounts.",
+        rationale: "Cash coverage supports it.",
+        decided_at: "2020-01-01T00:00:00Z",
+        outcomes: [{ result_state: "positive", summary: "Delivered a real lift.", observed_at: "2020-02-01T00:00:00Z" }],
+        omitted_outcomes_count: 0,
+      },
+    ]);
+  });
+
+  it("7: extra internal fields (decision_memory_id, reasoning_receipt_id) do not survive persistence sanitization", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponseWithOrganizationalMemory());
+    const serialized = JSON.stringify(persisted);
+    expect(serialized).not.toContain("decision_memory_id");
+    expect(serialized).not.toContain("did-1");
+    // reasoning_receipt_id is a legitimate top-level meta field (Slice
+    // 3B-2) but must never appear NESTED inside an OM item.
+    expect(persisted.meta.explainability?.cited_organizational_memory[0]).not.toHaveProperty("reasoning_receipt_id");
+  });
+
+  it("8: no OM# label is ever interpreted or persisted - only the opaque h# presentation id", () => {
+    const persisted = toPersistedChatResponse(fakeBackendResponseWithOrganizationalMemory());
+    const serialized = JSON.stringify(persisted);
+    expect(serialized).not.toMatch(/\bOM\d+\b/);
+    expect(persisted.meta.explainability?.cited_organizational_memory[0].id).toBe("h1");
+  });
+});
+
+describe("parseStoredTurns - cited_organizational_memory (M8 Slice 4C-2)", () => {
+  it("2/3: a persisted turn's cited_organizational_memory reconstructs identically after reload, with no network re-fetch", () => {
+    const original = toPersistedChatResponse(fakeBackendResponseWithOrganizationalMemory());
+    const stored = buildPersistedTurns({
+      ceo: [{ id: "t1", userMessage: "Status?", response: original }],
+    });
+    // No fetch/API mock is set up anywhere in this test - the reload path
+    // below reads ONLY the JSON string produced above.
+    const parsed = parseStoredTurns(JSON.stringify(stored));
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual(
+      original.meta.explainability?.cited_organizational_memory,
+    );
+  });
+
+  it("4/5: a malformed nested Outcome in persisted data drops the WHOLE parent OM item on reload, not just that Outcome", () => {
+    const raw = JSON.stringify({
+      ceo: [
+        {
+          id: "t1",
+          userMessage: "Status?",
+          response: {
+            ceo_text: "answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 0,
+              explainability: {
+                cited_evidence: [],
+                cited_company_basis: [],
+                cited_organizational_memory: [
+                  {
+                    id: "h1",
+                    decision: "Approve expansion for 14 accounts.",
+                    rationale: null,
+                    decided_at: "2020-01-01T00:00:00Z",
+                    outcomes: [
+                      { result_state: "positive", summary: "Safe outcome.", observed_at: "2020-02-01T00:00:00Z" },
+                      { result_state: "not-a-real-state", summary: "Corrupted outcome.", observed_at: "2020-03-01T00:00:00Z" },
+                    ],
+                    omitted_outcomes_count: 3,
+                  },
+                ],
+                confidence: null,
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(raw);
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+    const serialized = JSON.stringify(parsed);
+    // Neither the safe sibling Outcome nor the stale omitted_outcomes_count
+    // survives once the whole item is dropped.
+    expect(serialized).not.toContain("Safe outcome.");
+    expect(serialized).not.toContain("Corrupted outcome.");
+  });
+
+  it("6: reload never issues a network/backend request to reconstruct organizational memory", async () => {
+    const fetchSpy = vi.fn();
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    try {
+      const original = toPersistedChatResponse(fakeBackendResponseWithOrganizationalMemory());
+      const stored = buildPersistedTurns({ ceo: [{ id: "t1", userMessage: "Status?", response: original }] });
+      parseStoredTurns(JSON.stringify(stored));
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("legacy stored turn without cited_organizational_memory at all reloads safely to []", () => {
+    const raw = JSON.stringify({
+      ceo: [
+        {
+          id: "legacy-1",
+          userMessage: "old question",
+          response: {
+            ceo_text: "old answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 0,
+              explainability: { cited_evidence: [], cited_company_basis: [], confidence: null },
+            },
+          },
+        },
+      ],
+    });
+
+    const parsed = parseStoredTurns(raw);
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+});
+
+// M8 Slice 4C-2 fix round (Codex required fixes): corrupted persisted
+// payloads must be rejected on reload exactly as they would be from a
+// live response - the h# regex, the outcome-backed law, and the
+// non-blank-string law all apply identically to storage.ts's ONE
+// sanitizeExplainability trust boundary, whichever path calls it.
+describe("parseStoredTurns - cited_organizational_memory fix round (Codex blockers)", () => {
+  function safeOmItem(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "h1",
+      decision: "Approve expansion for 14 accounts.",
+      rationale: null,
+      decided_at: "2020-01-01T00:00:00Z",
+      outcomes: [
+        { result_state: "positive", summary: "Delivered a real lift.", observed_at: "2020-02-01T00:00:00Z" },
+      ],
+      omitted_outcomes_count: 0,
+      ...overrides,
+    };
+  }
+
+  function rawWithOmItems(items: unknown[]) {
+    return JSON.stringify({
+      ceo: [
+        {
+          id: "t1",
+          userMessage: "Status?",
+          response: {
+            ceo_text: "answer",
+            followup_question: null,
+            meta: {
+              parse_ok: true,
+              memory_injected: false,
+              events_count: 0,
+              explainability: {
+                cited_evidence: [],
+                cited_company_basis: [],
+                cited_organizational_memory: items,
+                confidence: null,
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  it("1: id=\"OM1\" causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(rawWithOmItems([safeOmItem({ id: "OM1" })]));
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("2: a UUID-like id causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(
+      rawWithOmItems([safeOmItem({ id: "11111111-2222-3333-4444-555555555555" })]),
+    );
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("3: outcomes=[] causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(rawWithOmItems([safeOmItem({ outcomes: [] })]));
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("4: a blank decision causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(rawWithOmItems([safeOmItem({ decision: "   " })]));
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("5: a blank decided_at causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(rawWithOmItems([safeOmItem({ decided_at: "" })]));
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("6: a blank Outcome summary causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(
+      rawWithOmItems([
+        safeOmItem({ outcomes: [{ result_state: "positive", summary: "   ", observed_at: "2020-02-01T00:00:00Z" }] }),
+      ]),
+    );
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("7: a blank Outcome observed_at causes the whole OM item to disappear after reload", () => {
+    const parsed = parseStoredTurns(
+      rawWithOmItems([safeOmItem({ outcomes: [{ result_state: "positive", summary: "x", observed_at: "" }] })]),
+    );
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toEqual([]);
+  });
+
+  it("8: a valid sibling OM item remains if another OM item is invalid", () => {
+    const parsed = parseStoredTurns(
+      rawWithOmItems([safeOmItem({ id: "h1" }), safeOmItem({ id: "OM2" })]),
+    );
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory).toHaveLength(1);
+    expect(parsed.ceo[0].response.meta.explainability?.cited_organizational_memory[0].id).toBe("h1");
+  });
+
+  it("9: no fetch/network reconstruction is triggered while rejecting a corrupted OM item", () => {
+    const fetchSpy = vi.fn();
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    try {
+      parseStoredTurns(rawWithOmItems([safeOmItem({ id: "OM1" })]));
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("10: no raw OM#/UUID value survives sanitized persisted metadata even when the corrupted item is rejected", () => {
+    const parsed = parseStoredTurns(
+      rawWithOmItems([safeOmItem({ id: "OM1" }), safeOmItem({ id: "11111111-2222-3333-4444-555555555555" })]),
+    );
+    const serialized = JSON.stringify(parsed);
+    expect(serialized).not.toMatch(/\bOM\d+\b/);
+    expect(serialized).not.toContain("11111111-2222-3333-4444-555555555555");
   });
 });

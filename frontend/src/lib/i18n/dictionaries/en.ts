@@ -400,6 +400,21 @@ export const en = {
     originInferred: "Inferred",
     originRecommended: "Recommended",
     sourceTimeAuthoritative: "Authoritative",
+    // M8 Slice 4C-2: Historical Organizational Memory section - distinct
+    // from Evidence Used/Company Brain Basis above. reuses the top-level
+    // rationale/resultPositive/resultNegative/resultMixed/resultUnknown
+    // keys rather than duplicating them.
+    historicalMemoryTitle: "Historical Organizational Memory",
+    historicalMemoryDescription:
+      "Prior human decisions and their recorded outcomes, cited as historical context for this recommendation.",
+    historicalMemoryCausalityDisclaimer:
+      "Recorded outcomes occurred after the decision and do not prove that the decision caused them.",
+    historicalDecision: "Decision",
+    historicalDecisionDate: "Decision date",
+    historicalRecordedOutcomes: "Recorded outcomes",
+    historicalObservedAt: "Observed",
+    historicalOutcomesOmitted:
+      "additional recorded outcomes were omitted from the AI context for this recommendation due to context limits.",
   },
   operations: {
     dairtnaPoultry: "Dairtna Poultry",

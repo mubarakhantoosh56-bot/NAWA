@@ -392,6 +392,19 @@ export const ar = {
     originInferred: "مُفترض",
     originRecommended: "مُوصى به",
     sourceTimeAuthoritative: "موثوق",
+    // M8 Slice 4C-2: قسم الذاكرة المؤسسية التاريخية - مختلف عن الأدلة
+    // المستخدمة/أساس عقل الشركة أعلاه.
+    historicalMemoryTitle: "الذاكرة المؤسسية التاريخية",
+    historicalMemoryDescription:
+      "قرارات بشرية سابقة ونتائجها المسجّلة، تم الاستشهاد بها كسياق تاريخي لهذه التوصية.",
+    historicalMemoryCausalityDisclaimer:
+      "النتائج المسجّلة حدثت بعد اتخاذ القرار ولا تُثبت أن القرار كان سببًا لها.",
+    historicalDecision: "القرار",
+    historicalDecisionDate: "تاريخ القرار",
+    historicalRecordedOutcomes: "النتائج المسجّلة",
+    historicalObservedAt: "تاريخ الرصد",
+    historicalOutcomesOmitted:
+      "نتيجة إضافية مسجّلة تم استبعادها من سياق الذكاء الاصطناعي لهذه التوصية بسبب حدود حجم السياق.",
   },
   operations: {
     dairtnaPoultry: "ديرتنا للدواجن",

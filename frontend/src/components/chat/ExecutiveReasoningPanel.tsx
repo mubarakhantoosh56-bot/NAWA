@@ -2,11 +2,14 @@
 
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import type {
+  CitedOrganizationalMemoryItem,
   ConfidenceDriver,
   Explainability,
   ExplainabilityCompanyBasisItem,
   ExplainabilityConfidence,
   ExplainabilityEvidenceItem,
+  OrganizationalMemoryOutcomeExplainability,
+  OutcomeResultState,
   ReasoningState,
 } from "@/lib/types";
 
@@ -39,6 +42,7 @@ export function ExecutiveReasoningPanel({ explainability }: { explainability: Ex
     tensions,
     cited_evidence: citedEvidence,
     cited_company_basis: citedCompanyBasis,
+    cited_organizational_memory: citedOrganizationalMemory,
     evidence_gaps: evidenceGaps,
     missing_evidence: missingEvidence,
     risk_assessment: riskAssessment,
@@ -78,6 +82,8 @@ export function ExecutiveReasoningPanel({ explainability }: { explainability: Ex
         items={citedCompanyBasis}
         empty={t("executiveReasoning.noCompanyBasisCited")}
       />
+
+      <HistoricalOrganizationalMemorySection items={citedOrganizationalMemory} />
 
       <MissingEvidenceSection
         title={t("executiveReasoning.missingEvidence")}
@@ -193,6 +199,137 @@ function CompanyBasisListSection({
       )}
     </div>
   );
+}
+
+// M8 Slice 4C-2: renders the FINAL accepted candidate's
+// cited_organizational_memory - a THIRD, distinct citation category,
+// never merged with Evidence Used/Company Brain Basis above. Hidden
+// entirely when nothing was cited (Step 10): an empty-state sentence here
+// risks reading as "NAWA has no historical memory," which the section-
+// level copy below explicitly avoids implying. Every value rendered is a
+// verbatim passthrough of the already-sanitized public backend/client
+// shape - nothing here is computed, inferred, or re-truncated.
+function HistoricalOrganizationalMemorySection({ items }: { items: CitedOrganizationalMemoryItem[] }) {
+  const { t } = useLanguage();
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-md border border-line bg-white p-3">
+      <div className="text-xs font-semibold uppercase text-muted">{t("executiveReasoning.historicalMemoryTitle")}</div>
+      <p className="mt-1 text-xs leading-5 text-muted">{t("executiveReasoning.historicalMemoryDescription")}</p>
+      {/* Section-level only (Step 13) - never repeated per Outcome. */}
+      <p className="mt-1 text-xs leading-5 text-muted">{t("executiveReasoning.historicalMemoryCausalityDisclaimer")}</p>
+      <ul className="mt-2 space-y-2">
+        {items.map((item) => (
+          // item.id ("h1", "h2", ...) is presentation-only, used ONLY as
+          // the React key - never rendered as visible text (Step 14,
+          // matches the existing e#/c# convention).
+          <OrganizationalMemoryItemRow key={item.id} item={item} t={t} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function OrganizationalMemoryItemRow({
+  item,
+  t,
+}: {
+  item: CitedOrganizationalMemoryItem;
+  t: (key: string) => string;
+}) {
+  return (
+    <li className="rounded border border-line bg-surface p-2 text-sm leading-6 text-ink">
+      <div className="text-xs font-semibold uppercase text-muted">{t("executiveReasoning.historicalDecision")}</div>
+      <p className="mt-0.5 whitespace-pre-wrap">{item.decision}</p>
+
+      {/* Rationale omitted entirely when null - never a fabricated
+          "No rationale" placeholder (Step 16). */}
+      {item.rationale ? (
+        <>
+          <div className="mt-2 text-xs font-semibold uppercase text-muted">{t("rationale")}</div>
+          <p className="mt-0.5 whitespace-pre-wrap">{item.rationale}</p>
+        </>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+        <span>
+          {t("executiveReasoning.historicalDecisionDate")}: {item.decided_at}
+        </span>
+      </div>
+
+      {item.outcomes.length > 0 ? (
+        <div className="mt-2">
+          <div className="text-xs font-semibold uppercase text-muted">
+            {t("executiveReasoning.historicalRecordedOutcomes")}
+          </div>
+          <ul className="mt-1 space-y-1">
+            {item.outcomes.map((outcome, index) => (
+              <OrganizationalMemoryOutcomeRow key={index} outcome={outcome} t={t} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {item.omitted_outcomes_count > 0 ? (
+        <p className="mt-2 text-xs leading-5 text-muted">
+          {item.omitted_outcomes_count} {t("executiveReasoning.historicalOutcomesOmitted")}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+function OrganizationalMemoryOutcomeRow({
+  outcome,
+  t,
+}: {
+  outcome: OrganizationalMemoryOutcomeExplainability;
+  t: (key: string) => string;
+}) {
+  return (
+    <li className="rounded border border-line bg-white p-2 text-xs leading-5 text-ink">
+      <div className="flex flex-wrap items-center gap-2">
+        <ResultStateBadge state={outcome.result_state} t={t} />
+        <span className="text-muted">
+          {t("executiveReasoning.historicalObservedAt")}: {outcome.observed_at}
+        </span>
+      </div>
+      <p className="mt-1 whitespace-pre-wrap">{outcome.summary}</p>
+    </li>
+  );
+}
+
+// Step 19: reuses the SAME top-level keys RecordOutcome.tsx already uses
+// for this exact OutcomeResultState enum - never a duplicate translation,
+// never a numeric score. `unknown` renders its own distinct label, never
+// coerced to "neutral" or omitted (Step 23).
+function omResultStateLabel(state: OutcomeResultState, t: (key: string) => string): string {
+  if (state === "positive") {
+    return t("resultPositive");
+  }
+  if (state === "negative") {
+    return t("resultNegative");
+  }
+  if (state === "mixed") {
+    return t("resultMixed");
+  }
+  return t("resultUnknown");
+}
+
+function ResultStateBadge({ state, t }: { state: OutcomeResultState; t: (key: string) => string }) {
+  const toneClass =
+    state === "positive"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : state === "negative"
+        ? "border-rose-200 bg-rose-50 text-rose-700"
+        : state === "mixed"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-slate-300 bg-slate-100 text-slate-700";
+  return <span className={`rounded border px-1.5 py-0.5 text-xs font-medium ${toneClass}`}>{omResultStateLabel(state, t)}</span>;
 }
 
 // Section 25: evidence_gaps (prose) and missing_evidence (structured

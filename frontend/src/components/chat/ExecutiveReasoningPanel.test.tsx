@@ -17,6 +17,7 @@ function baseExplainability(overrides: Partial<Explainability> = {}): Explainabi
   return {
     cited_evidence: [],
     cited_company_basis: [],
+    cited_organizational_memory: [],
     confidence: null,
     reasoning_state: null,
     operational_assessment: null,
@@ -324,5 +325,198 @@ describe("ExecutiveReasoningPanel", () => {
     expect(screen.getByText("unusual_metric")).toBeInTheDocument();
     expect(container.textContent).not.toContain("estimated");
     expect(container.textContent).not.toContain("pending_confirmation");
+  });
+});
+
+// M8 Slice 4C-2: Historical Organizational Memory section - a third,
+// distinct citation category. Fixtures use the exact sanitized
+// CitedOrganizationalMemoryItem shape (id/decision/rationale/decided_at/
+// outcomes/omitted_outcomes_count) - never a raw OM#/durable-id shape.
+describe("ExecutiveReasoningPanel - Historical Organizational Memory (M8 Slice 4C-2)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    document.documentElement.dir = "ltr";
+  });
+
+  const omFixture: Explainability = baseExplainability({
+    reasoning_state: "aligned",
+    cited_organizational_memory: [
+      {
+        id: "h1",
+        decision: "Approve expansion for 14 accounts.",
+        rationale: "Cash coverage supports it.",
+        decided_at: "2020-01-01T00:00:00Z",
+        outcomes: [
+          { result_state: "positive", summary: "Revenue grew as expected.", observed_at: "2020-02-01T00:00:00Z" },
+          { result_state: "negative", summary: "Support costs rose sharply.", observed_at: "2020-03-01T00:00:00Z" },
+          { result_state: "mixed", summary: "Mixed regional adoption.", observed_at: "2020-04-01T00:00:00Z" },
+          { result_state: "unknown", summary: "Long-term effect not yet assessed.", observed_at: "2020-05-01T00:00:00Z" },
+        ],
+        omitted_outcomes_count: 3,
+      },
+    ],
+  });
+
+  const omNoRationaleFixture: Explainability = baseExplainability({
+    reasoning_state: "aligned",
+    cited_organizational_memory: [
+      {
+        id: "h1",
+        decision: "Discontinue the pilot program.",
+        rationale: null,
+        decided_at: "2021-06-01T00:00:00Z",
+        outcomes: [{ result_state: "unknown", summary: "No outcome recorded yet.", observed_at: "2021-07-01T00:00:00Z" }],
+        omitted_outcomes_count: 0,
+      },
+    ],
+  });
+
+  it("1: an empty cited_organizational_memory array hides the section entirely", async () => {
+    await renderInLanguage(baseExplainability({ reasoning_state: "aligned" }));
+    expect(screen.queryByText("Historical Organizational Memory")).not.toBeInTheDocument();
+  });
+
+  it("2/3/4: renders the heading, supporting copy, and causality disclaimer exactly once", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText("Historical Organizational Memory")).toBeInTheDocument();
+    expect(
+      screen.getByText("Prior human decisions and their recorded outcomes, cited as historical context for this recommendation."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Recorded outcomes occurred after the decision and do not prove that the decision caused them.")
+        .length,
+    ).toBe(1);
+  });
+
+  it("5: renders the Decision text", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText("Approve expansion for 14 accounts.")).toBeInTheDocument();
+  });
+
+  it("6: renders rationale when present", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText("Cash coverage supports it.")).toBeInTheDocument();
+  });
+
+  it("7: omits the rationale row entirely when rationale is null", async () => {
+    const { container } = await renderInLanguage(omNoRationaleFixture);
+    expect(container.textContent).not.toMatch(/No rationale/);
+    expect(container.textContent).not.toMatch(/n\/a/i);
+  });
+
+  it("8: renders decided_at", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText(/2020-01-01T00:00:00Z/)).toBeInTheDocument();
+  });
+
+  it("9: h1 (the presentation id) is never rendered as visible text", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.queryByText("h1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^h\d+$/)).not.toBeInTheDocument();
+  });
+
+  it("10/11/12/13: renders localized labels for positive/negative/mixed/unknown, unknown distinct", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText("Positive")).toBeInTheDocument();
+    expect(screen.getByText("Negative")).toBeInTheDocument();
+    expect(screen.getByText("Mixed")).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+  });
+
+  it("14: multiple Outcomes render separately, never collapsed", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText("Revenue grew as expected.")).toBeInTheDocument();
+    expect(screen.getByText("Support costs rose sharply.")).toBeInTheDocument();
+    expect(screen.getByText("Mixed regional adoption.")).toBeInTheDocument();
+    expect(screen.getByText("Long-term effect not yet assessed.")).toBeInTheDocument();
+  });
+
+  it("15: renders observed_at for each Outcome", async () => {
+    await renderInLanguage(omFixture);
+    expect(screen.getByText(/2020-02-01T00:00:00Z/)).toBeInTheDocument();
+    expect(screen.getByText(/2020-05-01T00:00:00Z/)).toBeInTheDocument();
+  });
+
+  it("16: omitted_outcomes_count=0 shows no omission note", async () => {
+    const { container } = await renderInLanguage(omNoRationaleFixture);
+    expect(container.textContent).not.toContain("context limits");
+  });
+
+  it("17: omitted_outcomes_count>0 displays the count plus neutral omission copy", async () => {
+    await renderInLanguage(omFixture);
+    expect(
+      screen.getByText(/3 additional recorded outcomes were omitted from the AI context/),
+    ).toBeInTheDocument();
+  });
+
+  it("18/19: no final-outcome/net-result copy and no causal-proof wording beyond the one disclaimer", async () => {
+    const { container } = await renderInLanguage(omFixture);
+    expect(container.textContent).not.toMatch(/final outcome/i);
+    expect(container.textContent).not.toMatch(/net result/i);
+    expect(container.textContent).not.toMatch(/proves? causation/i);
+    expect(container.textContent).not.toMatch(/guarantee/i);
+  });
+
+  it("20/21: Evidence Used and Company Brain Basis sections remain unaffected by an OM citation", async () => {
+    await renderInLanguage(
+      baseExplainability({
+        reasoning_state: "aligned",
+        cited_evidence: [
+          {
+            id: "e1",
+            label: "bird_balance",
+            filename: "hall2_daily_report.xlsx",
+            report_date: "2026-06-01",
+            entity: null,
+            epistemic_origin: "observed",
+            source_time_status: "authoritative",
+          },
+        ],
+        cited_company_basis: [
+          { id: "c1", label: "Feed sourcing priority", type: "POLICY", statement: "Prefer local feed suppliers." },
+        ],
+        cited_organizational_memory: omFixture.cited_organizational_memory,
+      }),
+    );
+    expect(screen.getByText("bird_balance")).toBeInTheDocument();
+    expect(screen.getByText("Feed sourcing priority")).toBeInTheDocument();
+    expect(screen.getByText("Historical Organizational Memory")).toBeInTheDocument();
+  });
+
+  it("22: the Historical Organizational Memory section is distinct, appearing after Company Brain Basis and before Missing Evidence", async () => {
+    const { container } = await renderInLanguage(
+      baseExplainability({
+        reasoning_state: "insufficient_evidence",
+        cited_company_basis: [
+          { id: "c1", label: "Growth priority", type: "PREFERENCE", statement: "Pursue regional expansion." },
+        ],
+        cited_organizational_memory: omFixture.cited_organizational_memory,
+        evidence_gaps: ["Water consumption reading is missing for Hall 2."],
+      }),
+    );
+    const text = container.textContent ?? "";
+    const companyBasisIndex = text.indexOf("Company Brain Basis");
+    const omIndex = text.indexOf("Historical Organizational Memory");
+    const missingEvidenceIndex = text.indexOf("Missing Evidence");
+    expect(companyBasisIndex).toBeGreaterThanOrEqual(0);
+    expect(omIndex).toBeGreaterThan(companyBasisIndex);
+    expect(missingEvidenceIndex).toBeGreaterThan(omIndex);
+  });
+
+  it("23/24/25: Arabic heading, supporting copy, and causality disclaimer render", async () => {
+    await renderInLanguage(omFixture, "ar");
+    expect(screen.getByText("الذاكرة المؤسسية التاريخية")).toBeInTheDocument();
+    expect(
+      screen.getByText("قرارات بشرية سابقة ونتائجها المسجّلة، تم الاستشهاد بها كسياق تاريخي لهذه التوصية."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("النتائج المسجّلة حدثت بعد اتخاذ القرار ولا تُثبت أن القرار كان سببًا لها."),
+    ).toBeInTheDocument();
+  });
+
+  it("26: Arabic (RTL) render does not crash and keeps rtl direction active", async () => {
+    await renderInLanguage(omFixture, "ar");
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(screen.getByText("Approve expansion for 14 accounts.")).toBeInTheDocument();
   });
 });

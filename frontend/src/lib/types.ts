@@ -130,9 +130,34 @@ export type ExplainabilityConfidence = {
 // label mapping, which is presentation-only and never changes this value).
 export type ReasoningState = "aligned" | "tension" | "insufficient_evidence";
 
+// M8 Slice 4C-2: cited_organizational_memory reference NO internal OM#
+// labels or durable ids - only an opaque, backend-assigned presentation id
+// ("h1", "h2", ...) with no backend lookup semantics, matching the e#/c#
+// convention above. Reuses OutcomeResultState (Slice 3C-2) verbatim - the
+// backend's public item shape is the exact same enum.
+export type OrganizationalMemoryOutcomeExplainability = {
+  result_state: OutcomeResultState;
+  summary: string;
+  observed_at: string;
+};
+
+export type CitedOrganizationalMemoryItem = {
+  id: string;
+  decision: string;
+  rationale: string | null;
+  decided_at: string;
+  outcomes: OrganizationalMemoryOutcomeExplainability[];
+  omitted_outcomes_count: number;
+};
+
 export type Explainability = {
   cited_evidence: ExplainabilityEvidenceItem[];
   cited_company_basis: ExplainabilityCompanyBasisItem[];
+  // M8 Slice 4C-2: a THIRD, distinct citation category - historical human
+  // Decision/Outcome context, never merged with cited_evidence/
+  // cited_company_basis. See app/services/explainability.py's
+  // cited_organizational_memory for the closed backend contract.
+  cited_organizational_memory: CitedOrganizationalMemoryItem[];
   confidence: ExplainabilityConfidence | null;
   // M7 Slice 2B: safe executive-provenance passthrough from the FINAL
   // accepted reasoning_assessment - see app/services/explainability.py.
