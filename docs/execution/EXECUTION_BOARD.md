@@ -3,17 +3,31 @@
 **Purpose:** Live dashboard of execution across Project NAWA. Single source of truth for what is running, who owns it, and what is blocking.
 **Maintained by:** COWORK (Chief of Staff / PMO).
 **Update cadence:** Progress signals as they arrive; formal update at every Sprint boundary and any blocker escalation.
-**Last updated:** 2026-07-18 (ENG-EX1-004 accepted).
+**Last updated:** 2026-08-28 (retrospective M1–M8 execution reconciliation recorded). EX-1's own content below was last substantively updated 2026-07-18 (ENG-EX1-004 accepted) and is preserved as-is.
 
 ---
 
+## Execution State (Retrospective Reconciliation — 2026-08-28)
+
+A substantial body of M-series engineering (M1 through M8, plus a Post-M8 hardening commit) executed via git history between 2026-08-09 and 2026-08-28 without corresponding entries in this tracker, in tension with the Repository First Policy below. This section records the reconciled current state. Full detail, source precedence, and reasoning: [`M8_OME_RECONCILIATION.md`](M8_OME_RECONCILIATION.md).
+
+| Track | Status |
+|---|---|
+| M1–M8 engineering track | **CLOSED** |
+| Post-M8 ReasoningReceipt validation hardening | **CLOSED** (commit `8c5af39`) |
+| Sprint EX-1 — Executive Decision Support | **PAUSED — requires explicit Founder reactivation** |
+| Next engineering milestone | **NOT YET ACTIVATED** — requires explicit Founder decision |
+| Verified remote push checkpoint | **PENDING** |
+
+This reconciliation does not mark EX-1 completed, cancelled, or superseded — its historical record below remains valid and unedited. It is simply not the automatically active track pending Founder reactivation.
+
 ## Sprint Status
 
-🟢 **Sprint EX-1 Active** — Started 2026-07-08.
+🟡 **Sprint EX-1 PAUSED** — Started 2026-07-08. Requires explicit Founder reactivation (see Execution State above).
 
 ## Active Sprint
 
-**Sprint EX-1 — Executive Decision Support.**
+**Sprint EX-1 — Executive Decision Support.** (Historical record below; paused, not active — see Execution State above.)
 
 ## Sprint Goal
 

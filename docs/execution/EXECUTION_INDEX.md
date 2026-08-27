@@ -6,15 +6,21 @@ For depth, follow the links below. For live team status, see `EXECUTION_BOARD.md
 
 ---
 
+## Retrospective Reconciliation Notice (2026-08-28)
+
+M1–M8 engineering (plus a Post-M8 hardening commit) executed outside this tracker between 2026-08-09 and 2026-08-28. It is now reconciled: M1–M8 CLOSED, Post-M8 ReasoningReceipt hardening CLOSED, Sprint EX-1 PAUSED pending explicit Founder reactivation, no next engineering milestone activated, remote push checkpoint PENDING. See [`M8_OME_RECONCILIATION.md`](M8_OME_RECONCILIATION.md) for full detail.
+
+---
+
 ## Active Sprint
 
-**Sprint EX-1 — Executive Decision Support.**
+**Sprint EX-1 — Executive Decision Support.** (PAUSED — see Retrospective Reconciliation Notice above. Content below is the preserved historical record.)
 
 Goal: Transform NAWA's Executive Brief into a true Executive Decision Support document.
 
 ## Sprint Status
 
-🟢 Started (2026-07-08).
+🟡 PAUSED (started 2026-07-08; requires explicit Founder reactivation).
 
 ## Active Engineering Tasks
 
@@ -49,7 +55,7 @@ ENG-EX1-001, ENG-EX1-002, ENG-EX1-003 (in order of expected start; parallelism w
 
 ## Sprint Folders
 
-- [Sprint EX-1](sprint_ex1/) — active
+- [Sprint EX-1](sprint_ex1/) — paused (historical record preserved)
 - Future Sprint folders will appear here as `sprint_exN/`
 
 ## Cross-Cutting Documents
@@ -57,3 +63,4 @@ ENG-EX1-001, ENG-EX1-002, ENG-EX1-003 (in order of expected start; parallelism w
 - [EXECUTION_BOARD.md](EXECUTION_BOARD.md) — live team dashboard, ownership rules, risks, blockers, Founder decisions
 - [SPRINT_HISTORY.md](SPRINT_HISTORY.md) — cross-Sprint institutional memory
 - [backlog/](backlog/) — items outside MVP awaiting Founder promotion
+- [M8_OME_RECONCILIATION.md](M8_OME_RECONCILIATION.md) — retrospective execution reconciliation record; type: retrospective execution reconciliation; status: current / closed checkpoint record
