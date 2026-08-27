@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from fastapi import HTTPException
 
 from app.services.output_formatter import format_ai_response
+from app.models.response import ChatResponse
 from app.core.config import settings
 from app.core.aimx_prompt import AIMX_SYSTEM_PROMPT
 from app.core.decision_prompt import AIMX_DECISION_PROMPT
@@ -1986,6 +1987,25 @@ class AIService:
                 events_count=events_count,
                 language=response_language,
             )
+
+            # Reasoning receipt hardening (post-M8 audit fix, Strategy A):
+            # gate receipt persistence on the SAME public contract the
+            # route validates - a durable ReasoningReceipt must never be
+            # created for a response that cannot pass the final public
+            # ChatResponse validation boundary. Validated here, BEFORE any
+            # receipt/side-effect write, using the real Pydantic contract
+            # (never a fake/wrapped check) - a failure here raises and
+            # aborts the whole request through the existing outer
+            # except-Exception handler below, exactly like every other
+            # pre-receipt failure path (M6 repair failure, etc.). This is a
+            # gate only: `result` itself is untouched (never replaced by
+            # the validated model or a model_dump), so the receipt
+            # snapshot, reasoning_receipt_id injection, and every side
+            # effect below still read the exact same plain dict as before.
+            # The route's own ChatResponse.model_validate(result) at
+            # app/api/chat.py remains as unchanged defense-in-depth on the
+            # final result including the injected reasoning_receipt_id.
+            ChatResponse.model_validate(result)
 
             # M8 Slice 3A (Founder Correction 2): the immutable reasoning
             # receipt is created HERE - after `result` (the final,

@@ -24,7 +24,9 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import asyncpg
+import pydantic
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
@@ -683,6 +685,142 @@ def test_persistence_failure_aborts_request_and_skips_all_side_effects(db_availa
     _run(scenario())
 
 
+def test_chat_response_validation_failure_persists_zero_receipts(db_available, monkeypatch) -> None:
+    """Reasoning receipt hardening (post-M8 audit fix, Strategy A): a final
+    result that cannot pass the REAL public ChatResponse contract must
+    never reach receipt persistence.
+
+    Codex fix round: corrupts `followup_question`, NOT `ceo_text`/
+    `reasoning_assessment`. Those two fields are ALSO independently
+    validated by ReasoningReceiptService.create_receipt() before its own
+    INSERT (see response_snapshot's ceo_text/reasoning_assessment checks),
+    so corrupting either would not uniquely prove the NEW pre-persistence
+    ChatResponse.model_validate(result) gate inside AIService.chat() -
+    zero receipts could result from EITHER boundary. `followup_question`
+    is a ChatResponse-only field: _create_live_reasoning_receipt's
+    response_snapshot never carries it (only ceo_text/reasoning_assessment
+    - see its own docstring), so ONLY the new gate can catch this
+    corruption. Exercises the genuine Pydantic contract - never a
+    fake/wrapped validator, never a monkeypatch of
+    ChatResponse.model_validate itself."""
+
+    async def scenario():
+        pool = await _make_pool()
+        # Cleanup-safety fix round: company_id/user_id/service start as None
+        # so the finally block below can always tell, without a NameError,
+        # whether seeding actually happened - and therefore whether there is
+        # anything to clean up - regardless of WHERE in the try block an
+        # assertion (diagnostic or otherwise) raises.
+        company_id: str | None = None
+        user_id: str | None = None
+        service: AIService | None = None
+        try:
+            company_id, user_id, _department_id = await _seed_company_department_user(
+                pool, label="chatresponsefail"
+            )
+
+            service = AIService()
+            service.client = SimpleNamespace(
+                chat=SimpleNamespace(
+                    completions=SimpleNamespace(
+                        create=_operational_response_valid_completion,
+                    )
+                )
+            )
+
+            import app.services.openai_client as openai_client_module
+            from app.services.output_formatter import format_ai_response as real_format_ai_response
+
+            def _malformed_format_ai_response(*args, **kwargs):
+                result = real_format_ai_response(*args, **kwargs)
+                # ChatResponse.followup_question is `str | None` - an int
+                # is a genuine violation of the real public contract, and
+                # (unlike ceo_text/reasoning_assessment) is never read by
+                # ReasoningReceiptService at all. ceo_text and
+                # reasoning_assessment are left exactly as the real
+                # formatter/model produced them - both remain valid.
+                result["followup_question"] = 12345
+                return result
+
+            monkeypatch.setattr(openai_client_module, "format_ai_response", _malformed_format_ai_response)
+
+            # Direct call-proof: _create_live_reasoning_receipt must never
+            # be entered once the new gate rejects `result`. Captures every
+            # invocation before raising, so the assertion below is reliable
+            # regardless of which exception type ultimately propagates.
+            receipt_create_calls: list[None] = []
+
+            async def _spy_create_live_reasoning_receipt(*args, **kwargs):
+                receipt_create_calls.append(None)
+                raise AssertionError(
+                    "_create_live_reasoning_receipt must never be called when the new "
+                    "pre-persistence ChatResponse gate has already rejected `result`"
+                )
+
+            monkeypatch.setattr(service, "_create_live_reasoning_receipt", _spy_create_live_reasoning_receipt)
+
+            key = service._memory_key(company_id, "m8-s3a-chatresponsefail")
+            before_count = await _receipt_count(pool, company_id=company_id)
+            assert before_count == 0
+
+            with pytest.raises(HTTPException) as exc_info:
+                await service.chat(
+                    session_id="m8-s3a-chatresponsefail",
+                    message="hello",
+                    context={},
+                    company_id=company_id,
+                    created_by_user_id=user_id,
+                )
+
+            # Boundary proof: the failure's underlying cause (chat()'s
+            # outer `raise HTTPException(...) from e` preserves it as
+            # __cause__) is the REAL pydantic.ValidationError from the new
+            # gate, naming exactly the corrupted field - never
+            # ChatResponse.model_validate mocked, and distinguishable from
+            # the (never-reached) receipt spy's AssertionError, which would
+            # fail this exact assertion if the new gate had NOT stopped
+            # execution first.
+            cause = exc_info.value.__cause__
+            assert isinstance(cause, pydantic.ValidationError), (
+                f"expected the new gate's real pydantic.ValidationError as the cause, got {type(cause)!r}"
+            )
+            assert "followup_question" in str(cause)
+
+            assert receipt_create_calls == [], (
+                "_create_live_reasoning_receipt must never be invoked once the new "
+                "pre-persistence ChatResponse gate rejects the final result"
+            )
+
+            after_count = await _receipt_count(pool, company_id=company_id)
+            assert after_count == 0, (
+                "a result that fails the real ChatResponse contract must persist zero receipts"
+            )
+
+            # Same side-effect-skip proof as
+            # test_persistence_failure_aborts_request_and_skips_all_side_effects
+            # - the new gate sits BEFORE receipt creation, so every
+            # downstream side effect must also not have run.
+            assert key not in service.sessions or service.sessions[key] == []
+            events = await pool.fetch("SELECT id FROM memory_events WHERE company_id = $1", company_id)
+            facts = await pool.fetch("SELECT id FROM memory_facts WHERE company_id = $1", company_id)
+            assert events == [], "no legacy DB memory event for the rejected response"
+            assert facts == [], "no memory-fact extraction/upsert for the rejected response"
+        finally:
+            # Cleanup-safety fix round: runs regardless of whether the try
+            # block above completed normally or a diagnostic assertion
+            # raised partway through - a failed run must never leave
+            # m8-s3a-chatresponsefail-* companies/users/receipts behind
+            # (see test_zero_slice3a_leftovers_marker, the existing
+            # file-wide dormancy proof this test must not violate).
+            if company_id is not None and user_id is not None:
+                await _cleanup(pool, company_id=company_id, user_id=user_id)
+            if service is not None and service.db_pool is not None:
+                await service.db_pool.close()
+            await pool.close()
+
+    _run(scenario())
+
+
 async def _always_valid_no_citation_completion(**kwargs):
     reasoning_assessment = {
         "reasoning_state": "insufficient_evidence",
@@ -700,6 +838,46 @@ async def _always_valid_no_citation_completion(**kwargs):
         },
     }
     return _valid_ai_response(reasoning_assessment)
+
+
+async def _operational_response_valid_completion(**kwargs):
+    """Codex fix round: unlike _always_valid_no_citation_completion (whose
+    fixed executive_summary text never satisfies the CEO-scope operational-
+    response enforcement's "affected departments"/"operational impact"
+    element checks - see _operational_response_missing_elements, which
+    never skips those two regardless of reasoning_state), this completion
+    carries an executive_summary containing a qualifying keyword for each
+    ("production", "inventory") so the chat() call reaches
+    format_ai_response()/the new pre-persistence gate on the FIRST call,
+    with zero regeneration. reasoning_state stays "insufficient_evidence"
+    so the bottleneck/cause-effect elements remain skipped, matching the
+    same no-citation, no-provenance shape _always_valid_no_citation_
+    completion already establishes for this file's persistence-boundary
+    tests."""
+    reasoning_assessment = {
+        "reasoning_state": "insufficient_evidence",
+        "operational_assessment": "x",
+        "company_brain_alignment": "cannot determine",
+        "tensions": [],
+        "evidence_gaps": [],
+        "risk_assessment": "x",
+        "confidence": 40,
+        "recommendation_basis": {
+            "evidence_basis": [],
+            "company_basis": [],
+            "missing_evidence": [],
+            "organizational_memory_basis": [],
+        },
+    }
+    ai_json = json.dumps({
+        "executive_summary": (
+            "Executive Summary\n- Production levels and inventory impact reviewed; root cause not "
+            "yet established given current evidence.\n\n"
+            "Recommended Actions\n- Monitor production and inventory levels.\n\nPriority Level\n- Medium."
+        ),
+        "raw_decision": _raw_decision(reasoning_assessment),
+    })
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=ai_json))])
 
 
 # ---------------------------------------------------------------------------
