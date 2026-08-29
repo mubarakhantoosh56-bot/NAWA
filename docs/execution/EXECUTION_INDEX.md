@@ -6,9 +6,9 @@ For depth, follow the links below. For live team status, see `EXECUTION_BOARD.md
 
 ---
 
-## Retrospective Reconciliation Notice (2026-08-28)
+## Retrospective Reconciliation Notice (2026-08-28; push/milestone status updated 2026-08-29)
 
-M1–M8 engineering (plus a Post-M8 hardening commit) executed outside this tracker between 2026-08-09 and 2026-08-28. It is now reconciled: M1–M8 CLOSED, Post-M8 ReasoningReceipt hardening CLOSED, Sprint EX-1 PAUSED pending explicit Founder reactivation, no next engineering milestone activated, remote push checkpoint PENDING. See [`M8_OME_RECONCILIATION.md`](M8_OME_RECONCILIATION.md) for full detail.
+M1–M8 engineering (plus a Post-M8 hardening commit) executed outside this tracker between 2026-08-09 and 2026-08-28. It is now reconciled: M1–M8 CLOSED, Post-M8 ReasoningReceipt hardening CLOSED, M1–M8 documentation reconciliation CLOSED (commit `71772e95`), Sprint EX-1 PAUSED pending explicit Founder reactivation, remote push checkpoint COMPLETED (commit `71772e95`, verified identical against live `origin/claude-safe-review`). Next engineering milestone: M9 — Decision Execution Foundation — SELECTED — IMPLEMENTATION NOT ACTIVATED, per Founder direction. See [`M8_OME_RECONCILIATION.md`](M8_OME_RECONCILIATION.md) for full detail.
 
 ---
 

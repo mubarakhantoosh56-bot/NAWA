@@ -1,5 +1,33 @@
 # NAWA – Current State
 
+## Current Execution Status (authoritative — updated 2026-08-29)
+
+This block is the authoritative current-state summary required by
+`docs/governance/NAWA_DOCUMENTATION_STANDARD_v1.md` §4. It supersedes nothing
+below it — the Phase 2A / Dairtna narrative that follows remains valid
+historical and contextual material. Full engineering-track detail and
+reasoning are preserved in `docs/execution/M8_OME_RECONCILIATION.md`; this
+block is a pointer/summary, not a duplicate.
+
+- **M8 (Organizational Memory Engine):** CLOSED.
+- **ReasoningReceipt validation hardening (Post-M8):** CLOSED.
+- **M1–M8 documentation reconciliation:** CLOSED.
+- **Verified remote push checkpoint:** COMPLETED — commit
+  `71772e956f6ad3eae19141f1111c4fcc7e78e83a` confirmed identical on local
+  `claude-safe-review` and live `origin/claude-safe-review`.
+- **Sprint EX-1 — Executive Decision Support:** PAUSED — requires explicit
+  Founder reactivation.
+- **Next milestone:** M9 — Decision Execution Foundation — **SELECTED —
+  IMPLEMENTATION NOT ACTIVATED** (per Founder direction). No Slice 1, no
+  migration 015, no code implementation authorized.
+- **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
+  governance for durable OME storage remains unresolved.
+- **OME lifecycle / bounded-growth governance:** DEFERRED.
+- **Durable Situation Memory:** DEFERRED — NOT MVP BLOCKING.
+
+See `docs/execution/M8_OME_RECONCILIATION.md` for the full reconciliation
+record and `docs/execution/EXECUTION_BOARD.md` for the live execution tracker.
+
 ## Current Product Direction
 NAWA is an AI Operational Intelligence Platform and AI Workforce Platform for Arabic companies.
 

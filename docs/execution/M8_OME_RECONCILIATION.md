@@ -173,9 +173,10 @@ This is **not** open technical debt, a pending fix, or an unresolved audit conce
 | Functional runtime behavior vs. EBD-004 | **ALIGNED WITH IMPLEMENTED MVP PORTIONS** |
 | Full EBD-004 compliance | **NOT ESTABLISHED BY THIS RECONCILIATION** (lifecycle/bounded-growth governance not identified) |
 | Post-M8 ReasoningReceipt validation hardening | **CLOSED** |
+| M1–M8 documentation reconciliation | **CLOSED** (commit `71772e95`) |
 | Sprint EX-1 | **PAUSED — Founder reactivation required** |
-| Next engineering milestone | **NOT YET ACTIVATED** |
-| Verified remote push checkpoint | **PENDING** — not yet performed |
+| Next engineering milestone | **SELECTED — M9 — Decision Execution Foundation — IMPLEMENTATION NOT ACTIVATED** (per Founder direction; no Slice 1, no migration 015, no code authorized) |
+| Verified remote push checkpoint | **COMPLETED** — commit `71772e956f6ad3eae19141f1111c4fcc7e78e83a`, verified identical on local `claude-safe-review` and live `origin/claude-safe-review` (see §17) |
 
 ## 14. Explicit Non-Goals / Deferred Capabilities
 
@@ -204,6 +205,28 @@ None of the following are active work, and none are promoted by this reconciliat
 - **Migration 014 SHA-256:** `8e30a9b8bb7c73f226ac8bf8eb1a751ddb311c82404c5f635fd995c46a378710`.
 - **Working tree at reconciliation start:** clean, nothing staged.
 - This document, and the accompanying updates to `EXECUTION_BOARD.md`, `EXECUTION_INDEX.md`, and `SPRINT_HISTORY.md`, are themselves uncommitted at the time of writing — staging, committing, and pushing are explicitly out of scope for this task and require separate Founder authorization and independent review.
+
+## 17. Post-Reconciliation Addendum — Push Verification (2026-08-29)
+
+**Type:** Post-reconciliation addendum. Section 13 is the live Current Execution Status section and has been intentionally updated by this post-push reconciliation. The historically time-scoped reconciliation record remains preserved; in particular, §16's reconciliation-time HEAD (`8c5af39`) and its "uncommitted at the time of writing" statement remain exactly as originally recorded.
+
+Subsequent to the original reconciliation recorded above:
+
+- This document, together with the accompanying updates to `EXECUTION_BOARD.md`, `EXECUTION_INDEX.md`, and `SPRINT_HISTORY.md`, was committed as `71772e956f6ad3eae19141f1111c4fcc7e78e83a` ("Docs: reconcile M1-M8 execution state").
+- Independent verification confirmed the commit touched only the four `docs/execution/` files named above.
+- The commit was pushed to the remote.
+- Local branch `claude-safe-review` and live `origin/claude-safe-review` were independently verified (`git ls-remote origin claude-safe-review`) to be identical at hash `71772e956f6ad3eae19141f1111c4fcc7e78e83a`.
+- **Verified remote push checkpoint is therefore COMPLETED.** This replaces the PENDING current-status value that §13 carried before this post-push reconciliation; §13's table above has been updated accordingly and no longer shows PENDING.
+
+Separately, per Founder direction, the next engineering milestone has been **SELECTED** as **M9 — Decision Execution Foundation**. This selection is recorded for documentation-currency purposes only. It does **not** constitute Sprint activation, architecture ratification, Slice 1 authorization, migration authorization, or any form of implementation authorization. No migration 015 exists. No code implementation is authorized. M9 status is **SELECTED — IMPLEMENTATION NOT ACTIVATED**.
+
+This addendum does not fold, activate, or otherwise change the status of the following, which remain exactly as recorded in Sections 8 and 10 above:
+
+- Full EBD-004 compliance: **NOT ESTABLISHED**.
+- OME lifecycle / bounded-growth governance: **DEFERRED**.
+- Durable Situation Memory: **DEFERRED — NOT MVP BLOCKING**.
+
+This addendum is itself a documentation-only record. It creates no new architecture or governance decision, authorizes no code change, and does not amend `EBD-003`, `EBD-004`, or `OME_FOUNDATION_PLAN_v1.md`.
 
 ---
 

@@ -3,7 +3,7 @@
 **Purpose:** Live dashboard of execution across Project NAWA. Single source of truth for what is running, who owns it, and what is blocking.
 **Maintained by:** COWORK (Chief of Staff / PMO).
 **Update cadence:** Progress signals as they arrive; formal update at every Sprint boundary and any blocker escalation.
-**Last updated:** 2026-08-28 (retrospective M1–M8 execution reconciliation recorded). EX-1's own content below was last substantively updated 2026-07-18 (ENG-EX1-004 accepted) and is preserved as-is.
+**Last updated:** 2026-08-29 (post-push checkpoint verified COMPLETED; next-milestone status updated to reflect Founder selection of M9 — see Execution State below). Retrospective M1–M8 execution reconciliation originally recorded 2026-08-28. EX-1's own content below was last substantively updated 2026-07-18 (ENG-EX1-004 accepted) and is preserved as-is.
 
 ---
 
@@ -15,9 +15,13 @@ A substantial body of M-series engineering (M1 through M8, plus a Post-M8 harden
 |---|---|
 | M1–M8 engineering track | **CLOSED** |
 | Post-M8 ReasoningReceipt validation hardening | **CLOSED** (commit `8c5af39`) |
+| M1–M8 documentation reconciliation | **CLOSED** (commit `71772e95`) |
 | Sprint EX-1 — Executive Decision Support | **PAUSED — requires explicit Founder reactivation** |
-| Next engineering milestone | **NOT YET ACTIVATED** — requires explicit Founder decision |
-| Verified remote push checkpoint | **PENDING** |
+| Next engineering milestone | **SELECTED — M9 — Decision Execution Foundation — IMPLEMENTATION NOT ACTIVATED** (per Founder direction; no Slice 1, no migration 015, no code authorized) |
+| Verified remote push checkpoint | **COMPLETED** — commit `71772e956f6ad3eae19141f1111c4fcc7e78e83a`, local `claude-safe-review` verified identical to live `origin/claude-safe-review` |
+| Full EBD-004 compliance | **NOT ESTABLISHED** — lifecycle/bounded-growth governance for durable OME storage remains unresolved (detail: `M8_OME_RECONCILIATION.md` §8) |
+| OME lifecycle / bounded-growth governance | **DEFERRED** |
+| Durable Situation Memory | **DEFERRED — NOT MVP BLOCKING** (detail: `M8_OME_RECONCILIATION.md` §10) |
 
 This reconciliation does not mark EX-1 completed, cancelled, or superseded — its historical record below remains valid and unedited. It is simply not the automatically active track pending Founder reactivation.
 
