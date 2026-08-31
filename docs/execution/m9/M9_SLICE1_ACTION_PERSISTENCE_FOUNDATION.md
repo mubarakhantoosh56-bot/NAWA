@@ -3,7 +3,7 @@
 **Priority:** P0. First slice of M9 — Decision Execution Foundation.
 **Owner:** AI Engineering Team (Claude Code).
 **Ownership layer:** Persistence (migration + domain models only).
-**Repository First Policy compliance:** This document is filed retroactively relative to the code — Slice 1 implementation began under explicit Founder activation before this task document existed. It is created now, before commit, to close that governance gap per the Architecture Contract's own requirement (§28: "No slice may begin without explicit Founder activation **and a task document** under `docs/execution/`"; §32: "a new `docs/execution/m9/` task folder (required before any slice begins)"). No further Slice 1 work occurs without this document existing; it is a precondition for review and commit, not merely a record of what already happened.
+**Repository First Policy compliance:** This document was filed retroactively relative to the code — Slice 1 implementation began under explicit Founder activation before this task document existed. It was created before commit to close that governance gap per the Architecture Contract's own requirement (§28: "No slice may begin without explicit Founder activation **and a task document** under `docs/execution/`"; §32: "a new `docs/execution/m9/` task folder (required before any slice begins)"). It was a precondition for commit `09ac78d56e64c36263f5d3f4d0120904503b88a1`, not merely a record of what already happened; it now also serves as the current status record for that commit pending independent post-commit verification.
 
 ---
 
@@ -18,10 +18,11 @@
 | M9 Slice 3 — Frontend Human-Governed Action Recording | **PROPOSED — NOT ACTIVATED** |
 | M9 Slice 4 — Golden Path E2E & Hardening | **PROPOSED — NOT ACTIVATED** |
 | Starting checkpoint | `4e1650e957f8c6d337ec43adef014aa9411aed17` (branch `claude-safe-review`) |
+| M9 Slice 1 implementation commit | `09ac78d56e64c36263f5d3f4d0120904503b88a1` — "M9 Slice 1: add action persistence foundation" — **committed locally, NOT pushed** |
 
 ## Objective
 
-Implement the minimum durable persistence foundation for M9 Decision Execution: current Action execution state, and an immutable append-only Action change ledger (status transitions + assignment changes), per the Founder-accepted Architecture Contract's Option M9-2 (architecture substance ratified through v1.3, Founder-acceptance amendment, remote checkpoint closed at `4e1650e957f8c6d337ec43adef014aa9411aed17`; a v1.4 status-only amendment recording Slice 1's activation exists on disk, uncommitted).
+Implement the minimum durable persistence foundation for M9 Decision Execution: current Action execution state, and an immutable append-only Action change ledger (status transitions + assignment changes), per the Founder-accepted Architecture Contract's Option M9-2 (architecture substance ratified through v1.3, Founder-acceptance amendment, remote checkpoint closed at `4e1650e957f8c6d337ec43adef014aa9411aed17`; a v1.4 amendment recording Slice 1's activation and persistence precision is committed locally in `09ac78d56e64c36263f5d3f4d0120904503b88a1`, not yet pushed).
 
 ## Scope
 
@@ -42,7 +43,7 @@ This governs scope over the broader activation prompt's "allowed" list (which pe
 
 ## Expected Deliverable
 
-Migration 015 (reviewed, corrected, applied to and live-local validated against the existing project-local `nawa-postgres` PostgreSQL 16 / pgvector development instance — not yet committed, not yet pushed, not applied to any production or shared database), `Action`/`ActionChangeEvent` domain models with CHECK-mirroring `__post_init__` validation, and passing focused tests — ready for independent review before commit.
+Migration 015 (reviewed, corrected, applied to and live-local validated against the existing project-local `nawa-postgres` PostgreSQL 16 / pgvector development instance, and committed locally in `09ac78d56e64c36263f5d3f4d0120904503b88a1` — not yet pushed, not applied to any production or shared database), `Action`/`ActionChangeEvent` domain models with CHECK-mirroring `__post_init__` validation, and passing focused tests — implemented and committed locally, pending independent post-commit verification.
 
 ## Dependencies
 
@@ -88,18 +89,24 @@ None. (See Persistence Correction Log below for issues found and resolved during
 17. **DB-independent M9 suite: 48/48 passed** (unchanged from Pass 2).
 18. **Full backend regression suite: 1092/1092 passed, 0 failed, 0 skipped, 0 errors** (two runs — the first surfaced and this pass's own item 14 fixed the one real failure found; the confirmation rerun was clean).
 
-This closes the "not executed" gap left open at the end of Pass 2. Migration 015 remains uncommitted, unpushed, and applied only to this local development/test instance — never to production or shared infrastructure.
+This closes the "not executed" gap left open at the end of Pass 2. At the time Pass 3 completed, migration 015 was uncommitted, unpushed, and applied only to this local development/test instance, never to production or shared infrastructure — that state is superseded by Pass 4 below, not contradicted by it.
+
+**Pass 4 (post-commit governance reconciliation).** Following Founder stage+commit authorization, the validated Pass 1–3 package (implementation, migration, tests, and governance documentation as they stood after Pass 3) was staged and committed in exactly one commit:
+
+19. **Commit `09ac78d56e64c36263f5d3f4d0120904503b88a1`** — "M9 Slice 1: add action persistence foundation," parent `4e1650e957f8c6d337ec43adef014aa9411aed17`, 19 files changed (6 created, 13 modified), containing precisely the validated package and nothing else. Migration 015 is now committed locally at the exact byte content whose checksum (`aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`) was live-local validated in Pass 3 — no re-edit occurred between validation and commit. **Not pushed** — `origin/claude-safe-review` still points to `4e1650e957f8c6d337ec43adef014aa9411aed17`.
+20. **This governance-documentation follow-up pass** corrects the remaining post-commit staleness Codex identified: this task document, `CURRENT_STATE.md`, `EXECUTION_BOARD.md`, `EXECUTION_INDEX.md`, and the Architecture Contract (promoted to v1.5) all previously still described Slice 1 / migration 015 as uncommitted or working-tree-only after commit `09ac78d` already existed. Corrected to state committed-locally/not-pushed consistently. No implementation, migration, or test file was touched in this pass — governance documentation only.
 
 ---
 
 ## Execution Result
 
-**Status:** Implementation complete, corrected across two independent-review passes, live-local validated (Pass 3), **ACTIVE — IMPLEMENTATION VALIDATED / UNDER INDEPENDENT REVIEW — NOT CLOSED**.
+**Status:** Implementation complete, corrected across two independent-review passes, live-local validated (Pass 3), committed locally (Pass 4), **ACTIVE — IMPLEMENTATION VALIDATED + COMMITTED LOCALLY / AWAITING INDEPENDENT POST-COMMIT VERIFICATION / NOT CLOSED**.
 **Started:** 2026-08-31 (Founder Slice 1 activation).
 **Corrections applied:** 2026-08-31, Pass 1 and Pass 2 (this document's Persistence Correction Log).
 **Live validation completed:** 2026-08-31, Pass 3 (this document's Persistence Correction Log).
-**Commit(s):** None yet — working tree only, per explicit "do not stage/commit/push" authorization scope.
-**Reviewer:** Pending independent review.
-**Validation (current, as of Pass 3):** Migration 015 applied to and validated against the existing project-local `nawa-postgres` PostgreSQL 16 / pgvector development instance — 001–014 integrity confirmed, 015 recorded in `schema_migrations` with checksum `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`, rerun confirmed idempotent. Live M9 schema-contract suite: **36/36 passed**. DB-independent M9 suite: **48/48 passed**. Full backend regression suite: **1092/1092 passed, 0 failed, 0 skipped, 0 errors**. (Historical note: earlier in this document's own Pass 1/Pass 2 entries, schema tests against a live Postgres were reported as not executable and the full suite showed 280 DB-connectivity failures — that was the true state at that time, before Pass 3's live database became available; it is superseded by the figures in this paragraph, not contradicted by them.)
+**Committed locally:** 2026-08-31/2026-09-01, Pass 4 — commit `09ac78d56e64c36263f5d3f4d0120904503b88a1`, not pushed.
+**Commit(s):** `09ac78d56e64c36263f5d3f4d0120904503b88a1` — "M9 Slice 1: add action persistence foundation" (parent `4e1650e957f8c6d337ec43adef014aa9411aed17`). Committed locally under explicit Founder stage+commit authorization. **NOT pushed** — live `origin/claude-safe-review` still points to `4e1650e957f8c6d337ec43adef014aa9411aed17`.
+**Reviewer:** Pending independent post-commit verification.
+**Validation (current, as of Pass 3, still applicable — commit `09ac78d` contains these exact validated bytes):** Migration 015 applied to and validated against the existing project-local `nawa-postgres` PostgreSQL 16 / pgvector development instance — 001–014 integrity confirmed, 015 recorded in `schema_migrations` with checksum `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`, rerun confirmed idempotent. Live M9 schema-contract suite: **36/36 passed**. DB-independent M9 suite: **48/48 passed**. Full backend regression suite: **1092/1092 passed, 0 failed, 0 skipped, 0 errors**. (Historical note: earlier in this document's own Pass 1/Pass 2 entries, schema tests against a live Postgres were reported as not executable and the full suite showed 280 DB-connectivity failures — that was the true state at that time, before Pass 3's live database became available; it is superseded by the figures in this paragraph, not contradicted by them.)
 **Follow-up:** Slice 2 (Repository, Domain Service & API) remains `PROPOSED — NOT ACTIVATED` and requires its own explicit Founder activation and task document.
-**Notes:** This slice does not close until independent review passes and the Founder authorizes commit. Pre-commit live-PostgreSQL validation is complete; no further validation is outstanding on that front.
+**Notes:** This slice does not close until independent post-commit verification passes and the Founder authorizes the closure-state update. Pre-commit live-PostgreSQL validation is complete; commit `09ac78d` exists locally and is not yet pushed; no further validation is outstanding on the persistence/schema front — the only remaining gate is independent post-commit verification.

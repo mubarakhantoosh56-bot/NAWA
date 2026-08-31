@@ -1,6 +1,6 @@
 # NAWA – Current State
 
-## Current Execution Status (authoritative — updated 2026-08-31)
+## Current Execution Status (authoritative — updated 2026-09-01)
 
 This block is the authoritative current-state summary required by
 `docs/governance/NAWA_DOCUMENTATION_STANDARD_v1.md` §4. It supersedes nothing
@@ -21,14 +21,20 @@ block is a pointer/summary, not a duplicate.
   Founder reactivation.
 - **Next milestone:** M9 — Decision Execution Foundation — **ACTIVE.**
   Architecture Contract v1.3 — **FOUNDER ACCEPTED** at the closed remote
-  checkpoint above; a v1.4 status-only amendment (Slice 1 activation status)
-  exists on disk, uncommitted
+  checkpoint above; a v1.4 amendment (Slice 1 activation + persistence
+  precision) is **committed locally** in commit
+  `09ac78d56e64c36263f5d3f4d0120904503b88a1` — **not yet pushed**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
-  **Slice 1 — Action Persistence Foundation — ACTIVE, implemented and
-  corrected, under independent review, not yet committed**: migration 015
-  (`ome_actions`, `ome_action_change_events`) plus `Action`/`ActionChangeEvent`
-  domain models — no repository, service, API, or frontend yet, per the
-  contract's own Slice 1 scope. Slices 2–4 remain **PROPOSED — NOT
+  **M9 Slice 1 — Action Persistence Foundation implementation is committed
+  locally** at `09ac78d56e64c36263f5d3f4d0120904503b88a1` (parent
+  `4e1650e957f8c6d337ec43adef014aa9411aed17`, subject "M9 Slice 1: add action
+  persistence foundation"), **not yet pushed**: migration 015
+  (`ome_actions`, `ome_action_change_events`, live-local validated, checksum
+  `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`) plus
+  `Action`/`ActionChangeEvent` domain models — no repository, service, API, or
+  frontend yet, per the contract's own Slice 1 scope. Current status: **ACTIVE
+  — IMPLEMENTATION VALIDATED + COMMITTED LOCALLY / AWAITING INDEPENDENT
+  POST-COMMIT VERIFICATION / NOT CLOSED**. Slices 2–4 remain **PROPOSED — NOT
   ACTIVATED**. See `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
