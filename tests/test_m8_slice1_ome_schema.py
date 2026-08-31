@@ -113,9 +113,18 @@ async def _seed_decision(
 # 1. Migration applies / migration inventory integrity
 # ---------------------------------------------------------------------------
 
-def test_migration_014_file_exists_and_is_next_after_013() -> None:
+def test_migration_014_exists_in_contiguous_sequence() -> None:
+    """M8 boundary invariant: migration 014 exists, and the full
+    migration sequence remains contiguously numbered with no gaps or
+    renumbering. (Historical note: this test was originally named
+    test_migration_014_file_exists_and_is_next_after_013 and asserted
+    014 was the LAST migration file; that assertion became obsolete
+    once Founder-approved M9 Slice 1 added migration 015 - M8's real
+    invariant was always that 001-014 remain intact and contiguously
+    numbered, not that no future milestone may ever add a migration
+    after 014.)"""
     files = sorted(p.name for p in MIGRATIONS_DIR.glob("*.sql"))
-    assert files[-1] == "014_organizational_memory.sql"
+    assert "014_organizational_memory.sql" in files
     assert files == [f"{i:03d}_{files[i - 1].split('_', 1)[1]}" for i in range(1, len(files) + 1)]
 
 

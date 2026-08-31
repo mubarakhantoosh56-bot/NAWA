@@ -1152,8 +1152,13 @@ def test_dormancy_not_referenced_from_chat_api_or_decision_context() -> None:
 # ---------------------------------------------------------------------------
 
 def test_migrations_still_001_through_014() -> None:
+    """M8 boundary invariant: migration 014 is present, unrenamed.
+    (Historical note: this test previously also asserted no migration
+    015 existed; that assertion became obsolete once Founder-approved
+    M9 Slice 1 added migration 015, and has been removed - it was never
+    the real invariant this M8 slice needed, which is that 001-014
+    remain intact, not that no future milestone may ever add one.)"""
     migration_files = sorted(p.name for p in pathlib.Path("migrations").glob("*.sql"))
-    assert not any(name.startswith("015") for name in migration_files)
     assert any(name.startswith("014") for name in migration_files)
 
 

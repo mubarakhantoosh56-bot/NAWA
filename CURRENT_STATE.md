@@ -1,6 +1,6 @@
 # NAWA – Current State
 
-## Current Execution Status (authoritative — updated 2026-08-29)
+## Current Execution Status (authoritative — updated 2026-08-31)
 
 This block is the authoritative current-state summary required by
 `docs/governance/NAWA_DOCUMENTATION_STANDARD_v1.md` §4. It supersedes nothing
@@ -12,14 +12,24 @@ block is a pointer/summary, not a duplicate.
 - **M8 (Organizational Memory Engine):** CLOSED.
 - **ReasoningReceipt validation hardening (Post-M8):** CLOSED.
 - **M1–M8 documentation reconciliation:** CLOSED.
-- **Verified remote push checkpoint:** COMPLETED — commit
-  `71772e956f6ad3eae19141f1111c4fcc7e78e83a` confirmed identical on local
-  `claude-safe-review` and live `origin/claude-safe-review`.
+- **Verified remote push checkpoint:** COMPLETED and CLOSED — commit
+  `4e1650e957f8c6d337ec43adef014aa9411aed17` confirmed identical between local
+  `claude-safe-review` and live `origin/claude-safe-review` (divergence 0/0).
+  This checkpoint includes the Deferred Architecture Pack v1.3 and the M9
+  Architecture Contract through its v1.3 Founder-acceptance amendment.
 - **Sprint EX-1 — Executive Decision Support:** PAUSED — requires explicit
   Founder reactivation.
-- **Next milestone:** M9 — Decision Execution Foundation — **SELECTED —
-  IMPLEMENTATION NOT ACTIVATED** (per Founder direction). No Slice 1, no
-  migration 015, no code implementation authorized.
+- **Next milestone:** M9 — Decision Execution Foundation — **ACTIVE.**
+  Architecture Contract v1.3 — **FOUNDER ACCEPTED** at the closed remote
+  checkpoint above; a v1.4 status-only amendment (Slice 1 activation status)
+  exists on disk, uncommitted
+  (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
+  **Slice 1 — Action Persistence Foundation — ACTIVE, implemented and
+  corrected, under independent review, not yet committed**: migration 015
+  (`ome_actions`, `ome_action_change_events`) plus `Action`/`ActionChangeEvent`
+  domain models — no repository, service, API, or frontend yet, per the
+  contract's own Slice 1 scope. Slices 2–4 remain **PROPOSED — NOT
+  ACTIVATED**. See `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.

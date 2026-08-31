@@ -908,11 +908,18 @@ def test_no_outcome_supersession_api_added() -> None:
         assert ".supersede_outcome(" not in text
 
 
-def test_no_migration_015() -> None:
+def test_migration_014_still_present() -> None:
+    """M8 boundary invariant: 014_organizational_memory.sql remains the
+    M8 OME foundation migration, present and unrenamed. (Historical
+    note: this test was originally named test_no_migration_015 and
+    asserted no migration 015 existed. That assertion became obsolete
+    once Founder-approved M9 Slice 1 added migration 015 - M8's real
+    invariant was always about migration 014 staying intact, not about
+    permanently forbidding future milestones from adding migrations.)"""
     import pathlib
 
     migration_files = sorted(p.name for p in pathlib.Path("migrations").glob("*.sql"))
-    assert not any(name.startswith("015") for name in migration_files)
+    assert "014_organizational_memory.sql" in migration_files
 
 
 def test_chat_request_model_has_no_provenance_fields() -> None:
