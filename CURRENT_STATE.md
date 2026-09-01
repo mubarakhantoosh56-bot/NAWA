@@ -25,17 +25,23 @@ block is a pointer/summary, not a duplicate.
   precision) is **committed locally** in commit
   `09ac78d56e64c36263f5d3f4d0120904503b88a1` — **not yet pushed**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
-  **M9 Slice 1 — Action Persistence Foundation implementation is committed
-  locally** at `09ac78d56e64c36263f5d3f4d0120904503b88a1` (parent
+  **M9 Slice 1 — Action Persistence Foundation is CLOSED.** Implementation
+  committed locally at `09ac78d56e64c36263f5d3f4d0120904503b88a1` (parent
   `4e1650e957f8c6d337ec43adef014aa9411aed17`, subject "M9 Slice 1: add action
-  persistence foundation"), **not yet pushed**: migration 015
-  (`ome_actions`, `ome_action_change_events`, live-local validated, checksum
+  persistence foundation"): migration 015 (`ome_actions`,
+  `ome_action_change_events`, checksum
   `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`) plus
   `Action`/`ActionChangeEvent` domain models — no repository, service, API, or
-  frontend yet, per the contract's own Slice 1 scope. Current status: **ACTIVE
-  — IMPLEMENTATION VALIDATED + COMMITTED LOCALLY / AWAITING INDEPENDENT
-  POST-COMMIT VERIFICATION / NOT CLOSED**. Slices 2–4 remain **PROPOSED — NOT
-  ACTIVATED**. See `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
+  frontend, per the contract's own Slice 1 scope. Closure basis: 36/36 live
+  PostgreSQL M9 schema tests, 48/48 DB-independent M9 tests, 1092/1092 full
+  backend regression suite (0 failed/skipped/errors), and independent
+  post-commit chain verification — all PASS. **The local M9 commit chain
+  (`09ac78d` → `d0e5082` → `c30fd22` → `743cc2f`) has NOT been pushed;** live
+  `origin/claude-safe-review` remains at the prior checkpoint until the
+  Founder authorizes a push (live ahead/behind divergence is verified
+  directly from Git at review time, not persisted here as a numeric count).
+  Slices 2–4 remain **PROPOSED — NOT ACTIVATED**; Slice 1's closure does not
+  activate any of them. See `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
