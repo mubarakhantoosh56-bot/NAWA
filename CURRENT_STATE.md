@@ -29,17 +29,30 @@ block is a pointer/summary, not a duplicate.
 - **Next milestone:** M9 — Decision Execution Foundation — **ACTIVE.**
   Architecture Contract v1.6 — **FOUNDER ACCEPTED**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
-  Slice 1 is CLOSED and pushed (checkpoint above). **M9 Slice 2 — Backend
-  Service / API is ACTIVE**, implemented and focused-tested on disk, under
-  independent review, **not yet committed**: `ActionRepository`,
+  Slice 1 is CLOSED and pushed. **M9 Slice 2 — Backend Service / API is
+  CLOSED — REMOTE CHECKPOINT VERIFIED**: commit
+  `3618470f5f044bfbe8b6d1227fe7441b903e44f5` confirmed identical between
+  local `claude-safe-review` and live `origin/claude-safe-review` at the
+  time of verification. This checkpoint includes `ActionRepository`,
   `ActionService`, and the five `/actions` endpoints (`POST /actions`,
   `GET /actions`, `GET /actions/{id}`, `PATCH /actions/{id}/status`,
-  `PATCH /actions/{id}/assignee`) — no frontend yet, per the contract's own
-  Slice 2 scope. See
-  `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md`. Slice 2 status:
-  **ACTIVE — IMPLEMENTED / UNDER PRE-COMMIT REVIEW / NOT COMMITTED / NOT
-  CLOSED**. Slices 3–4 remain **PROPOSED — NOT ACTIVATED**; Slice 2's
-  activation does not activate either of them. See
+  `PATCH /actions/{id}/assignee`) — no frontend, per the contract's own
+  Slice 2 scope. See `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md`.
+  **M9 Slice 3 — Frontend Golden Path is ACTIVE — IMPLEMENTED / UNDER
+  REVIEW / NOT COMMITTED / NOT CLOSED**: minimum frontend UI over the
+  Slice 2 Action endpoints, anchored to the existing Decision UI in
+  `ChatPanel.tsx` (no standalone Actions surface), plus one
+  Founder-approved bounded read-only backend addition —
+  `GET /company/members` (`app/api/company_members.py`,
+  `MembershipRepository.list_active_company_members`) — added to resolve
+  the member-source gap flagged during the first Slice 3 pass, so the
+  Action assignee selector now supports full assign/reassign/unassign by
+  name. See `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md` for full
+  scope and evidence. **M9 Slice 4 —
+  Golden Path E2E & Hardening remains PROPOSED — NOT ACTIVATED**; Slice 3's
+  activation does not activate it. Live ahead/behind divergence beyond the
+  Slice 2 checkpoint is verified directly from Git at review time, not
+  persisted here as a numeric count. See
   `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.

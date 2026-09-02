@@ -462,3 +462,73 @@ export type OutcomeResponse = {
   observed_at: string;
   created_at: string;
 };
+
+// M9 Slice 3: mirrors the closed backend contract (app/api/actions.py)
+// exactly. company_id/created_by_user_id/status(at create)/changed_by_user_id
+// are never client-authorable and never appear in any of these types -
+// the backend derives them from the authenticated request every time.
+export type ActionStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
+export type ActionCreateRequest = {
+  decision_memory_id: string;
+  title: string;
+  instructions: string | null;
+  // Optional (Founder-approved member-source completion pass): present
+  // only when a human explicitly selected a company member from the
+  // approved company-members read (see ActionAssignableMember below).
+  // Omitted entirely - never sent as an empty string or null - when the
+  // human leaves the selector on its default "Unassigned" state; the
+  // backend's own field is optional/nullable and defaults to unassigned.
+  assigned_user_id?: string;
+};
+
+export type ActionAssigneeUpdateRequest = {
+  // Required, not optional - an omitted field is a malformed request on
+  // the backend (422), never silently treated as "unassign". Explicit
+  // `null` means unassign; a UUID means assign/reassign to that member.
+  assigned_user_id: string | null;
+};
+
+// M9 Slice 3 completion pass: the Founder-approved bounded, read-only
+// company-member source (GET /company/members) that backs the Action
+// assignee selector. Deliberately narrower than the unused, dead-scaffold
+// `User`/`Membership` types above - only the three fields the selector
+// needs, matching the backend's own minimal response exactly.
+export type ActionAssignableMember = {
+  id: string;
+  full_name: string;
+  email: string;
+};
+
+export type ActionStatusUpdateRequest = {
+  status: ActionStatus;
+};
+
+export type ActionResponse = {
+  id: string;
+  decision_memory_id: string;
+  title: string;
+  instructions: string | null;
+  status: ActionStatus;
+  assigned_user_id: string | null;
+  created_by_user_id: string;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+};
+
+export type ActionChangeEvent = {
+  id: string;
+  change_type: "status" | "assignment";
+  from_status: ActionStatus | null;
+  to_status: ActionStatus | null;
+  from_assigned_user_id: string | null;
+  to_assigned_user_id: string | null;
+  changed_by_user_id: string;
+  changed_at: string;
+};
+
+export type ActionDetailResponse = ActionResponse & {
+  events: ActionChangeEvent[];
+};

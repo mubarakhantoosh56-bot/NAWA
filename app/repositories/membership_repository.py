@@ -185,6 +185,39 @@ class MembershipRepository:
         )
         return [self._row_to_dict(row) for row in rows]
 
+    async def list_active_company_members(
+        self,
+        company_id: UUID,
+    ) -> list[RowDict]:
+        """Return one row per distinct user with at least one ACTIVE,
+        non-deleted membership in this company (M9 Slice 3 - Action
+        assignee selector source, Founder-approved completion pass).
+
+        Company scope must always come from the caller's JWT-derived
+        AuthContext, never from client input. Deduplicates a user holding
+        more than one active membership (e.g. company-wide plus a
+        department-scoped row) to exactly one result row. Ordered for a
+        selector: by display name, then email, then id."""
+        rows = await self.db.fetch(
+            """
+            SELECT DISTINCT ON (users.id)
+                users.id,
+                users.full_name,
+                users.email
+            FROM memberships
+            JOIN users ON users.id = memberships.user_id
+            WHERE memberships.company_id = $1
+              AND memberships.status = 'active'
+              AND memberships.deleted_at IS NULL
+              AND users.deleted_at IS NULL
+            ORDER BY users.id, users.full_name, users.email
+            """,
+            company_id,
+        )
+        members = [self._row_to_dict(row) for row in rows]
+        members.sort(key=lambda member: (str(member["full_name"]), str(member["email"]), str(member["id"])))
+        return members
+
     async def list_auth_memberships_by_user(
         self,
         user_id: UUID,

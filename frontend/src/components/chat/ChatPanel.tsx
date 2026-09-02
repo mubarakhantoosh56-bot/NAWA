@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { sendChatMessage } from "@/lib/api/chat";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { chatStorageKey, sanitizeExplainability } from "@/lib/chat/storage";
+import { ActionsPanel } from "@/components/chat/ActionsPanel";
 import { ExecutiveReasoningPanel } from "@/components/chat/ExecutiveReasoningPanel";
 import { RecordDecision } from "@/components/chat/RecordDecision";
 import { RecordOutcome } from "@/components/chat/RecordOutcome";
@@ -193,6 +194,15 @@ export function ChatPanel({
                   canRecordOutcomes prop or RBAC plumbing is introduced. */}
               {canRecordDecisions && turn.response.meta.recorded_decision_id ? (
                 <RecordOutcome token={token} decisionMemoryId={turn.response.meta.recorded_decision_id} />
+              ) : null}
+              {/* M9 Slice 3: same canRecordDecisions gate reused again -
+                  it already represents the same memory.write permission
+                  every Action endpoint requires, so no new prop or RBAC
+                  plumbing is introduced. Anchored to the recorded Decision
+                  exactly like RecordOutcome - there is no standalone
+                  Actions surface anywhere in this frontend. */}
+              {canRecordDecisions && turn.response.meta.recorded_decision_id ? (
+                <ActionsPanel token={token} decisionMemoryId={turn.response.meta.recorded_decision_id} />
               ) : null}
             </div>
           </article>

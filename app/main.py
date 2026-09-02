@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.actions import router as actions_router
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
+from app.api.company_members import router as company_members_router
 from app.api.company_profile import router as company_profile_router
 from app.api.decision_debug import router as decision_debug_router
 from app.api.decisions import router as decisions_router
@@ -75,6 +76,7 @@ app.include_router(decision_debug_router)
 app.include_router(decisions_router)
 app.include_router(outcomes_router)
 app.include_router(actions_router)
+app.include_router(company_members_router)
 app.include_router(company_profile_router)
 app.include_router(departments_router)
 app.include_router(files_router)
