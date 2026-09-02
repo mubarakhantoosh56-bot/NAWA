@@ -11,13 +11,14 @@
 
 | Item | Status |
 |---|---|
-| M9 — Decision Execution Foundation | **ACTIVE** |
-| M9 Architecture Contract | v1.6, **FOUNDER ACCEPTED** |
+| M9 — Decision Execution Foundation | **CLOSED** |
+| M9 Architecture Contract | v1.7, **FOUNDER ACCEPTED** |
 | M9 Slice 1 — Action Persistence Foundation | **CLOSED** |
 | M9 Slice 2 — Backend Service / API | **CLOSED — REMOTE CHECKPOINT VERIFIED** |
 | M9 Slice 3 — Frontend Golden Path | **CLOSED — REMOTE CHECKPOINT VERIFIED** (commit `de81441089fc97c8403348e5aafbb4206ba3d761`) |
-| M9 Slice 4 — Golden Path E2E & Hardening | **ACTIVE — IMPLEMENTED / UNDER REVIEW / NOT COMMITTED / NOT CLOSED** |
+| M9 Slice 4 — Golden Path E2E & Hardening | **CLOSED — REMOTE CHECKPOINT VERIFIED** (commit `4a0c578e75b0d91890cbcb264326765045ff069a`) |
 | Starting checkpoint | `de81441089fc97c8403348e5aafbb4206ba3d761` (branch `claude-safe-review`) |
+| Final M9 engineering checkpoint | `4a0c578e75b0d91890cbcb264326765045ff069a` (branch `claude-safe-review`) |
 
 ## Objective
 
@@ -136,20 +137,20 @@ Every item below is now proven by the combined Slice 1–4 evidence (backend uni
 | AG | Full backend passes | **Proven** (1155/1155) |
 | AH | Frontend build/typecheck/lint passes | **Proven** |
 
-Every material item is proven. **M9 closure is a reasonable candidate recommendation**, pending independent review and explicit Founder closure authorization — neither of which this slice grants itself.
+Every material item is proven. Independent post-commit review returned **PASS WITH NON-BLOCKING OBSERVATIONS — SAFE TO PUSH — M9 CLOSURE CANDIDATE**; the Founder subsequently authorized the final engineering push and, separately, the M9 final closure reconciliation recorded below. **M9 — Decision Execution Foundation is CLOSED.**
 
 ## Git safety
 
-Working tree contains exactly: `frontend/e2e/m9-slice4-golden-path.spec.ts` (new), `frontend/playwright.config.ts` (one-line hardening correction, justified above), this task document, and the three minimum governance updates (`CURRENT_STATE.md`, `EXECUTION_BOARD.md`, `EXECUTION_INDEX.md`) — on top of the verified Slice 3 checkpoint (`de81441089fc97c8403348e5aafbb4206ba3d761`). Not staged. Not committed. Not pushed.
+The Slice 4 engineering package (`frontend/e2e/m9-slice4-golden-path.spec.ts`, `frontend/playwright.config.ts`'s one-line hardening correction, this task document, and the three minimum governance updates) was staged, committed in exactly one commit, and pushed — all under separate, explicit Founder authorization at each step (stage+commit, then push), never self-authorized by this slice. This closure-reconciliation pass is itself documentation-only and does not stage, commit, or push.
 
 ---
 
 ## Execution Result
 
-**Status:** Golden Path browser acceptance complete, one hardening correction applied and regression-proven, **under review — not closed, not committed.**
-**Started:** 2026-09-02 (Founder Slice 4 activation).
-**Commit(s):** None — working tree only, per explicit "do not stage/commit/push" authorization scope.
-**Reviewer:** Pending independent pre-commit review.
+**Status:** Golden Path browser acceptance complete, one hardening correction applied and regression-proven, **CLOSED — REMOTE CHECKPOINT VERIFIED.**
+**Started:** 2026-09-02 (Founder Slice 4 activation). **Closed:** 2026-09-03.
+**Commit:** `4a0c578e75b0d91890cbcb264326765045ff069a` ("M9 Slice 4: add Golden Path E2E acceptance," parent `de81441089fc97c8403348e5aafbb4206ba3d761`, 6 files) — independently pre-commit reviewed (`PASS WITH NON-BLOCKING OBSERVATIONS`), staged and committed under explicit Founder authorization, independently post-commit reviewed (`PASS WITH NON-BLOCKING OBSERVATIONS — SAFE TO PUSH`), then pushed under separate explicit Founder authorization as a normal fast-forward push, with local HEAD, tracking origin, and live origin confirmed identical at verification time.
+**Reviewer:** Independent pre-commit and post-commit review both passed with non-blocking observations only (local Git/pytest cache permission warnings, no worktree/index/package impact).
 **Validation:** 3/3 consecutive clean full-suite Playwright runs (4/4 specs each); 33/33 focused Slice 3 frontend tests; 13/13 focused Slice 3 backend tests; 232/232 relevant Decision/Outcome/Action/Tenant backend regression; 1155/1155 full backend suite; 197/197 full frontend suite; `tsc --noEmit`, `eslint .`, `next build` all clean.
-**M9 closure:** Not marked. All final-acceptance checklist items proven; recommendation is a **closure candidate**, subject to independent review and a separate, explicit Founder closure decision.
-**Notes:** Migration 015 byte-identical to its Slice 1 closure state; checksum unchanged. No M9 Slice 1/2/3 production file was modified. The one hardening correction was to E2E test-runner configuration only.
+**M9 closure:** **M9 — Decision Execution Foundation is CLOSED.** All final-acceptance checklist items (A–AH) proven. Final M9 engineering checkpoint: `4a0c578e75b0d91890cbcb264326765045ff069a`. Recorded via a separate, explicit Founder-authorized docs-only closure reconciliation (Architecture Contract v1.7; `CURRENT_STATE.md`, `EXECUTION_BOARD.md`, `EXECUTION_INDEX.md`, and this document corrected identically).
+**Notes:** Migration 015 byte-identical to its Slice 1 closure state; checksum unchanged; no migration 016. No M9 Slice 1/2/3 production file was modified by Slice 4. The one hardening correction was to E2E test-runner configuration only. M9's closure does not activate Track A, Track B, or any post-M9 milestone — post-M9 work remains NOT ACTIVATED.

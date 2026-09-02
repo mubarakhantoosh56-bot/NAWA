@@ -1,6 +1,6 @@
 # NAWA – Current State
 
-## Current Execution Status (authoritative — updated 2026-09-01)
+## Current Execution Status (authoritative — updated 2026-09-03)
 
 This block is the authoritative current-state summary required by
 `docs/governance/NAWA_DOCUMENTATION_STANDARD_v1.md` §4. It supersedes nothing
@@ -12,49 +12,58 @@ block is a pointer/summary, not a duplicate.
 - **M8 (Organizational Memory Engine):** CLOSED.
 - **ReasoningReceipt validation hardening (Post-M8):** CLOSED.
 - **M1–M8 documentation reconciliation:** CLOSED.
-- **Verified remote push checkpoint:** COMPLETED and CLOSED — commit
-  `89991dd37799cdea7420ecdcc2ff7df318516cf7` confirmed identical between local
-  `claude-safe-review` and live `origin/claude-safe-review`. This checkpoint
-  includes the Deferred Architecture Pack v1.3, the M9 Architecture Contract
-  through its v1.6 Slice 1 Closure Amendment, and **M9 Slice 1 — Action
-  Persistence Foundation, CLOSED** (migration 015 — `ome_actions`,
-  `ome_action_change_events`, checksum
-  `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a` — plus
-  `Action`/`ActionChangeEvent` domain models; no repository, service, API, or
-  frontend, per the contract's own Slice 1 scope). Live ahead/behind
-  divergence beyond this checkpoint is verified directly from Git at review
-  time, not persisted here as a numeric count.
+- **Verified remote engineering checkpoint:** COMPLETED — commit
+  `4a0c578e75b0d91890cbcb264326765045ff069a` confirmed identical between
+  local `claude-safe-review` and live `origin/claude-safe-review` at the
+  time of verification. This is the **final M9 engineering checkpoint**:
+  it contains the Deferred Architecture Pack v1.3, the M9 Architecture
+  Contract as it stood at that commit (**v1.6** — v1.7 did not yet exist),
+  M9 Slice 1 CLOSED, M9 Slice 2 CLOSED — REMOTE CHECKPOINT VERIFIED, M9
+  Slice 3 CLOSED — REMOTE CHECKPOINT VERIFIED, and the M9 Slice 4
+  engineering package (browser E2E acceptance spec plus one
+  E2E-infrastructure hardening correction), itself remotely verified at
+  this checkpoint. **It does not contain the M9 final closure
+  reconciliation** (Architecture Contract v1.7, or the repository-wide
+  "M9 = CLOSED" governance declaration below) — that reconciliation is a
+  separate, later documentation-only change, described in its current
+  state immediately below, not yet committed or pushed as of this
+  writing. Live ahead/behind divergence beyond this checkpoint is
+  verified directly from Git at review time, not persisted here as a
+  numeric count.
 - **Sprint EX-1 — Executive Decision Support:** PAUSED — requires explicit
   Founder reactivation.
-- **Next milestone:** M9 — Decision Execution Foundation — **ACTIVE.**
-  Architecture Contract v1.6 — **FOUNDER ACCEPTED**
+- **M9 — Decision Execution Foundation: CLOSED.** (This closure
+  declaration and Architecture Contract v1.7 are recorded in this
+  documentation-only working tree, prepared for a separate future
+  closure-reconciliation commit — not yet staged, committed, or pushed as
+  of this writing. Each slice's own engineering is independently
+  remotely verified, per checkpoint, as stated below.)
+  Architecture Contract v1.7 — **FOUNDER ACCEPTED**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
-  Slice 1 is CLOSED and pushed. **M9 Slice 2 — Backend Service / API is
-  CLOSED — REMOTE CHECKPOINT VERIFIED** and **M9 Slice 3 — Frontend Golden
-  Path is CLOSED — REMOTE CHECKPOINT VERIFIED** at commit
-  `de81441089fc97c8403348e5aafbb4206ba3d761`, confirmed identical between
-  local `claude-safe-review` and live `origin/claude-safe-review` at the
-  time of verification. This checkpoint includes `ActionRepository`,
-  `ActionService`, the five `/actions` endpoints, the frontend Golden Path
-  UI (`ActionsPanel.tsx`, anchored to `ChatPanel.tsx`, no standalone
-  Actions surface), and the Founder-approved bounded read-only
-  `GET /company/members` member source. See
-  `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md` and
-  `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md`.
-  **M9 Slice 4 — Golden Path E2E & Hardening is ACTIVE — IMPLEMENTED /
-  UNDER REVIEW / NOT COMMITTED / NOT CLOSED**: a real-browser Playwright
-  acceptance of the full Decision → Action → Assignment → Status → History
-  loop (`frontend/e2e/m9-slice4-golden-path.spec.ts`), plus one hardening
-  correction to `frontend/playwright.config.ts` (`workers: 1`, fixing a
-  real cross-file E2E concurrency defect the new spec exposed — no
-  product/domain file touched). Every M9 final-acceptance checklist item
-  is proven; M9 closure is a **candidate recommendation**, not yet
-  authorized. See
+  All four slices are **CLOSED — REMOTE CHECKPOINT VERIFIED**: Slice 1 —
+  Action Persistence Foundation (migration 015 — `ome_actions`,
+  `ome_action_change_events`, checksum
+  `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a` —
+  plus `Action`/`ActionChangeEvent` domain models); Slice 2 — Backend
+  Service / API (`ActionRepository`, `ActionService`, the five `/actions`
+  endpoints); Slice 3 — Frontend Golden Path (`ActionsPanel.tsx` anchored
+  to `ChatPanel.tsx`, no standalone Actions surface, plus the
+  Founder-approved bounded read-only `GET /company/members` member
+  source); Slice 4 — Golden Path E2E & Hardening (a real-browser
+  Playwright acceptance of the full Decision → Action → Assignment →
+  Status → History loop, `frontend/e2e/m9-slice4-golden-path.spec.ts`,
+  plus one E2E-infrastructure-only hardening correction to
+  `frontend/playwright.config.ts`). **Final M9 engineering checkpoint:
+  `4a0c578e75b0d91890cbcb264326765045ff069a`.** Full M9 acceptance
+  (criteria A–AH) is proven. M9's closure does not activate Track A,
+  Track B, or any post-M9 milestone — each remains a separate, explicit
+  future Founder decision. See
+  `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`,
+  `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md`,
+  `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md`, and
   `docs/execution/m9/M9_SLICE4_GOLDEN_PATH_E2E_HARDENING.md` for full
-  scope and evidence. Live ahead/behind divergence beyond the Slice 3
-  checkpoint is verified directly from Git at review time, not persisted
-  here as a numeric count. See
-  `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
+  scope and evidence.
+- **Post-M9 work:** NOT ACTIVATED.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
