@@ -30,29 +30,30 @@ block is a pointer/summary, not a duplicate.
   Architecture Contract v1.6 — **FOUNDER ACCEPTED**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
   Slice 1 is CLOSED and pushed. **M9 Slice 2 — Backend Service / API is
-  CLOSED — REMOTE CHECKPOINT VERIFIED**: commit
-  `3618470f5f044bfbe8b6d1227fe7441b903e44f5` confirmed identical between
+  CLOSED — REMOTE CHECKPOINT VERIFIED** and **M9 Slice 3 — Frontend Golden
+  Path is CLOSED — REMOTE CHECKPOINT VERIFIED** at commit
+  `de81441089fc97c8403348e5aafbb4206ba3d761`, confirmed identical between
   local `claude-safe-review` and live `origin/claude-safe-review` at the
   time of verification. This checkpoint includes `ActionRepository`,
-  `ActionService`, and the five `/actions` endpoints (`POST /actions`,
-  `GET /actions`, `GET /actions/{id}`, `PATCH /actions/{id}/status`,
-  `PATCH /actions/{id}/assignee`) — no frontend, per the contract's own
-  Slice 2 scope. See `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md`.
-  **M9 Slice 3 — Frontend Golden Path is ACTIVE — IMPLEMENTED / UNDER
-  REVIEW / NOT COMMITTED / NOT CLOSED**: minimum frontend UI over the
-  Slice 2 Action endpoints, anchored to the existing Decision UI in
-  `ChatPanel.tsx` (no standalone Actions surface), plus one
-  Founder-approved bounded read-only backend addition —
-  `GET /company/members` (`app/api/company_members.py`,
-  `MembershipRepository.list_active_company_members`) — added to resolve
-  the member-source gap flagged during the first Slice 3 pass, so the
-  Action assignee selector now supports full assign/reassign/unassign by
-  name. See `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md` for full
-  scope and evidence. **M9 Slice 4 —
-  Golden Path E2E & Hardening remains PROPOSED — NOT ACTIVATED**; Slice 3's
-  activation does not activate it. Live ahead/behind divergence beyond the
-  Slice 2 checkpoint is verified directly from Git at review time, not
-  persisted here as a numeric count. See
+  `ActionService`, the five `/actions` endpoints, the frontend Golden Path
+  UI (`ActionsPanel.tsx`, anchored to `ChatPanel.tsx`, no standalone
+  Actions surface), and the Founder-approved bounded read-only
+  `GET /company/members` member source. See
+  `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md` and
+  `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md`.
+  **M9 Slice 4 — Golden Path E2E & Hardening is ACTIVE — IMPLEMENTED /
+  UNDER REVIEW / NOT COMMITTED / NOT CLOSED**: a real-browser Playwright
+  acceptance of the full Decision → Action → Assignment → Status → History
+  loop (`frontend/e2e/m9-slice4-golden-path.spec.ts`), plus one hardening
+  correction to `frontend/playwright.config.ts` (`workers: 1`, fixing a
+  real cross-file E2E concurrency defect the new spec exposed — no
+  product/domain file touched). Every M9 final-acceptance checklist item
+  is proven; M9 closure is a **candidate recommendation**, not yet
+  authorized. See
+  `docs/execution/m9/M9_SLICE4_GOLDEN_PATH_E2E_HARDENING.md` for full
+  scope and evidence. Live ahead/behind divergence beyond the Slice 3
+  checkpoint is verified directly from Git at review time, not persisted
+  here as a numeric count. See
   `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
