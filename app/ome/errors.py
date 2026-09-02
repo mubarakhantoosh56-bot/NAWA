@@ -37,3 +37,22 @@ class InvalidMemoryInput(OMEError):
     unsupported evidence type, a malformed id, an invalid result_state, an
     evidence/situation/file reference that does not resolve inside the
     caller's company, or a non-timezone-aware/future observed_at."""
+
+
+class ActionNotFound(OMEError):
+    """No Action exists for this id inside the caller's company (M9 Slice 2)."""
+
+
+class InvalidActionTransition(OMEError):
+    """A status transition or reassignment was rejected because it is not
+    a valid move from the Action's actual current state: an unlisted
+    status transition, a self-transition, a mutation attempted on a
+    terminal (completed/cancelled) Action, or a no-op reassignment
+    (M9 Slice 2, Architecture Contract Sec 8 / Sec 7.5 / Sec 24.1)."""
+
+
+class InvalidAssignee(OMEError):
+    """The target assigned_user_id does not exist, has no active
+    membership in the Action's company, or belongs to another company -
+    resolves identically to a generic 404 (Architecture Contract Sec
+    11.3), never distinguishing which case applied (M9 Slice 2)."""

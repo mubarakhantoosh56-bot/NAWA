@@ -13,35 +13,34 @@ block is a pointer/summary, not a duplicate.
 - **ReasoningReceipt validation hardening (Post-M8):** CLOSED.
 - **M1–M8 documentation reconciliation:** CLOSED.
 - **Verified remote push checkpoint:** COMPLETED and CLOSED — commit
-  `4e1650e957f8c6d337ec43adef014aa9411aed17` confirmed identical between local
-  `claude-safe-review` and live `origin/claude-safe-review` (divergence 0/0).
-  This checkpoint includes the Deferred Architecture Pack v1.3 and the M9
-  Architecture Contract through its v1.3 Founder-acceptance amendment.
+  `89991dd37799cdea7420ecdcc2ff7df318516cf7` confirmed identical between local
+  `claude-safe-review` and live `origin/claude-safe-review`. This checkpoint
+  includes the Deferred Architecture Pack v1.3, the M9 Architecture Contract
+  through its v1.6 Slice 1 Closure Amendment, and **M9 Slice 1 — Action
+  Persistence Foundation, CLOSED** (migration 015 — `ome_actions`,
+  `ome_action_change_events`, checksum
+  `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a` — plus
+  `Action`/`ActionChangeEvent` domain models; no repository, service, API, or
+  frontend, per the contract's own Slice 1 scope). Live ahead/behind
+  divergence beyond this checkpoint is verified directly from Git at review
+  time, not persisted here as a numeric count.
 - **Sprint EX-1 — Executive Decision Support:** PAUSED — requires explicit
   Founder reactivation.
 - **Next milestone:** M9 — Decision Execution Foundation — **ACTIVE.**
-  Architecture Contract v1.3 — **FOUNDER ACCEPTED** at the closed remote
-  checkpoint above; a v1.4 amendment (Slice 1 activation + persistence
-  precision) is **committed locally** in commit
-  `09ac78d56e64c36263f5d3f4d0120904503b88a1` — **not yet pushed**
+  Architecture Contract v1.6 — **FOUNDER ACCEPTED**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
-  **M9 Slice 1 — Action Persistence Foundation is CLOSED.** Implementation
-  committed locally at `09ac78d56e64c36263f5d3f4d0120904503b88a1` (parent
-  `4e1650e957f8c6d337ec43adef014aa9411aed17`, subject "M9 Slice 1: add action
-  persistence foundation"): migration 015 (`ome_actions`,
-  `ome_action_change_events`, checksum
-  `aa427a0d363459b9391b66218967762ce0eddda0604c788c85e25ab7e9bb553a`) plus
-  `Action`/`ActionChangeEvent` domain models — no repository, service, API, or
-  frontend, per the contract's own Slice 1 scope. Closure basis: 36/36 live
-  PostgreSQL M9 schema tests, 48/48 DB-independent M9 tests, 1092/1092 full
-  backend regression suite (0 failed/skipped/errors), and independent
-  post-commit chain verification — all PASS. **The local M9 commit chain
-  (`09ac78d` → `d0e5082` → `c30fd22` → `743cc2f`) has NOT been pushed;** live
-  `origin/claude-safe-review` remains at the prior checkpoint until the
-  Founder authorizes a push (live ahead/behind divergence is verified
-  directly from Git at review time, not persisted here as a numeric count).
-  Slices 2–4 remain **PROPOSED — NOT ACTIVATED**; Slice 1's closure does not
-  activate any of them. See `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
+  Slice 1 is CLOSED and pushed (checkpoint above). **M9 Slice 2 — Backend
+  Service / API is ACTIVE**, implemented and focused-tested on disk, under
+  independent review, **not yet committed**: `ActionRepository`,
+  `ActionService`, and the five `/actions` endpoints (`POST /actions`,
+  `GET /actions`, `GET /actions/{id}`, `PATCH /actions/{id}/status`,
+  `PATCH /actions/{id}/assignee`) — no frontend yet, per the contract's own
+  Slice 2 scope. See
+  `docs/execution/m9/M9_SLICE2_BACKEND_SERVICE_API.md`. Slice 2 status:
+  **ACTIVE — IMPLEMENTED / UNDER PRE-COMMIT REVIEW / NOT COMMITTED / NOT
+  CLOSED**. Slices 3–4 remain **PROPOSED — NOT ACTIVATED**; Slice 2's
+  activation does not activate either of them. See
+  `docs/execution/m9/M9_SLICE1_ACTION_PERSISTENCE_FOUNDATION.md`.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
