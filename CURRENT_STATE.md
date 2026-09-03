@@ -22,23 +22,20 @@ block is a pointer/summary, not a duplicate.
   Slice 3 CLOSED — REMOTE CHECKPOINT VERIFIED, and the M9 Slice 4
   engineering package (browser E2E acceptance spec plus one
   E2E-infrastructure hardening correction), itself remotely verified at
-  this checkpoint. **It does not contain the M9 final closure
-  reconciliation** (Architecture Contract v1.7, or the repository-wide
-  "M9 = CLOSED" governance declaration below) — that reconciliation is a
-  separate, later documentation-only change, described in its current
-  state immediately below, not yet committed or pushed as of this
-  writing. Live ahead/behind divergence beyond this checkpoint is
-  verified directly from Git at review time, not persisted here as a
-  numeric count.
+  this checkpoint. It did not yet contain the M9 final closure
+  reconciliation (Architecture Contract v1.7, or the repository-wide
+  "M9 = CLOSED" governance declaration below) — that reconciliation was a
+  separate, later documentation-only change, since committed
+  (`acebd7720b1aa6294dffc549185e0d9d7cac1715`, parent `4a0c578`) and
+  pushed, remotely verified identical between local `claude-safe-review`
+  and live `origin/claude-safe-review`. Live ahead/behind divergence
+  beyond the current checkpoint is verified directly from Git at review
+  time, not persisted here as a numeric count.
 - **Sprint EX-1 — Executive Decision Support:** PAUSED — requires explicit
   Founder reactivation.
-- **M9 — Decision Execution Foundation: CLOSED.** (This closure
-  declaration and Architecture Contract v1.7 are recorded in this
-  documentation-only working tree, prepared for a separate future
-  closure-reconciliation commit — not yet staged, committed, or pushed as
-  of this writing. Each slice's own engineering is independently
-  remotely verified, per checkpoint, as stated below.)
-  Architecture Contract v1.7 — **FOUNDER ACCEPTED**
+- **M9 — Decision Execution Foundation: CLOSED.** Final governance
+  closure commit `acebd7720b1aa6294dffc549185e0d9d7cac1715`, remotely
+  verified. Architecture Contract v1.7 — **FOUNDER ACCEPTED**
   (`docs/architecture/NAWA_M9_DECISION_EXECUTION_FOUNDATION_ARCHITECTURE_CONTRACT_v1.md`).
   All four slices are **CLOSED — REMOTE CHECKPOINT VERIFIED**: Slice 1 —
   Action Persistence Foundation (migration 015 — `ome_actions`,
@@ -63,7 +60,18 @@ block is a pointer/summary, not a duplicate.
   `docs/execution/m9/M9_SLICE3_FRONTEND_GOLDEN_PATH.md`, and
   `docs/execution/m9/M9_SLICE4_GOLDEN_PATH_E2E_HARDENING.md` for full
   scope and evidence.
-- **Post-M9 work:** NOT ACTIVATED.
+- **Post-M9 engineering feature expansion:** NOT ACTIVATED.
+- **PV1 — Jannat Al-Firdaws Real-Company Pilot Validation:** **ACTIVE.**
+  Founder-activated post-M9 phase, validating the closed M9 technical MVP
+  against a real company, real operational files, and real Company Brain
+  content — not a feature-expansion milestone, not M10. **PV1 Slice 1 —
+  Pilot Baseline + Acceptance Contract: BASELINE + ACCEPTANCE CONTRACT
+  COMPLETE — UNDER INDEPENDENT REVIEW** (not closed — closure requires
+  review, commit, Founder push authorization, and remote verification
+  under the existing governance model). See
+  `docs/execution/pilot/PV1_JANNAT_REAL_COMPANY_VALIDATION.md` for full
+  scope, real-data/Company-Brain discovery, the proposed acceptance
+  model, and the proposed (not yet activated) PV1 Slice 2–5 sequence.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
