@@ -65,13 +65,28 @@ block is a pointer/summary, not a duplicate.
   Founder-activated post-M9 phase, validating the closed M9 technical MVP
   against a real company, real operational files, and real Company Brain
   content — not a feature-expansion milestone, not M10. **PV1 Slice 1 —
-  Pilot Baseline + Acceptance Contract: BASELINE + ACCEPTANCE CONTRACT
-  COMPLETE — UNDER INDEPENDENT REVIEW** (not closed — closure requires
-  review, commit, Founder push authorization, and remote verification
-  under the existing governance model). See
-  `docs/execution/pilot/PV1_JANNAT_REAL_COMPANY_VALIDATION.md` for full
-  scope, real-data/Company-Brain discovery, the proposed acceptance
-  model, and the proposed (not yet activated) PV1 Slice 2–5 sequence.
+  Pilot Baseline + Acceptance Contract: CLOSED — REMOTE CHECKPOINT
+  VERIFIED** (commit `12b4f0d55436e0018455582db673c236924879fb`, remotely
+  verified). **PV1 Slice 2 — Real Data Ingestion Validation: COMPLETE —
+  UNDER INDEPENDENT REVIEW** (not closed — closure requires review,
+  commit, Founder push authorization, and remote verification under the
+  existing governance model). Direct structured parsing was validated
+  against all 6 real poultry files and the real feed-mill workbook, with no
+  source alteration. Live structured upload routing was separately
+  validated: 5 of 6 poultry files route successfully; the company-aggregate
+  poultry file is skipped by the current filename-marker gate, and the
+  feed-mill translator, though directly proven correct, is not currently
+  reachable through the live structured upload route. Four real,
+  non-pilot-blocking defects found and documented (not fixed, per this
+  Slice's validation-first scope): a short-header feed-field mapping gap
+  affecting 3 of 6 real files, a cross-upload non-deduplication gap
+  (proven against a real Jannat workbook), the company-aggregate poultry
+  file's live-routing skip, and the feed-mill translator's live-routing
+  gap. **PV1 Slices 3–5 remain PROPOSED — NOT ACTIVATED.** See
+  `docs/execution/pilot/PV1_JANNAT_REAL_COMPANY_VALIDATION.md` and
+  `docs/execution/pilot/PV1_SLICE2_REAL_DATA_INGESTION_VALIDATION.md` for
+  full scope, real-data/Company-Brain discovery, the acceptance model,
+  and real-data validation evidence.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
