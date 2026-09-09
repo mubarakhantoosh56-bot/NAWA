@@ -67,10 +67,9 @@ block is a pointer/summary, not a duplicate.
   content — not a feature-expansion milestone, not M10. **PV1 Slice 1 —
   Pilot Baseline + Acceptance Contract: CLOSED — REMOTE CHECKPOINT
   VERIFIED** (commit `12b4f0d55436e0018455582db673c236924879fb`, remotely
-  verified). **PV1 Slice 2 — Real Data Ingestion Validation: COMPLETE —
-  UNDER INDEPENDENT REVIEW** (not closed — closure requires review,
-  commit, Founder push authorization, and remote verification under the
-  existing governance model). Direct structured parsing was validated
+  verified). **PV1 Slice 2 — Real Data Ingestion Validation: CLOSED —
+  REMOTE CHECKPOINT VERIFIED** (checkpoint
+  `a461adda91083dd7131f09ab64e7882914da4944`). Direct structured parsing was validated
   against all 6 real poultry files and the real feed-mill workbook, with no
   source alteration. Live structured upload routing was separately
   validated: 5 of 6 poultry files route successfully; the company-aggregate
@@ -82,11 +81,61 @@ block is a pointer/summary, not a duplicate.
   affecting 3 of 6 real files, a cross-upload non-deduplication gap
   (proven against a real Jannat workbook), the company-aggregate poultry
   file's live-routing skip, and the feed-mill translator's live-routing
-  gap. **PV1 Slices 3–5 remain PROPOSED — NOT ACTIVATED.** See
-  `docs/execution/pilot/PV1_JANNAT_REAL_COMPANY_VALIDATION.md` and
-  `docs/execution/pilot/PV1_SLICE2_REAL_DATA_INGESTION_VALIDATION.md` for
-  full scope, real-data/Company-Brain discovery, the acceptance model,
-  and real-data validation evidence.
+  gap. **PV1 Slice 3 — Real Operational Reasoning Validation: ACTIVE —
+  FOUNDER BLOCKER REVIEW** (not complete, not closed). All four PV1
+  scenarios were run as real chat conversations against the real Jannat
+  tenant through the real `POST /ai/chat` HTTP route (in-process ASGI,
+  real OpenAI calls, real local Postgres), using the real, unmodified
+  reasoning path end to end. A Founder-directed blocker reconciliation
+  has since re-derived every material claim from code, saved response and
+  debug artifacts, and direct read-only database queries; it corrected
+  three first-pass claims and raised two further defects. **Six real,
+  reproducible defects, none fixed** (validation-first scope):
+  **DEFECT-005** — upload classification depends on the file's *storage
+  path*, not its filename: the repository directory `poultry_operations`
+  supplies the decisive `poultry` token that an opaque OS temporary
+  upload path cannot, so 4 of 5 real hall/report files fail structured
+  routing (0.62, below the 0.70 threshold) through the real HTTP upload
+  path; **DEFECT-006** — a legacy marketing-shaped execution-structure
+  validator failed closed on 19 of 23 real chat attempts (82.6%, HTTP 500
+  with no CEO-visible output, no receipt, no explainability), and passes
+  only responses that contain **no** structured recommendations at all —
+  all four successful runs returned entirely empty `solution_generator`
+  and `execution_engine`; **DEFECT-007** — an "Institutional Facts"
+  write-back loop persists model output as durable per-company truth: a
+  claim fabricated in Scenario 4 with zero prompt support was written
+  back as two `conf:80` company truths and re-injected into every later
+  turn, and is reproduced verbatim in the public explainability surface
+  with zero citations at a "high" confidence band; **DEFECT-008** —
+  Founder Pilot Rule 1's isolation flag gates 1 of 11 real evidence
+  channels; 8 are ungated and 5 were confirmed leaking, including RAG
+  chunks and operational-event drafts created by files that had *failed*
+  structured classification; **DEFECT-009** — the CEO company-wide
+  workspace receives Dairtna operational Truth Context but is denied
+  Dairtna Company Brain policy, so policy-grounded CEO reasoning is
+  unreachable in the primary described usage; **DEFECT-010** — the
+  Dairtna mortality guardrails are prompt-only and unenforced, and the
+  product's own operational-response enforcement layer *coerced* their
+  violation (the model's compliant first answer was rejected and
+  regenerated into severity escalation plus an unsupported
+  mortality-to-sales linkage). No PV1 scenario scored PROVEN: Scenario 1
+  BLOCKED BY PRODUCT DEFECT (0 of 7 attempts produced any output),
+  Scenarios 2 and 4 NOT PROVEN, Scenario 3 PARTIAL. Also recorded: a
+  **SLICE 2 EVIDENCE CLARIFICATION** — Slice 2 did invoke the real
+  downstream production upload helper, but supplied the repository path
+  as `source_path`, so its 5/6 live-routing claim was materially
+  overstated for the complete user-facing HTTP path, where the real
+  figure is 1/6; the closed Slice 2 checkpoint is **not** reopened or
+  rewritten. See
+  `docs/execution/pilot/PV1_JANNAT_REAL_COMPANY_VALIDATION.md`,
+  `docs/execution/pilot/PV1_SLICE2_REAL_DATA_INGESTION_VALIDATION.md`, and
+  `docs/execution/pilot/PV1_SLICE3_REAL_OPERATIONAL_REASONING_VALIDATION.md`
+  for full scope, real-data/Company-Brain discovery, the acceptance model,
+  and real-data validation evidence. **PV1 Slices 4–5 remain PROPOSED —
+  NOT ACTIVATED**; Slice 4 is assessed **NOT READY** and must not be
+  activated before Founder review of DEFECT-005 through DEFECT-010 —
+  its input precondition does not currently exist, since no successful
+  response this Slice contained a single machine-readable action.
 - **Full EBD-004 compliance:** NOT ESTABLISHED — lifecycle/bounded-growth
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
