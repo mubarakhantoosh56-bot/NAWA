@@ -3,7 +3,7 @@
 **Status:** **ACTIVE — FOUNDER BLOCKER REVIEW.**
 **Priority:** P0. Third slice of PV1 — Jannat Al-Firdaws Real-Company Pilot Validation.
 **Owner:** AI Engineering Team (Claude Code).
-**Ownership layer:** Validation only. No application code, frontend code, test, script, migration, Company Brain knowledge file, or env/config file was modified to produce this document.
+**Ownership layer:** Validation, plus the record of correction batch A1. The validation findings below were produced without modifying any application code. Correction batch A1 (DEFECT-007) has since been implemented, reviewed, committed and pushed under separate Founder authorization — engineering checkpoint `0090d00c0de0c757c9618148c8b354c5bc4e3a0b` — and is recorded in §0.1. No frontend, migration, source-data, Company Brain knowledge, or env/config file was modified by the Slice 3 validation/reconciliation pass, the A1 correction, or this A1 closure-documentation work.
 **Repository First Policy compliance:** This document is the required task document for this Slice.
 
 ---
@@ -24,7 +24,29 @@ This document has been **reconciled** following Founder blocker review of its fi
 
 **One first-pass conclusion is materially strengthened:** the duplicate-contamination check was performed against the wrong table. Actual duplication **did** occur, in `operational_event_drafts` (§12).
 
-No defect was fixed. No product code was modified.
+No defect was fixed **during the reconciliation pass that produced this document**. Correction batch A1 (DEFECT-007) was authorized and executed afterwards — see §0.1.
+
+---
+
+## 0.1 Correction batch A1 — DEFECT-007: CLOSED — REMOTE VERIFIED
+
+**Engineering checkpoint:** `0090d00c0de0c757c9618148c8b354c5bc4e3a0b` (parent `d23c90e0bb6d4cb5fc453c3c998bb103597ca7c5`, the pre-correction evidence checkpoint).
+
+**What A1 closed:**
+
+1. Live `/ai/chat` no longer automatically persists AI- or user-derived content into durable `memory_facts`.
+2. Live operational reasoning no longer loads legacy `memory_facts` through any of the five verified read paths: direct Institutional Facts prompt injection (P1), Company Brain `INSTITUTIONAL_MEMORY` folding (P2), memory-derived Company Profile (P3), Decision Context memory trends (P4), and the memory-profile fallback (P5).
+3. The automatic `_extract_and_upsert_facts` invocation from live chat is disabled; the extractor itself is retained, unmodified, and simply no longer called.
+4. Historical contaminated facts remain physically present as negative regression fixtures — 13 `memory_facts`, 9 `memory_fact_history`, 80 `operational_event_drafts`, both Hall fixtures. No deletion, edit, cleanup, or seed rewrite was used to obtain a pass.
+5. No migration and no schema change was required.
+6. `memory_events` remains a separate channel and was deliberately **not** disabled by A1.
+7. Helper and repository semantics remain intact outside the live operational reasoning path.
+
+**Acceptance evidence.** Architecture review PASS; implementation review PASS; M7 test re-specification PASS; final pre-commit review PASS; post-amend review PASS; remote verification PASS. Golden Journey 1 passed; A1 focused suite 7 passed; required regressions 385 passed; full suite 1162 passed, 0 failed; real Scenario 4 regression PASS **for A1 isolation only**.
+
+**What A1 did NOT close.** A1 closure is **not** Slice 3 closure. PV1 Slice 3 remains **ACTIVE — FOUNDER BLOCKER REVIEW**. Scenario 4 is **not** fully PROVEN, and no scenario score in §15 changes. CEO-wide Company Brain applicability is **not** solved — A1 intentionally leaves it reporting `no_evidence` until DEFECT-009 / Batch D is addressed. DEFECT-002/A2, DEFECT-008/A3, DEFECT-006/B1, DEFECT-010/B2 and DEFECT-009/D remain **OPEN — NOT ACTIVATED**; C1 (DEFECT-005 + DEFECT-003), C2 (DEFECT-001) and C3 (DEFECT-004) remain **NOT ACTIVATED**; PV1 Slice 4 remains **NOT ACTIVATED**.
+
+**Next eligible correction batch: A2 / DEFECT-002 — A2 ARCHITECTURE GATE REQUIRED BEFORE ACTIVATION.** Race-safe exact-content deduplication across duplicate-sensitive durable writes remains architecture-unproven (see §12.4 and Correction Plan v2.1 §5). **NO MIGRATION IS CURRENTLY AUTHORIZED.** A2 is not activated by this document.
 
 ---
 
@@ -685,12 +707,12 @@ Raised in this Slice:
 |---|---|---|---|
 | **DEFECT-005** | Upload classification storage-path dependency — 4 of 5 real files fail structured routing through the real HTTP path | High | **PILOT BLOCKING** |
 | **DEFECT-006** | Legacy marketing-shaped execution-structure validator fails closed (82.6% of real attempts), and passes only responses containing no recommendations | High | **PILOT BLOCKING** |
-| **DEFECT-007** | Institutional Facts write-back loop persists uncited, unverified AI claims — including a fabrication — as durable `conf:80` company truth | High | **PILOT BLOCKING** |
+| **DEFECT-007** | Institutional Facts write-back loop persists uncited, unverified AI claims — including a fabrication — as durable `conf:80` company truth | High | **CLOSED — REMOTE VERIFIED** (batch A1, checkpoint `0090d00c0de0c757c9618148c8b354c5bc4e3a0b`; see §0.1) |
 | **DEFECT-008** | Founder Pilot Rule 1 isolation covers 1 of 11 evidence channels; 8 ungated, 5 confirmed leaking | High *(raised from moderate-to-high)* | **PILOT BLOCKING** |
 | **DEFECT-009** | CEO company-brain applicability gap — the CEO workspace receives Dairtna operational evidence but no Dairtna policy | High | **PILOT BLOCKING for the CEO workspace** |
 | **DEFECT-010** | Mortality reasoning guardrail enforcement failure — hard constraints are prompt-only, and a second enforcement layer coerces their violation | High | **PILOT BLOCKING** |
 
-**No defect was fixed. No product code was modified.**
+**Of these, DEFECT-007 has since been corrected and closed by batch A1 (§0.1). The other nine remain unfixed, and no further product code has been modified.**
 
 ## 19. Repo safety
 
@@ -711,7 +733,14 @@ Nothing staged. Nothing committed. Nothing pushed.
 - PV1: **ACTIVE**
 - PV1 Slice 1: **CLOSED — REMOTE CHECKPOINT VERIFIED**
 - PV1 Slice 2: **CLOSED — REMOTE CHECKPOINT VERIFIED**, checkpoint `a461adda91083dd7131f09ab64e7882914da4944`
-- PV1 Slice 3: **ACTIVE — FOUNDER BLOCKER REVIEW**
+- PV1 Slice 3: **ACTIVE — FOUNDER BLOCKER REVIEW** (A1 closure does not close Slice 3)
+- Correction batch A1 (DEFECT-007): **CLOSED — REMOTE VERIFIED**, checkpoint `0090d00c0de0c757c9618148c8b354c5bc4e3a0b`
+- Correction batch A2 (DEFECT-002): **OPEN — NOT ACTIVATED**; next eligible batch, **A2 ARCHITECTURE GATE REQUIRED BEFORE ACTIVATION**; no migration authorized
+- Correction batch A3 (DEFECT-008): **OPEN — NOT ACTIVATED**
+- Correction batch B1 (DEFECT-006): **OPEN — NOT ACTIVATED**
+- Correction batch B2 (DEFECT-010): **OPEN — NOT ACTIVATED**
+- Correction batches C1 (DEFECT-005 + DEFECT-003), C2 (DEFECT-001), C3 (DEFECT-004): **NOT ACTIVATED**
+- Correction batch D (DEFECT-009): **OPEN — NOT ACTIVATED**
 - PV1 Slice 4: **PROPOSED — NOT ACTIVATED** (not activated by this document; recommended NOT READY)
 - PV1 Slice 5: **PROPOSED — NOT ACTIVATED**
 - Post-M9 engineering feature expansion: **NOT ACTIVATED**

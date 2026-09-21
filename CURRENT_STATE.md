@@ -90,7 +90,9 @@ block is a pointer/summary, not a duplicate.
   has since re-derived every material claim from code, saved response and
   debug artifacts, and direct read-only database queries; it corrected
   three first-pass claims and raised two further defects. **Six real,
-  reproducible defects, none fixed** (validation-first scope):
+  reproducible defects were confirmed; one (DEFECT-007) has since been
+  corrected, remote verified and CLOSED by correction batch A1, and five
+  remain open**:
   **DEFECT-005** — upload classification depends on the file's *storage
   path*, not its filename: the repository directory `poultry_operations`
   supplies the decisive `poultry` token that an opaque OS temporary
@@ -106,7 +108,7 @@ block is a pointer/summary, not a duplicate.
   claim fabricated in Scenario 4 with zero prompt support was written
   back as two `conf:80` company truths and re-injected into every later
   turn, and is reproduced verbatim in the public explainability surface
-  with zero citations at a "high" confidence band; **DEFECT-008** —
+  with zero citations at a "high" confidence band — **CORRECTED AND CLOSED by A1, remote verified at `0090d00c0de0c757c9618148c8b354c5bc4e3a0b`**; **DEFECT-008** —
   Founder Pilot Rule 1's isolation flag gates 1 of 11 real evidence
   channels; 8 are ungated and 5 were confirmed leaking, including RAG
   chunks and operational-event drafts created by files that had *failed*
@@ -131,7 +133,7 @@ block is a pointer/summary, not a duplicate.
   `docs/execution/pilot/PV1_SLICE2_REAL_DATA_INGESTION_VALIDATION.md`, and
   `docs/execution/pilot/PV1_SLICE3_REAL_OPERATIONAL_REASONING_VALIDATION.md`
   for full scope, real-data/Company-Brain discovery, the acceptance model,
-  and real-data validation evidence. **PV1 Slices 4–5 remain PROPOSED —
+  and real-data validation evidence. **A1 / DEFECT-007: CLOSED — REMOTE VERIFIED** (engineering checkpoint `0090d00c0de0c757c9618148c8b354c5bc4e3a0b`). The first bounded correction batch is complete: live `/ai/chat` no longer automatically persists AI- or user-derived content into durable `memory_facts` (the automatic `_extract_and_upsert_facts` invocation is disabled), and live operational reasoning no longer loads legacy `memory_facts` through any of the five verified read paths — direct Institutional Facts prompt injection, Company Brain `INSTITUTIONAL_MEMORY` folding, memory-derived Company Profile, Decision Context memory trends, and the memory-profile fallback. The historical contaminated rows remain physically present as negative regression fixtures (13 `memory_facts`, 9 `memory_fact_history`, 80 `operational_event_drafts`, both Hall fixtures) — no deletion, edit, cleanup, or seed rewrite was used to obtain a pass. No migration or schema change was required. `memory_events` remains a separate channel and was deliberately not disabled by A1, and helper/repository semantics remain intact outside the live operational reasoning path. Evidence: architecture review, implementation review, M7 test re-specification, final pre-commit review, post-amend review and remote verification all PASS; Golden Journey 1 passed, A1 focused suite 7 passed, required regressions 385 passed, full suite 1162 passed / 0 failed, plus a real Scenario 4 regression that passes for A1 isolation only. **A1 closure is not Slice 3 closure** — PV1 Slice 3 remains ACTIVE — FOUNDER BLOCKER REVIEW, and Scenario 4 is still not PROVEN. A1 intentionally leaves CEO-wide Company Brain applicability reporting `no_evidence` until DEFECT-009 / Batch D is addressed. **Next eligible correction batch: A2 / DEFECT-002 — A2 ARCHITECTURE GATE REQUIRED BEFORE ACTIVATION** (race-safe exact-content dedup across duplicate-sensitive durable writes remains architecture-unproven), and **NO MIGRATION IS CURRENTLY AUTHORIZED**. DEFECT-002/A2, DEFECT-008/A3, DEFECT-006/B1, DEFECT-010/B2 and DEFECT-009/D remain OPEN — NOT ACTIVATED; C1 (DEFECT-005 + DEFECT-003), C2 (DEFECT-001) and C3 (DEFECT-004) remain NOT ACTIVATED; PV1 Slice 4 remains NOT ACTIVATED. **PV1 Slices 4–5 remain PROPOSED —
   NOT ACTIVATED**; Slice 4 is assessed **NOT READY** and must not be
   activated before Founder review of DEFECT-005 through DEFECT-010 —
   its input precondition does not currently exist, since no successful
