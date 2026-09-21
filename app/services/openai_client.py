@@ -1513,14 +1513,43 @@ class AIService:
                     events_count = len(recent_events)
                     memory_events_block = build_memory_block(recent_events) or ""
 
-                    facts = await self.repo.fetch_facts(company_id=company_id, limit=25)
-                    memory_facts_block = _build_facts_block(facts) or ""
-
-                    memory_profile = await self.repo.build_company_profile(company_id=company_id)
-                    company_profile_block = _build_company_profile_block(memory_profile) or ""
-
-                    profile_has_values = any(bool(value) for value in memory_profile.values())
-                    memory_injected = bool(recent_events or facts or profile_has_values)
+                    # PV1 Slice 3 / A1 (DEFECT-007) - READ SAFETY.
+                    #
+                    # Founder rule: CHAT TEXT != AUTHORITATIVE COMPANY TRUTH.
+                    # Legacy `memory_facts` are LLM-extracted free text with no
+                    # source identity, no source time, no confirmation state and
+                    # no T#/CB#/OM# citation identity, yet they were reaching live
+                    # operational reasoning through five verified paths, all fed
+                    # from the two reads that used to sit here:
+                    #   P1 `_build_facts_block`   -> "INSTITUTIONAL FACTS" prompt block
+                    #   P2 `_memory_fact_items`   -> INSTITUTIONAL_MEMORY Company Brain
+                    #                                items, which DO receive CB#
+                    #                                reference ids and so reach the
+                    #                                citation validator, the
+                    #                                ReasoningReceipt and public
+                    #                                explainability
+                    #   P3 `build_company_profile`-> memory-derived COMPANY PROFILE
+                    #                                block (including memory_fact_
+                    #                                history residual-uncertainty prose)
+                    #   P4 `_build_trends`        -> "Memory signal: ..." trend hints
+                    #   P5 `_compact_company_profile` field-level fallback
+                    #
+                    # Both reads are deliberately NOT performed for operational
+                    # reasoning. `facts`/`memory_profile` keep the safe values they
+                    # were initialised with above - the same degraded state this
+                    # block's own `except` branch already produces - so every
+                    # downstream consumer (Company Brain, Decision Context, Company
+                    # Profile) is starved at this single choke point and needs no
+                    # change of its own. Nothing is deleted: the rows stay in
+                    # `memory_facts`, and `MemoryRepository`/`upsert_fact` semantics
+                    # are untouched for non-live-chat callers.
+                    #
+                    # Expected, accepted consequence: a CEO/company-wide chat, which
+                    # DEFECT-009 already excludes from the real Dairtna Company
+                    # Brain, now reports company_brain status "no_evidence" instead
+                    # of being populated by legacy memory facts. Legitimate CEO
+                    # Company Brain applicability is DEFECT-009 / Batch D, not A1.
+                    memory_injected = bool(recent_events)
 
                     logger.info(
                         "Memory context loaded",
@@ -2082,13 +2111,24 @@ class AIService:
                         exc_info=True,
                     )
 
-                await self._extract_and_upsert_facts(
-                    company_id=company_id,
-                    session_id=session_id,
-                    user_message=message,
-                    executive_summary=executive_summary,
-                    raw_decision=raw_decision,
-                )
+                # PV1 Slice 3 / A1 (DEFECT-007) - WRITE SAFETY.
+                #
+                # Founder rule: CHAT TEXT != AUTHORITATIVE COMPANY TRUTH.
+                # `_extract_and_upsert_facts` used to run here on every live
+                # turn, passing this turn's user message AND the model's own
+                # `executive_summary`/`raw_decision` to a second LLM call whose
+                # output was persisted as durable per-company truth at a
+                # model-self-reported confidence. A claim fabricated in one turn
+                # could therefore become an authoritative `memory_facts` row and
+                # be replayed into every later turn. A user message is not
+                # authoritative either - it may be a hypothetical, a quote, an
+                # uncertain recollection, or a question about a number rather
+                # than an assertion of it.
+                #
+                # The extractor is intentionally left in place, unmodified, and
+                # is simply no longer invoked from the live reasoning path.
+                # Explicit, governed fact capture/confirmation is a separate,
+                # later architectural decision and is NOT part of A1.
 
             self.sessions[key].append({"role": "user", "content": message})
             self.sessions[key].append({"role": "assistant", "content": answer_text})

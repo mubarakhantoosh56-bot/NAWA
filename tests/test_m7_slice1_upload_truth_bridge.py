@@ -1730,14 +1730,21 @@ def test_m7_04_full_golden_journey_through_real_endpoints(tmp_path, monkeypatch)
 
         # Exact model-call count: exactly one REASONING call (no repair/
         # regeneration needed since the citation-aware fake always returns
-        # an already-valid response under every contract), plus exactly one
-        # separate call from the existing, independent fact-extraction
-        # subsystem (AIService._extract_and_upsert_facts - a real,
-        # legitimately separate external call this real ai_engine
-        # singleton already makes after every accepted response when a
-        # real memory repo is configured, unrelated to reasoning/citation).
+        # an already-valid response under every contract), and NO second
+        # call.
+        #
+        # Re-specified by PV1 Slice 3 / A1 (DEFECT-007). This assertion
+        # previously expected call_count == 2, because
+        # AIService._extract_and_upsert_facts ran after every accepted
+        # response and spent a second, separate model call turning that
+        # response into durable per-company memory_facts. A1 intentionally
+        # disables automatic durable memory_facts extraction from live
+        # chat (CHAT TEXT != AUTHORITATIVE COMPANY TRUTH), so the Golden
+        # Journey now expects one reasoning model call and no automatic
+        # fact-extractor model call. The reasoning/provenance contract
+        # asserted throughout this test is unchanged.
         assert fake_client.chat_completions.reasoning_call_count == 1
-        assert fake_client.chat_completions.call_count == 2
+        assert fake_client.chat_completions.call_count == 1
 
         chosen_ref = fake_client.chat_completions.chosen_ref
         assert chosen_ref is not None, "the citation-aware fake must have resolved a real T# during the real chat call"
