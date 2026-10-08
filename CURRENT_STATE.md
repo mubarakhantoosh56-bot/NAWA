@@ -142,6 +142,18 @@ block is a pointer/summary, not a duplicate.
   governance for durable OME storage remains unresolved.
 - **OME lifecycle / bounded-growth governance:** DEFERRED.
 - **Durable Situation Memory:** DEFERRED — NOT MVP BLOCKING.
+- **NAWA Autonomous Development Harness v1:** **FOUNDER RATIFIED AS AMENDED
+  — NOT YET ACTIVE.** A governance and orchestration layer for AI-agent
+  execution (`docs/execution/autonomy/`); it changes no product behaviour.
+  Founder Ratification: 2026-10-08 — `EBD-007`. Bootstrap Amendment:
+  2026-10-08 — `EBD-008`. Conditional governance commit authorization:
+  2026-10-08 — `EBD-009` (stage and commit only; it grants no push).
+  Harness activation condition: ACTIVE only after Governance Commit →
+  `G3a-G` PASS → authorized push → `G3b-G` PASS. Engineering Batch:
+  **NONE**. A2 / DEFECT-002: **NOT ACTIVATED**. Migration Authorization:
+  **NONE**. PV1 Slice 3 remains **ACTIVE — FOUNDER BLOCKER REVIEW**. The
+  Harness activates no engineering batch and does not resume product
+  development. Decision records: `docs/decisions/`.
 
 See `docs/execution/M8_OME_RECONCILIATION.md` for the full reconciliation
 record and `docs/execution/EXECUTION_BOARD.md` for the live execution tracker.
