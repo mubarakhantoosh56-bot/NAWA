@@ -1,7 +1,7 @@
 # Architectural Decision Record #002 — EBD-C: CTO Approval of the Post-Activation Governance Reconciliation
 
-**Status:** Approved. Records the CTO's `EBD-C` approval of 2026-10-09.
-**Version:** 1.0
+**Status:** INVALIDATED FOR CORRECTION RESTART (2026-10-09; Section 9). Originally Approved — records the CTO's `EBD-C` approval of 2026-10-09.
+**Version:** 1.1 — adds the invalidation record (Section 9). Sections 1–8 are unchanged.
 **Category:** Decision Logs
 **Scope:** The CTO's approval, at EBD-002 checkpoint `EBD-C`, of the substantive final state of the post-activation governance reconciliation — a `GOVERNANCE-ONLY` closure under `EBD-010`.
 **Non-scope:** Any Founder decision; any independent gate verdict; the Governance Closure Manifest; staging, commit, or push; any engineering batch.
@@ -132,3 +132,28 @@ This record cites no `manifest_id`; none exists.
 - **Identifier.** `ADR-002` is the next unused ADR identifier after
   `ADR-001`. It was reserved in `CURRENT_AUTONOMOUS_RUN.md` before this record
   was written.
+
+## 9. Invalidation record — INVALIDATED FOR CORRECTION RESTART (2026-10-09)
+
+This section is appended; Sections 1–8 above are the original approval and are
+not rewritten. The approval of 2026-10-09 stands as a historical fact.
+
+- **Status:** `EBD-C` for the post-activation governance reconciliation is
+  INVALIDATED FOR CORRECTION RESTART, under the `EBD-010` Second Supplemental
+  Decision (`REVIEW_PROTOCOL.md` §9.6 step 11).
+- **Why:** `G3a-G` failed — `FAIL — G3a-G GOVERNANCE COMMIT NOT SAFE FOR PUSH`,
+  as stated by the Founder — on the governance commit
+  `a5965e0b100c41836c5247c09f84de58f0896105` (parent
+  `4aec1e48a7ee9aac71d2769f11643ebb450b5959`). As reported, the committed
+  governance snapshot verified successfully, but the live checkpoint in the
+  worktree copy of `CURRENT_AUTONOMOUS_RUN.md` contradicted itself: its
+  `Local HEAD` and `Ahead Behind` fields still read
+  `4aec1e48a7ee9aac71d2769f11643ebb450b5959` and `0 / 0`, while Git and the
+  file's own `Ahead State` showed HEAD `a5965e0b…` and 1/0.
+- **Push:** never occurred. The closure is NOT PUSHABLE.
+- **Baseline:** unchanged — `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+- **History:** the failed local commit remains in history and is not amended,
+  rebased, reset, or otherwise rewritten. Any correction is a forward commit
+  above it.
+- **Next:** correction restart under `EBD-010`. A new `EBD-C` is required after
+  the correction; it will have its own Decision Log record.

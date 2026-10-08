@@ -27,7 +27,7 @@ Founder Ratification Record: "docs/decisions/EBD-007-autonomous-development-harn
 Harness Active: "YES — ACTIVE since 2026-10-08. Basis: G3b-G REMOTE VERIFIED on governance commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959."
 Harness Activation Basis: "G3b-G REMOTE VERIFIED"
 Harness Activation Date: 2026-10-08
-Governance Commit: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
+Governance Commit: "4aec1e48a7ee9aac71d2769f11643ebb450b5959 — the bootstrap governance commit, basis of harness activation. The current closure's failed local commit is a5965e0b100c41836c5247c09f84de58f0896105."
 Remote Verification: "PASS — G3b-G"
 Bootstrap Amendment: "APPROVED — INITIAL HARNESS CLOSURE ONLY"
 Bootstrap Amendment Date: 2026-10-08
@@ -35,20 +35,22 @@ Bootstrap Amendment Record: "docs/decisions/EBD-008-harness-bootstrap-amendment.
 Bootstrap Baseline: 9e2463fda8dad102601296f7e5bec33da5d68757
 Bootstrap Batch: NONE
 Bootstrap Amendment Review: "Codex — all substantive checks PASSED; one MINOR state inconsistency in this file's checkpoint fields (as stated by the Founder)"
-Governance Commit Authorization: "APPROVED CONDITIONALLY VIA EBD-011 — NOT YET EFFECTIVE (current GOVERNANCE-ONLY closure). Effective only after all six EBD-011 conditions are satisfied."
-Governance Commit Authorization Record: "docs/decisions/EBD-011-post-activation-governance-reconciliation-commit-authorization.md"
-Governance Commit Authorization Scope: "Staging and creating exactly one governance commit for the current GOVERNANCE-ONLY closure. Nothing else."
-Governance Commit Subject: "Docs: reconcile active Harness governance and formalize governance-only closures"
+Governance Commit Authorization: "EBD-012 — APPROVED CONDITIONALLY — NOT YET EFFECTIVE (current forward correction commit). Conditions 1–3 SATISFIED; conditions 4–7 NOT YET SATISFIED."
+Governance Commit Authorization Record: "docs/decisions/EBD-012-g3ag-forward-correction-commit-authorization.md"
+Governance Commit Authorization Scope: "Staging and creating exactly one forward correction governance commit above a5965e0b100c41836c5247c09f84de58f0896105, with exactly the four authorized paths. Any additional path or substantive change: STOP FOR FOUNDER."
+Governance Commit Subject: "Docs: correct Harness recovery state after G3a-G failure"
 Governance Commit Execution Conditions:
-  - "1. EBD-C issued for the current closure"
-  - "2. Substantive governance content frozen"
-  - "3. Governance Manifest finalized with batch GOVERNANCE-ONLY and baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959"
-  - "4. Derived-metadata region transitioned Idle → Finalized according to the protocol"
-  - "5. Normalized CURRENT_AUTONOMOUS_RUN.md identity and manifest integrity verified"
-  - "6. Native Windows Git verifies the exact authorized path set"
-Current Stage Authorization: "NOT YET EFFECTIVE"
-Current Commit Authorization: "NOT YET EFFECTIVE"
-Push Authorization: "NOT AUTHORIZED — a separate Founder push authorization is required after G3a-G PASS. EBD-011 grants no push."
+  - "1. Independent pre-EBD-C review = PASS — SATISFIED"
+  - "2. New EBD-C issued in ADR-003 — SATISFIED"
+  - "3. Substantive correction state frozen — SATISFIED"
+  - "4. Governance Manifest finalized under REVIEW_PROTOCOL.md with batch GOVERNANCE-ONLY and baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959 — NOT YET SATISFIED"
+  - "5. Derived-metadata region Idle → Finalized — NOT YET SATISFIED"
+  - "6. Manifest integrity and normalized run-file identity verified — NOT YET SATISFIED"
+  - "7. Native Windows Git verifies the exact authorized 4-path correction set — NOT YET SATISFIED"
+Current Stage Authorization: "NOT YET EFFECTIVE (EBD-012: conditions 4–7 not yet satisfied)"
+Current Commit Authorization: "NOT YET EFFECTIVE (EBD-012: conditions 4–7 not yet satisfied)"
+Push Authorization: "NOT AUTHORIZED — the closure is NOT PUSHABLE. The failed commit a5965e0b100c41836c5247c09f84de58f0896105 is never pushed by itself; a push needs G3a-G PASS on the corrected tip and a separate Founder push authorization. EBD-012 grants no push."
+Previous Closure Commit Authorization: "HISTORICAL — EBD-011 (docs/decisions/EBD-011-post-activation-governance-reconciliation-commit-authorization.md), CONSUMED BY a5965e0b100c41836c5247c09f84de58f0896105. It authorizes no other commit."
 Bootstrap Commit Authorization: "HISTORICAL — EBD-009 (docs/decisions/EBD-009-harness-governance-commit-authorization.md): bootstrap conditional commit authorization only, used for 4aec1e48a7ee9aac71d2769f11643ebb450b5959. Not a current authorization."
 Bootstrap Push: "HISTORICAL / COMPLETED — the bootstrap governance push of 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (governance commit only), as stated by the Founder."
 Engineering Batch: NONE
@@ -56,7 +58,7 @@ Product Development: NOT ACTIVE
 A2: NOT ACTIVATED
 Migration Authorization: NONE
 Active Batch: "NONE (engineering). Harness: ACTIVE — G3b-G REMOTE VERIFIED, 2026-10-08."
-Authorization: "Founder — H0 (2026-10-03): create the NAWA Autonomous Development Harness v1. H0.1: harden it per Founder decisions 1–7 (Charter §15). H0.1-R1: correct the four MAJOR findings and one MINOR finding of the H0.1 independent review (Charter §16). H0.1-R2: correct the two MAJOR findings and one MINOR finding remaining after the H0.1-R1 re-review (Charter §17). H0.1-R2 final state sync: correct only the one MINOR stale-state finding of the H0.1-R2 focused re-review, in this file. H0.1-R2 final stale-state cleanup: correct only the stale state references found by the Codex final confirmation, in this file. Ratification recording (2026-10-08): record the Founder Ratification — governance state only. Bootstrap Amendment recording (2026-10-08): amend REVIEW_PROTOCOL.md §2.6, §9.2, §9.7 for the initial harness governance closure only, and record it. Bootstrap checkpoint-state correction (2026-10-08): correct the checkpoint fields in this file only. Pre-EBD-C closure preparation (2026-10-08, EBD-009): update CURRENT_STATE.md, make the pre-EBD-C wording and state corrections, and prepare the prospective Ahead State. Conditional governance commit authorization (2026-10-08, EBD-009): stage and create the one harness governance closure commit, with the exact subject recorded above, only after every execution condition recorded above holds. Final live activation state recording (2026-10-08): record the harness activation after G3b-G PASS, in this file only. Post-activation governance reconciliation (2026-10-08): reconcile current-state harness declarations to ACTIVE, remove the manifest_id quoted outside the derived-metadata region of this file, and produce the H0 Founder Review Package — no stage, commit, or push. EBD-010 recording and reconciliation corrections (2026-10-08): record EBD-010, amend REVIEW_PROTOCOL.md minimally for GOVERNANCE-ONLY closures, correct the Founder-stop record, set the harness Effective date and the CURRENT_STATE.md authoritative date to 2026-10-08 — no stage, commit, or push. EBD-010 Supplemental Decision (2026-10-08): record it, amend REVIEW_PROTOCOL.md for the region lifecycle, and reset the region to Idle for the current closure — no stage, commit, push, EBD-C, or manifest. EBD-010 Second Supplemental Decision (2026-10-08): record it and amend REVIEW_PROTOCOL.md (and the matching sentence in AUTONOMOUS_LOOP.md §3) for the G3a-G correction restart — no stage, commit, push, EBD-C, or manifest. Pre-EBD-C prospective state correction (2026-10-08): record the current prospective governance commit and Ahead State, mark the bootstrap state historical, correct maintenance rule 10 and stale current-state wording — no stage, commit, push, EBD-C, or manifest. EBD-011 (2026-10-08): conditional authorization to stage and create exactly one governance commit for the current GOVERNANCE-ONLY closure, not yet effective; recording it and reconciling this file — no stage, commit, push, EBD-C, or manifest in this step. EBD-C for the current GOVERNANCE-ONLY closure (2026-10-09, Founder instruction): create ADR-002 and record the post-EBD-C state — no manifest, stage, commit, or push. Governance/documentation only. Not authorized: A2 activation, any engineering batch, product code, tests, schema, migrations, data, Company Brain knowledge, secrets, production behaviour, deploy, destructive data operations, merge to main, any other commit, pushing, or any Git history rewrite."
+Authorization: "Founder — H0 (2026-10-03): create the NAWA Autonomous Development Harness v1. H0.1: harden it per Founder decisions 1–7 (Charter §15). H0.1-R1: correct the four MAJOR findings and one MINOR finding of the H0.1 independent review (Charter §16). H0.1-R2: correct the two MAJOR findings and one MINOR finding remaining after the H0.1-R1 re-review (Charter §17). H0.1-R2 final state sync: correct only the one MINOR stale-state finding of the H0.1-R2 focused re-review, in this file. H0.1-R2 final stale-state cleanup: correct only the stale state references found by the Codex final confirmation, in this file. Ratification recording (2026-10-08): record the Founder Ratification — governance state only. Bootstrap Amendment recording (2026-10-08): amend REVIEW_PROTOCOL.md §2.6, §9.2, §9.7 for the initial harness governance closure only, and record it. Bootstrap checkpoint-state correction (2026-10-08): correct the checkpoint fields in this file only. Pre-EBD-C closure preparation (2026-10-08, EBD-009): update CURRENT_STATE.md, make the pre-EBD-C wording and state corrections, and prepare the prospective Ahead State. Conditional governance commit authorization (2026-10-08, EBD-009): stage and create the one harness governance closure commit, with the exact subject recorded above, only after every execution condition recorded above holds. Final live activation state recording (2026-10-08): record the harness activation after G3b-G PASS, in this file only. Post-activation governance reconciliation (2026-10-08): reconcile current-state harness declarations to ACTIVE, remove the manifest_id quoted outside the derived-metadata region of this file, and produce the H0 Founder Review Package — no stage, commit, or push. EBD-010 recording and reconciliation corrections (2026-10-08): record EBD-010, amend REVIEW_PROTOCOL.md minimally for GOVERNANCE-ONLY closures, correct the Founder-stop record, set the harness Effective date and the CURRENT_STATE.md authoritative date to 2026-10-08 — no stage, commit, or push. EBD-010 Supplemental Decision (2026-10-08): record it, amend REVIEW_PROTOCOL.md for the region lifecycle, and reset the region to Idle for the current closure — no stage, commit, push, EBD-C, or manifest. EBD-010 Second Supplemental Decision (2026-10-08): record it and amend REVIEW_PROTOCOL.md (and the matching sentence in AUTONOMOUS_LOOP.md §3) for the G3a-G correction restart — no stage, commit, push, EBD-C, or manifest. Pre-EBD-C prospective state correction (2026-10-08): record the current prospective governance commit and Ahead State, mark the bootstrap state historical, correct maintenance rule 10 and stale current-state wording — no stage, commit, push, EBD-C, or manifest. EBD-011 (2026-10-08): conditional authorization to stage and create exactly one governance commit for the current GOVERNANCE-ONLY closure, not yet effective; recording it and reconciling this file — no stage, commit, push, EBD-C, or manifest in this step. EBD-C for the current GOVERNANCE-ONLY closure (2026-10-09, Founder instruction): create ADR-002 and record the post-EBD-C state — no manifest, stage, commit, or push. G3a-G correction restart (2026-10-09, EBD-010 Second Supplemental Decision, Founder instruction): invalidate EBD-C, reset the region to Idle, correct the live recovery state, mark EBD-011 consumed — no stage, commit, push, new EBD-C, manifest, or new authorization. EBD-012 (2026-10-09): conditional authorization to stage and create exactly one forward correction commit above a5965e0b100c41836c5247c09f84de58f0896105, not yet effective; recording it and defining the forward correction closure in this file — no stage, commit, push, EBD-C, or manifest in this step. Correction-restart EBD-C (2026-10-09, Founder instruction): create ADR-003 and record the post-EBD-C state — no manifest, stage, commit, or push. Governance/documentation only. Not authorized: A2 activation, any engineering batch, product code, tests, schema, migrations, data, Company Brain knowledge, secrets, production behaviour, deploy, destructive data operations, merge to main, any other commit, pushing, or any Git history rewrite."
 Autonomy Level: "LIMITED — every independent gate requires a Founder-initiated Codex invocation (Charter §14)"
 Codex Automation: CODEX_INTERFACE_PRESENT_BUT_AUTOMATION_NOT_PROVEN
 
@@ -65,27 +67,29 @@ Branch: claude-safe-review
 Baseline HEAD: "9e2463fda8dad102601296f7e5bec33da5d68757 — HISTORICAL ONLY: the baseline of the harness setup run (H0). The current closure baseline is Governance Closure Baseline."
 Baseline Parent: 0090d00c0de0c757c9618148c8b354c5bc4e3a0b
 Last Verified Product Baseline: "9e2463fda8dad102601296f7e5bec33da5d68757 — the last commit with product-content changes verified; 4aec1e48a7ee9aac71d2769f11643ebb450b5959 changed documentation only."
-Tracking Origin: "origin/claude-safe-review @ 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (ahead 0, behind 0) — after the governance push, 2026-10-08"
-Live Origin: "https://github.com/mubarakhantoosh56-bot/NAWA.git refs/heads/claude-safe-review @ 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (G3b-G REMOTE VERIFIED, 2026-10-08; also read with git ls-remote by Claude Cowork, 2026-10-08)"
-Local HEAD: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
-Ahead Behind: "0 / 0"
+Tracking Origin: "origin/claude-safe-review @ 4aec1e48a7ee9aac71d2769f11643ebb450b5959 — local HEAD a5965e0b100c41836c5247c09f84de58f0896105, ahead 1, behind 0 (2026-10-09)"
+Live Origin: "https://github.com/mubarakhantoosh56-bot/NAWA.git refs/heads/claude-safe-review @ 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (git ls-remote by Claude Cowork, 2026-10-09). No push has occurred."
+Local HEAD: a5965e0b100c41836c5247c09f84de58f0896105
+Ahead Behind: "1 / 0"
+Current State: "HEAD-AHEAD / G3a-G CORRECTION RESTART / NOT PUSHABLE"
 
 Ahead State:
-  Expected Local Commit: "NOT YET KNOWN — commit not created. Before it exists: NONE — local HEAD equals the remote checkpoint. Once it exists: exactly one commit — the GOVERNANCE-ONLY closure commit, which carries this file. It is identified beforehand (SESSION_RECOVERY_PROTOCOL.md §5) by parent 4aec1e48a7ee9aac71d2769f11643ebb450b5959, by the proposed subject 'Docs: reconcile active Harness governance and formalize governance-only closures', and by the exact 14-path set under Prospective Governance Commit. Its hash is written to the worktree copy of this file immediately after the commit (class B3)."
+  Expected Local Commit: "Now: a5965e0b100c41836c5247c09f84de58f0896105 — one commit ahead of the remote checkpoint, the failed GOVERNANCE-ONLY closure commit (G3a-G FAIL; NOT PUSHABLE). After the forward correction commit: exactly two commits ahead, in order — a5965e0b100c41836c5247c09f84de58f0896105, then the forward correction commit, NOT YET KNOWN (commit not created), identified beforehand (SESSION_RECOVERY_PROTOCOL.md §5) by parent a5965e0b100c41836c5247c09f84de58f0896105, the subject 'Docs: correct Harness recovery state after G3a-G failure', and the exact 4-path set under Prospective Governance Commit. Its hash is written to the worktree copy of this file immediately after the commit (class B3)."
   Expected Remote Checkpoint: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
-  Why Ahead: "Governance window — AUTONOMOUS_LOOP.md stage 18, GOVERNANCE-ONLY closure. It applies only once that commit exists. Expected ahead/behind: 0/0 before the commit; 1/0 after it and before the push; 0/0 after the push."
-  Push Authorized: "NO — NOT AUTHORIZED. A push needs G3a-G PASS on the commit and a separate Founder push authorization."
-  Next Required Gate: "Before the commit: EBD-C is APPROVED (ADR-002); next, Governance Closure Manifest finalization; then the EBD-011 stage/commit authorization becomes effective once all six of its conditions hold. Once the commit exists: G3a-G. After a separately authorized push: G3b-G."
+  Why Ahead: "HEAD-AHEAD / G3a-G CORRECTION RESTART — the failed closure commit a5965e0b100c41836c5247c09f84de58f0896105 exists locally (G3a-G FAIL). Expected ahead/behind: 1/0 now; 2/0 after the forward correction commit, before the push; 0/0 after an authorized push, with the remote at the corrected tip."
+  Push Authorized: "NO — NOT PUSHABLE. A push needs G3a-G PASS on the corrected tip and a separate Founder push authorization."
+  Next Required Gate: "Before the correction commit: native revision-2 Governance Closure Manifest finalization (EBD-C APPROVED in ADR-003) → EBD-012 effective once conditions 4–7 also hold. Once the correction commit exists: G3a-G on the corrected tip (lineage: exactly the two commits above). After a separately authorized push: G3b-G."
 
-Prospective Governance Commit:
-  Closure: "CURRENT — GOVERNANCE-ONLY closure (EBD-010)"
+Failed Local Closure Commit:
+  Closure: "FAILED LOCAL COMMIT / CORRECTION PARENT — G3a-G FAIL; NOT PUSHABLE; never rewritten; not the manifest baseline"
+  Created As: "a5965e0b100c41836c5247c09f84de58f0896105 — committed 2026-10-09 00:51 +0300 under EBD-011; G3a-G FAIL; NOT PUSHED; never pushed by itself"
   Parent: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
   Branch: claude-safe-review
   Governance Closure Batch: GOVERNANCE-ONLY
   Subject: "Docs: reconcile active Harness governance and formalize governance-only closures"
-  Subject Status: "Founder-approved subject (EBD-011). Stage/commit authorization APPROVED CONDITIONALLY VIA EBD-011 — NOT YET EFFECTIVE."
-  Authorized By: "EBD-011 — conditional; staging and exactly one governance commit; not yet effective; no push"
-  Reserved EBD-C Record: "docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md — created 2026-10-09; EBD-C APPROVED"
+  Subject Status: "Founder-approved subject (EBD-011), used by a5965e0b100c41836c5247c09f84de58f0896105."
+  Authorized By: "EBD-011 — CONSUMED by a5965e0b100c41836c5247c09f84de58f0896105"
+  Reserved EBD-C Record: "docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md — created 2026-10-09; INVALIDATED FOR CORRECTION RESTART"
   Path Count: 14
   Paths:
     - "M CURRENT_STATE.md"
@@ -103,6 +107,26 @@ Prospective Governance Commit:
     - "M docs/execution/autonomy/ROLE_MATRIX.md"
     - "M docs/execution/autonomy/SESSION_RECOVERY_PROTOCOL.md"
   Path Note: "A = added, M = modified, relative to the parent. The commit is to contain exactly these 14 paths and no other. Before EBD-C, 13 existed in the worktree; ADR-002 was created at EBD-C (2026-10-09), so all 14 now exist. The authoritative path set is the finalized Governance Closure Manifest; if it differs from this list, the closure stops and nothing is committed."
+
+Prospective Governance Commit:
+  Closure: "CURRENT — FORWARD CORRECTION COMMIT of the GOVERNANCE-ONLY closure (EBD-010 Second Supplemental Decision)"
+  Parent: a5965e0b100c41836c5247c09f84de58f0896105
+  Correction Parent Role: "FAILED LOCAL COMMIT / CORRECTION PARENT — not the manifest baseline"
+  Governance Closure Baseline: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
+  Branch: claude-safe-review
+  Governance Closure Batch: GOVERNANCE-ONLY
+  Subject: "Docs: correct Harness recovery state after G3a-G failure"
+  Subject Status: "Founder-approved subject (EBD-012). Stage/commit authorization APPROVED CONDITIONALLY — NOT YET EFFECTIVE."
+  Authorized By: "EBD-012 — conditional; staging and exactly one forward correction commit; not yet effective; no push"
+  Reserved EBD-C Record: "docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md — created 2026-10-09; EBD-C APPROVED"
+  Path Count: 4
+  Paths:
+    - "M docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md"
+    - "A docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md"
+    - "A docs/decisions/EBD-012-g3ag-forward-correction-commit-authorization.md"
+    - "M docs/execution/autonomy/CURRENT_AUTONOMOUS_RUN.md"
+  Path Note: "A = added, M = modified, relative to the parent a5965e0b100c41836c5247c09f84de58f0896105. The commit is to contain exactly these 4 paths and no other (EBD-012); any additional path or substantive change is a STOP FOR FOUNDER. Before EBD-C, 3 existed in the worktree; ADR-003 was created at EBD-C (2026-10-09), so all 4 now exist."
+  Prospective Manifest: "Derived from REVIEW_PROTOCOL.md §9.2 and §9.7: kind GOVERNANCE-CLOSURE, schema 2, batch GOVERNANCE-ONLY, baseline_commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959; revision 2 — the number of commits in 4aec1e4..<correction commit> (rule 7); entries describe the cumulative content of 4aec1e4..<correction commit> (§9.4, §9.7 step 2) — the 14 paths of a5965e0 plus ADR-003 and EBD-012, 16 entries. The new EBD-C (ADR-003) is APPROVED; the manifest is not yet computed. Manifest scope: CUMULATIVE ORIGINAL-BASELINE → CORRECTED-TIP."
 
 Historical Bootstrap Governance Commit:
   State: "HISTORICAL / COMPLETED BOOTSTRAP STATE — not the current prospective closure"
@@ -132,7 +156,7 @@ Historical Bootstrap Governance Commit:
     - "A docs/execution/autonomy/SESSION_RECOVERY_PROTOCOL.md"
   Path Note: "A = added, M = modified, relative to the parent. The commit contains exactly these 16 paths and no other. The ADR-001 path is the EBD-C record: it is created only when EBD-C is decided, and the commit cannot be made without an APPROVED EBD-C. The authoritative path set is the finalized Governance Closure Manifest; if it differs from this list, the closure stops and nothing is committed."
 
-Current Phase: "POST-EBD-C / PRE-MANIFEST-FINALIZATION — GOVERNANCE-ONLY closure. Substantive governance state FROZEN. Harness ACTIVE."
+Current Phase: "POST-EBD-C / CORRECTION MANIFEST FINALIZATION PENDING — HEAD-AHEAD, NOT PUSHABLE. Substantive correction state FROZEN. Harness ACTIVE."
 Last Verified Safe Checkpoint: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
 
 Original H0.1 Native Git Verification: "PASSED — as stated by the Founder; the command output is not held in this file"
@@ -162,33 +186,35 @@ Architecture Gate: "G1 — N/A, no engineering batch active"
 Implementation Gate: "G2 — N/A, no engineering batch active"
 Post-Commit Gate:
   Engineering: "G3a-E — N/A — no engineering commit exists in this bootstrap closure"
-  Governance: "G3a-G — PASS — Codex, 2026-10-08, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (re-run after the first invocation failed; as stated by the Founder; the verbatim verdict text is not held in this file)"
+  Governance: "G3a-G — FAIL — GOVERNANCE COMMIT NOT SAFE FOR PUSH — Codex, on commit a5965e0b100c41836c5247c09f84de58f0896105 (as stated by the Founder). The committed snapshot verified; the live checkpoint fields Local HEAD and Ahead Behind contradicted Git and the Ahead State. Push forbidden. Bootstrap closure: PASS — Codex, 2026-10-08, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (re-run after the first invocation failed; as stated by the Founder; the verbatim verdict text is not held in this file)"
 Remote Verification Gate:
   Engineering: "G3b-E — N/A — no engineering commit exists in this bootstrap closure"
-  Governance: "G3b-G — PASS — Codex, 2026-10-08, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959: 'PASS — G3b-G REMOTE VERIFIED — NAWA AUTONOMOUS DEVELOPMENT HARNESS v1 ACTIVATION CONDITION SATISFIED' (verbatim as given by the Founder)"
+  Governance: "G3b-G — NOT APPLICABLE YET / NOT PERFORMED for the current GOVERNANCE-ONLY closure. Bootstrap closure: PASS — Codex, 2026-10-08, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959: 'PASS — G3b-G REMOTE VERIFIED — NAWA AUTONOMOUS DEVELOPMENT HARNESS v1 ACTIVATION CONDITION SATISFIED' (verbatim as given by the Founder)"
 EBD-002 Approvals:
   EBD-A: "N/A — no engineering implementation / architecture transition in this bootstrap closure"
   EBD-B: "N/A — no engineering runtime-validation / engineering commit in this bootstrap closure"
-  EBD-C: "APPROVED — CTO — 2026-10-09 (current GOVERNANCE-ONLY closure). Bootstrap closure: APPROVED — CTO — 2026-10-08 (ADR-001)."
-  EBD-C Record: "docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md (current closure). Bootstrap closure: docs/decisions/ADR-001-harness-v1-bootstrap-closure-ebd-c.md."
+  EBD-C: "APPROVED — CTO — 2026-10-09 — ADR-003 (docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md), the correction-restart EBD-C. ADR-002: INVALIDATED FOR CORRECTION RESTART (originally APPROVED 2026-10-09). Bootstrap closure: APPROVED — CTO — 2026-10-08 (ADR-001)."
+  EBD-C Record: "docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md (current valid EBD-C). Previous: docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md (INVALIDATED FOR CORRECTION RESTART). Bootstrap closure: docs/decisions/ADR-001-harness-v1-bootstrap-closure-ebd-c.md."
 Review Manifests:
   Gate 2 Review Manifest: "NONE — no engineering batch active"
   Governance Closure Baseline: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
   Governance Closure Batch: GOVERNANCE-ONLY
-  Governance Closure Manifest: "NONE — not yet finalized for the current GOVERNANCE-ONLY closure. The derived-metadata region is Idle. The bootstrap closure manifest is preserved in commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959 and Git history."
+  Governance Closure Manifest: "NOT FINALIZED — CORRECTION RESTART. The region is Idle. The failed revision-1 manifest is preserved immutably in commit a5965e0b100c41836c5247c09f84de58f0896105 and Git history."
 
-EBD-C Record Path: "docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md — the EBD-C record of the current GOVERNANCE-ONLY closure, created 2026-10-09 (EBD-C APPROVED). Bootstrap closure: ADR-001."
+EBD-C Record Path: "docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md — the valid EBD-C of the correction restart, APPROVED 2026-10-09. Previous: ADR-002, INVALIDATED FOR CORRECTION RESTART. Bootstrap closure: ADR-001."
 Current Governance Closure:
   Type: "GOVERNANCE-ONLY — EBD-010 (REVIEW_PROTOCOL.md §9.2; region lifecycle §9.5; G3a-G correction restart §9.6 step 11) — the post-activation governance reconciliation"
   Baseline: "4aec1e48a7ee9aac71d2769f11643ebb450b5959 — the last remotely verified checkpoint, recorded before drafting (2026-10-08)"
-  Phase: "POST-EBD-C / PRE-MANIFEST-FINALIZATION"
-  Derived-Metadata Lifecycle: "IDLE — new GOVERNANCE-ONLY closure (reset from the bootstrap closure manifest before EBD-C, per the EBD-010 Supplemental Decision)"
-  EBD-C: "APPROVED — CTO — 2026-10-09"
-  EBD-C Decision Log: "docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md"
-  Substantive Governance State: "FROZEN — since EBD-C (2026-10-09). Any substantive change invalidates EBD-C and requires the correction-restart lifecycle."
-  Manifest: "NOT YET FINALIZED"
-  Status: "Stage/commit authorization: APPROVED CONDITIONALLY VIA EBD-011 — NOT YET EFFECTIVE. Push authorization: NOT AUTHORIZED. G3a-G and G3b-G: not yet applicable. Worktree: 14 paths; prospective commit: 14 paths; none missing."
-  Reading Note: "Until this closure records its own results, the Post-Commit Gate and Remote Verification Gate fields, and EBD-A and EBD-B under EBD-002 Approvals, describe the bootstrap closure commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959. Ahead State, Prospective Governance Commit, EBD-C Record Path, Governance Closure Baseline, Governance Closure Batch, and Governance Closure Manifest already describe this closure. Bootstrap state stays in Bootstrap Baseline and Historical Bootstrap Governance Commit."
+  Phase: "POST-EBD-C / CORRECTION MANIFEST FINALIZATION PENDING"
+  Derived-Metadata Lifecycle: "IDLE — same-closure correction restart: Finalized → Idle after the EBD-C invalidation (EBD-010 Second Supplemental Decision)"
+  EBD-C: "APPROVED — CTO — 2026-10-09 — ADR-003 (docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md), the correction-restart EBD-C. ADR-002: INVALIDATED FOR CORRECTION RESTART (originally APPROVED 2026-10-09)."
+  EBD-C Decision Log: "docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md (APPROVED). Previous: docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md (INVALIDATED)."
+  Substantive Governance State: "FROZEN — substantive correction state frozen since EBD-C (ADR-003, 2026-10-09). Any substantive change invalidates this EBD-C and requires the correction-restart lifecycle again."
+  Manifest: "NOT FINALIZED — CORRECTION RESTART"
+  Status: "Failed local commit a5965e0b100c41836c5247c09f84de58f0896105 (G3a-G FAIL); NOT PUSHABLE. Forward correction commit: 4 paths, all present in the worktree. Prospective manifest: revision 2, 16 entries, scope CUMULATIVE ORIGINAL-BASELINE → CORRECTED-TIP, NOT YET FINALIZED. EBD-012: APPROVED CONDITIONALLY — NOT YET EFFECTIVE. Push: NOT AUTHORIZED."
+  Failed Local Commit: "a5965e0b100c41836c5247c09f84de58f0896105 — FAILED LOCAL COMMIT / CORRECTION PARENT"
+  Governance Closure Baseline: "4aec1e48a7ee9aac71d2769f11643ebb450b5959 — ORIGINAL GOVERNANCE CLOSURE BASELINE; unchanged; never a5965e0"
+  Reading Note: "The Post-Commit Gate and Remote Verification Gate fields record this closure first, then the bootstrap closure. EBD-A and EBD-B under EBD-002 Approvals are N/A for both closures. Bootstrap state stays in Bootstrap Baseline and Historical Bootstrap Governance Commit."
 
 Completed Work:
   - "H0: nine harness documents authored; harness pointer section appended to AGENTS.md and CLAUDE.md (additive only)."
@@ -229,42 +255,38 @@ Completed Work:
   - "EBD-011 (2026-10-08) recorded; this file reconciled: one current authorization block (EBD-011, not yet effective), bootstrap authorization, push, parent, and pre/post-commit expectations marked historical, prospective commit set 14 paths. Prepared, not committed."
   - "Independent Codex review of EBD-011 and the current closure state: PASS — EBD-011 AND CURRENT CLOSURE STATE VERIFIED — SAFE FOR EBD-C (per the Founder)."
   - "EBD-C (2026-10-09): APPROVED by Claude Cowork as CTO for the current GOVERNANCE-ONLY closure. Recorded in Decision Log entry ADR-002 and under EBD-002 Approvals. Substantive governance state frozen."
+  - "Governance closure commit a5965e0b100c41836c5247c09f84de58f0896105 created by Claude Code under EBD-011 (2026-10-09 00:51 +0300); class B3 Ahead State update written to this worktree copy."
+  - "G3a-G on a5965e0b100c41836c5247c09f84de58f0896105: FAIL — GOVERNANCE COMMIT NOT SAFE FOR PUSH (Codex; per the Founder). Not pushed."
+  - "Correction restart (2026-10-09), in this order: EBD-C recorded INVALIDATED FOR CORRECTION RESTART in ADR-002 Section 9 and in this file; then the derived-metadata region reset Finalized → Idle; then the live recovery fields corrected to Git (Local HEAD a5965e0b100c41836c5247c09f84de58f0896105, ahead/behind 1/0); EBD-011 marked consumed. Prepared, not committed."
+  - "EBD-012 (2026-10-09) recorded; forward correction commit defined in this file: parent a5965e0b100c41836c5247c09f84de58f0896105, baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959 unchanged, subject 'Docs: correct Harness recovery state after G3a-G failure', 4 paths, ADR-003 reserved; EBD-011 recorded as historical and consumed. Prepared, not committed."
+  - "Independent pre-EBD-C review of the forward correction closure: PASS — EBD-012 FORWARD CORRECTION VERIFIED — SAFE FOR ADR-003 / EBD-C (per the Founder)."
+  - "Correction-restart EBD-C (2026-10-09): APPROVED by Claude Cowork as CTO in ADR-003. Substantive correction state frozen. EBD-012 conditions 1–3 satisfied."
 Current Work:
   - "No engineering work. The GOVERNANCE-ONLY closure is in Governance Closure Documentation (pre-EBD-C), awaiting focused independent review."
 Pending Work:
-  - "Governance Closure Manifest finalization (REVIEW_PROTOCOL.md §9.6 steps 5–8) by Claude Code, natively: batch GOVERNANCE-ONLY, baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959; derived-metadata region Idle → Finalized; normalized identity and manifest integrity verified."
-  - "Native Windows Git verification of the exact authorized path set (EBD-011 condition 6). Then staging and the one governance commit under EBD-011, once all six of its conditions hold."
-  - "G3a-G (Codex); a separate Founder push authorization; the push; G3b-G."
+  - "Native deterministic revision-2 Governance Manifest finalization by Claude Code (REVIEW_PROTOCOL.md §9.6 steps 5–8): batch GOVERNANCE-ONLY, baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959, 16 cumulative entries; region Idle → Finalized; manifest integrity and normalized identity verified (EBD-012 conditions 4–6)."
+  - "Native Windows Git verification of the exact 4-path correction set (EBD-012 condition 7); then staging and the one forward correction commit under EBD-012."
+  - "Then: G3a-G on the corrected tip; a separate Founder push authorization; the push; G3b-G."
   - "Founder decision: H0.2 Codex Bridge / autonomy integration, or A2 activation under the active Harness. Neither starts without it."
 
 Expected Worktree Delta:
-  - " M CURRENT_STATE.md"
-  - "?? docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md"
-  - "?? docs/decisions/EBD-010-permanent-governance-only-closure-rule.md"
-  - "?? docs/decisions/EBD-011-post-activation-governance-reconciliation-commit-authorization.md"
-  - " M docs/execution/autonomy/ACTIVE_BATCH.md"
-  - " M docs/execution/autonomy/AUTONOMOUS_LOOP.md"
+  - " M docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md"
+  - "?? docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md"
+  - "?? docs/decisions/EBD-012-g3ag-forward-correction-commit-authorization.md"
   - " M docs/execution/autonomy/CURRENT_AUTONOMOUS_RUN.md"
-  - " M docs/execution/autonomy/FOUNDER_REVIEW_PACKAGE_TEMPLATE.md"
-  - " M docs/execution/autonomy/FOUNDER_STOP_CONDITIONS.md"
-  - "?? docs/execution/autonomy/H0_FOUNDER_REVIEW_PACKAGE.md"
-  - " M docs/execution/autonomy/NAWA_AUTONOMOUS_DEVELOPMENT_CHARTER.md"
-  - " M docs/execution/autonomy/REVIEW_PROTOCOL.md"
-  - " M docs/execution/autonomy/ROLE_MATRIX.md"
-  - " M docs/execution/autonomy/SESSION_RECOVERY_PROTOCOL.md"
-  - "Nothing staged. CURRENT_AUTONOMOUS_RUN.md is also class B3: this live record is newer than its committed copy. All 14 paths of the prospective commit are present."
+  - "Nothing staged. HEAD is a5965e0b100c41836c5247c09f84de58f0896105 (1/0). CURRENT_AUTONOMOUS_RUN.md is also class B3: this live record is newer than its committed copy. All 4 paths of the forward correction commit are present."
 
 Tests: "None run. H0, H0.1, H0.1-R1, H0.1-R2, the ratification and amendment recordings, and the closure preparation change documentation only; no application, test, migration, data, or knowledge path changed."
-Reviewer Verdicts: "Harness reviews (Codex): H0.1 — FAIL; H0.1-R1 re-review — FAIL, two MAJOR + one MINOR remaining; H0.1-R2 focused re-review — FAIL, one MINOR stale-state finding only, all substantive checks PASSED; Codex final confirmation (first) — FAIL, stale state references only, substantive harness review PASSED; Codex final verdict — PASS — H0.1-R2 HARNESS SAFE FOR FOUNDER RATIFICATION; Bootstrap Amendment review — all substantive checks PASSED, one MINOR state inconsistency; bootstrap checkpoint confirmation — PASS — BOOTSTRAP CHECKPOINT STATE SAFE — PROCEED TO EBD-C. All as stated by the Founder. First G3a-G invocation, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959: FAIL — reported by the Founder as failing only because the mandatory class B3 post-commit Ahead State update had not been written to this file, with every other G3a-G check passed; the verbatim verdict text is not held in this file. That update was written; the G3a-G re-run then returned PASS on 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (per the Founder). G3b-G: PASS — G3b-G REMOTE VERIFIED — NAWA AUTONOMOUS DEVELOPMENT HARNESS v1 ACTIVATION CONDITION SATISFIED (Codex, 2026-10-08; verbatim as given by the Founder). G3a-G and G3b-G verdicts are recorded in this worktree copy per REVIEW_PROTOCOL.md §7, never inside the commit they verify. No engineering batch has run under this harness. Prior A1 verdicts are recorded in docs/execution/pilot/PV1_SLICE3_REAL_OPERATIONAL_REASONING_VALIDATION.md §0.1."
+Reviewer Verdicts: "Harness reviews (Codex): H0.1 — FAIL; H0.1-R1 re-review — FAIL, two MAJOR + one MINOR remaining; H0.1-R2 focused re-review — FAIL, one MINOR stale-state finding only, all substantive checks PASSED; Codex final confirmation (first) — FAIL, stale state references only, substantive harness review PASSED; Codex final verdict — PASS — H0.1-R2 HARNESS SAFE FOR FOUNDER RATIFICATION; Bootstrap Amendment review — all substantive checks PASSED, one MINOR state inconsistency; bootstrap checkpoint confirmation — PASS — BOOTSTRAP CHECKPOINT STATE SAFE — PROCEED TO EBD-C. All as stated by the Founder. First G3a-G invocation, on commit 4aec1e48a7ee9aac71d2769f11643ebb450b5959: FAIL — reported by the Founder as failing only because the mandatory class B3 post-commit Ahead State update had not been written to this file, with every other G3a-G check passed; the verbatim verdict text is not held in this file. That update was written; the G3a-G re-run then returned PASS on 4aec1e48a7ee9aac71d2769f11643ebb450b5959 (per the Founder). G3b-G: PASS — G3b-G REMOTE VERIFIED — NAWA AUTONOMOUS DEVELOPMENT HARNESS v1 ACTIVATION CONDITION SATISFIED (Codex, 2026-10-08; verbatim as given by the Founder). Current GOVERNANCE-ONLY closure — G3a-G on a5965e0b100c41836c5247c09f84de58f0896105: FAIL — GOVERNANCE COMMIT NOT SAFE FOR PUSH (per the Founder). G3a-G and G3b-G verdicts are recorded in this worktree copy per REVIEW_PROTOCOL.md §7, never inside the commit they verify. No engineering batch has run under this harness. Prior A1 verdicts are recorded in docs/execution/pilot/PV1_SLICE3_REAL_OPERATIONAL_REASONING_VALIDATION.md §0.1."
 
 Known Blockers:
   - "No engineering batch is activated. A2 / DEFECT-002 is NOT ACTIVATED; it needs separate Founder activation."
   - "Codex automation is not proven; the harness is LIMITED AUTONOMY until a controller or adapter is authorized and proven."
-Founder Stop Condition Triggered?: "NO OPEN STOP — the lifecycle and G3a-G failure-path ambiguities are resolved by the Supplemental and Second Supplemental EBD-010 decisions. History: on 2026-10-08 the post-activation reconciliation found that a governance-only closure had no defined manifest identity — REVIEW_PROTOCOL.md §9.2 then allowed batch NONE only for the bootstrap closure, which had ended. That decision was reserved to the Founder (FOUNDER_STOP_CONDITIONS.md §1: EBD-002 — Founder decision required). The run stopped for the Founder: nothing was staged or committed, and the question was reported to the Founder. This file recorded it under Pending Work instead of in this field; this entry corrects that record. Resolved by Founder decision EBD-010 (2026-10-08). A second question — how the derived-metadata region, still holding the bootstrap manifest, passes to a new closure — was reported to the Founder on 2026-10-08 and resolved by the EBD-010 Supplemental Decision the same day. A third question — how a failed G3a-G is corrected without a Finalized-to-Finalized change after EBD-C — was reported to the Founder on 2026-10-08 and resolved by the EBD-010 Second Supplemental Decision the same day."
+Founder Stop Condition Triggered?: "NO OPEN POLICY STOP — the G3a-G correction restart is already authorized by the EBD-010 Second Supplemental Decision. Earlier questions resolved by the Supplemental and Second Supplemental EBD-010 decisions. History: on 2026-10-08 the post-activation reconciliation found that a governance-only closure had no defined manifest identity — REVIEW_PROTOCOL.md §9.2 then allowed batch NONE only for the bootstrap closure, which had ended. That decision was reserved to the Founder (FOUNDER_STOP_CONDITIONS.md §1: EBD-002 — Founder decision required). The run stopped for the Founder: nothing was staged or committed, and the question was reported to the Founder. This file recorded it under Pending Work instead of in this field; this entry corrects that record. Resolved by Founder decision EBD-010 (2026-10-08). A second question — how the derived-metadata region, still holding the bootstrap manifest, passes to a new closure — was reported to the Founder on 2026-10-08 and resolved by the EBD-010 Supplemental Decision the same day. A third question — how a failed G3a-G is corrected without a Finalized-to-Finalized change after EBD-C — was reported to the Founder on 2026-10-08 and resolved by the EBD-010 Second Supplemental Decision the same day."
 
-Next Exact Action: "Governance Closure Manifest finalization by Claude Code, natively (REVIEW_PROTOCOL.md §9.6 steps 5–8): batch GOVERNANCE-ONLY, baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959, region Idle → Finalized, normalized identity confirmed. Then native verification of the exact path set and staging and the one commit under EBD-011 once all six conditions hold. Push needs a separate Founder authorization after G3a-G PASS. No substantive edit is permitted. Do not start A2 automatically."
+Next Exact Action: "Native deterministic revision-2 Governance Manifest finalization by Claude Code (batch GOVERNANCE-ONLY, baseline 4aec1e48a7ee9aac71d2769f11643ebb450b5959, cumulative scope, 16 entries). No substantive edit is permitted. Staging and the correction commit only once all seven EBD-012 conditions hold. The closure is NOT PUSHABLE. Do not start A2."
 
-Last Updated By: "Claude Cowork — 2026-10-09 00:17 Asia/Amman (UTC+3) — EBD-C APPROVED (ADR-002); substantive governance state frozen; not committed (class B3)"
+Last Updated By: "Claude Cowork — 2026-10-09 01:37 Asia/Amman (UTC+3) — correction-restart EBD-C APPROVED (ADR-003); substantive correction state frozen; not committed (class B3)"
 ```
 
 ## Governance manifest derived metadata
@@ -282,16 +304,18 @@ REVIEW-MANIFEST
 schema: 2
 kind: GOVERNANCE-CLOSURE
 batch: GOVERNANCE-ONLY
-revision: 1
+revision: 2
 baseline_commit: 4aec1e48a7ee9aac71d2769f11643ebb450b5959
-entry_count: 14
+entry_count: 16
 M 100644 blob:086e741bc3cabe1dc31518301f30b4fd80a650af CURRENT_STATE.md
-A 100644 blob:8aa2837dfb550db40f59135885dccb639f7c6a39 docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md
+A 100644 blob:f8ab693f7504f2cb2051066078eaf4dcf2400766 docs/decisions/ADR-002-post-activation-governance-reconciliation-ebd-c.md
+A 100644 blob:d7b8e73b8088438f95ed5413005972ad3405b76f docs/decisions/ADR-003-g3ag-correction-restart-ebd-c.md
 A 100644 blob:5f97306112d7347a8bcdd7411f64e17e8ada13a7 docs/decisions/EBD-010-permanent-governance-only-closure-rule.md
 A 100644 blob:e505e3908f985891540624fb7b23da01fa92d224 docs/decisions/EBD-011-post-activation-governance-reconciliation-commit-authorization.md
+A 100644 blob:cb445f65dc3a37f993c7d4da8972fe76e722e09b docs/decisions/EBD-012-g3ag-forward-correction-commit-authorization.md
 M 100644 blob:68412e1e0324b8e6ab0a5021d707f5c644cde178 docs/execution/autonomy/ACTIVE_BATCH.md
 M 100644 blob:5fa0a32f48a0b34220ee94c38fa9be14d059f918 docs/execution/autonomy/AUTONOMOUS_LOOP.md
-M 100644 nsha256:f229769714afe279e29c9ddd39a25c1b94e268cb8cab2ff54238d7ec82363aa2 docs/execution/autonomy/CURRENT_AUTONOMOUS_RUN.md
+M 100644 nsha256:c21ec17d13790e0541f9e301eaa3733fabd057ca976c9cdbdea70dc8154e47b7 docs/execution/autonomy/CURRENT_AUTONOMOUS_RUN.md
 M 100644 blob:9ef3633a75fdbd309bed00053eb3ae8f93f11959 docs/execution/autonomy/FOUNDER_REVIEW_PACKAGE_TEMPLATE.md
 M 100644 blob:8cb3f2a647088cdbcb6a86dc0f082d176c032acd docs/execution/autonomy/FOUNDER_STOP_CONDITIONS.md
 A 100644 blob:43033e0c699905740609067ccdf1d38166310722 docs/execution/autonomy/H0_FOUNDER_REVIEW_PACKAGE.md
@@ -300,7 +324,7 @@ M 100644 blob:3ce61ef5f0444218c742cc223e30526e4c14fa48 docs/execution/autonomy/R
 M 100644 blob:1281d1920251eba9a172b1ddb93a1a3bfdb4d8cf docs/execution/autonomy/ROLE_MATRIX.md
 M 100644 blob:5a923a51f8b071fd8831b38ab778a712a715c2ff docs/execution/autonomy/SESSION_RECOVERY_PROTOCOL.md
 END
-manifest_id: a83cec2de4fb2e2bf04c0043d20da1bc95192520531693497c57a700bb31f810
+manifest_id: e31d99b3aead78012a1ef4f8c5f35b187e571648616b6b3429c6266b1e51cf87
 ```
 <!-- END GOVERNANCE MANIFEST DERIVED METADATA -->
 
@@ -322,15 +346,15 @@ git rev-list --left-right --count HEAD...origin/claude-safe-review
 
 Current `GOVERNANCE-ONLY` closure:
 
-Expected **before its governance commit** (now): branch `claude-safe-review`;
-HEAD, tracking origin, and live origin all
-`4aec1e48a7ee9aac71d2769f11643ebb450b5959`; ahead/behind `0 0`; nothing staged
-until the `EBD-011` authorization is effective; the worktree delta exactly as
-`Expected Worktree Delta` lists.
+Expected **now** (G3a-G correction restart): branch `claude-safe-review`;
+HEAD `a5965e0b100c41836c5247c09f84de58f0896105`, parent
+`4aec1e48a7ee9aac71d2769f11643ebb450b5959`; tracking and live origin
+`4aec1e48a7ee9aac71d2769f11643ebb450b5959`; ahead/behind `1 0`; nothing
+staged; the worktree delta exactly as `Expected Worktree Delta` lists.
 
-Expected **after its governance commit**: HEAD is that commit and its parent
-is `4aec1e48a7ee9aac71d2769f11643ebb450b5959`; ahead/behind `1 0` until a
-separately authorized push and `0 0` after it; the `Ahead State` rule of
+Expected **after a forward correction commit**: HEAD is that commit and its
+parent is `a5965e0b100c41836c5247c09f84de58f0896105`; ahead/behind `2 0` until
+a separately authorized push and `0 0` after it; the `Ahead State` rule of
 `SESSION_RECOVERY_PROTOCOL.md` §5 applies.
 
 HISTORICAL ONLY — the bootstrap closure: before its commit HEAD was
@@ -365,7 +389,7 @@ and passed `G3b-G`.
   `docs/decisions/`. The directory was created on 2026-10-08 by the Founder
   ratification record, `EBD-007`, its first entry. `EBD-008` records the
   Bootstrap Amendment and `EBD-009` the conditional governance commit
-  authorization. `ADR-001` records the `EBD-C` approval. `EBD-010` records
+  authorization. `ADR-001` records the bootstrap `EBD-C` approval; `ADR-002` the current closure's `EBD-C`, approved and then invalidated for correction restart. `EBD-012` authorizes the forward correction commit conditionally; `ADR-003` is reserved for its `EBD-C`. `EBD-010` records
   the permanent governance-only closure rule, and `EBD-011` the conditional
   commit authorization for the current closure.
 - The H0.1 Codex probe left one thread in the Codex desktop surface, titled
