@@ -1,13 +1,13 @@
 # Autonomous Loop
 
-**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
+**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
 **Version:** 1.0
 **Category:** Agent Instructions
 **Scope:** The fixed sequence an activated engineering batch follows from Founder activation to STOP.
 **Non-scope:** How to engineer the change itself — `CLAUDE.md`, `ARCHITECTURE_RULES.md`, `CODING_STANDARDS.md` and `AI_AGENT_WORKFLOW.md` govern that.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder (scope and authority rules).
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---
@@ -125,10 +125,9 @@ schema, migrations, architecture contract, or anything else listed in
 
 A failed `G3a-E` returns to `G2`, not to `G3a-E`: the content must be reviewed
 again before it can be verified again. A failed `G3a-G` is never pushed; it
-returns to Governance Closure Documentation and a repeated `EBD-C` when the
-correction changes any substantive content, and to Governance Closure Manifest
-finalization when it changes only the derived-metadata region
-(`REVIEW_PROTOCOL.md` §9.6 step 11).
+follows the correction restart in `REVIEW_PROTOCOL.md` §9.6 step 11 — `EBD-C`
+invalidated, forward correction, a new `EBD-C`, manifest finalization, and
+`G3a-G` again on the corrected tip.
 
 **Corrections after a commit are forward commits.** A reviewed commit is never
 amended, rebased, reset, or recreated to make a gate pass. Any such rewrite

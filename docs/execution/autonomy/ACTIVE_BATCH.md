@@ -1,13 +1,13 @@
 # Active Batch
 
-**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
+**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
 **Version:** 1.0
 **Category:** Agent Instructions (autonomous-run operational record)
 **Scope:** The single record of which batch, if any, the Founder has activated for autonomous execution.
 **Non-scope:** Project status in general — `CURRENT_STATE.md` is authoritative for that; this file is derived from it.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder. Only an explicit Founder instruction may change the activation state below.
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---
@@ -19,7 +19,7 @@ ACTIVE AUTONOMOUS ENGINEERING BATCH:
 NONE
 
 HARNESS:
-FOUNDER RATIFIED AS AMENDED — NOT YET ACTIVE
+ACTIVE — since 2026-10-08 (G3b-G REMOTE VERIFIED)
 
 PRODUCT DEVELOPMENT:
 NOT ACTIVE
@@ -78,8 +78,7 @@ none of the autonomous authority in Charter §5.
 (Charter §18;
 `docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`).
 The ratification activates no engineering batch and authorizes no staging,
-commit, or push. The harness is not ACTIVE until its governance commit passes
-`G3b-G`.
+commit, or push. It did not itself make the harness ACTIVE.
 
 **Bootstrap Amendment.** On 2026-10-08 the Founder approved a one-time
 exception for the initial harness governance closure
@@ -92,6 +91,12 @@ harness, executable only after `EBD-C` is approved and the Governance Closure
 Manifest and its derived metadata are finalized and confirmed
 (`docs/decisions/EBD-009-harness-governance-commit-authorization.md`). It
 grants no push and activates no engineering batch.
+
+**Harness activation.** The harness became ACTIVE on 2026-10-08, when its
+governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959` passed `G3b-G` remote
+verification. Activation activates no engineering batch: the active
+autonomous engineering batch stays `NONE`, and A2 / DEFECT-002 stays NOT
+ACTIVATED. Founder Review Package: `docs/execution/autonomy/H0_FOUNDER_REVIEW_PACKAGE.md`.
 
 ## Batch register
 

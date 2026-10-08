@@ -1,13 +1,13 @@
 # Founder Review Package — Template
 
-**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
+**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
 **Version:** 1.0
 **Category:** Agent Instructions
 **Scope:** The structure of the single document the Founder receives when an autonomous batch reaches STOP.
 **Non-scope:** The batch's full evidence, which stays in its task document under `docs/execution/`.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder (scope and authority rules).
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---

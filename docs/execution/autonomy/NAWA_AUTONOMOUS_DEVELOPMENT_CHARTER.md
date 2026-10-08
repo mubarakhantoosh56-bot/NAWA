@@ -1,13 +1,13 @@
 # NAWA Autonomous Development Charter
 
-**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
+**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
 **Version:** 1.0
 **Category:** Agent Instructions
 **Scope:** How AI agents execute an activated, bounded engineering batch on NAWA without the Founder relaying prompts or state between them.
 **Non-scope:** Product architecture, product direction, engineering standards, and current project status — all of which stay in their existing authoritative documents.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder (scope and authority rules).
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---
@@ -304,8 +304,9 @@ ratification (Section 18).
 - **Decision Log entry:**
   `docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`.
 - **Status:** Founder-ratified on 2026-10-08, and amended the same day by the
-  Bootstrap Amendment (Section 19). Not ACTIVE until `G3b-G` PASS on the
-  harness governance commit.
+  Bootstrap Amendment (Section 19). ACTIVE since 2026-10-08, when the
+  harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959` passed
+  `G3b-G`.
 - **Not authorized by the ratification:** A2 activation or any engineering
   batch; migration or schema changes; product code or test changes; production
   deployment; secrets changes; destructive data operations; staging, commit,

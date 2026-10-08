@@ -1,13 +1,13 @@
 # Review Protocol
 
-**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`: §2.6, §9.2, §9.7). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
-**Version:** 1.1
+**Status:** Founder-ratified as amended on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`; Bootstrap Amendment `docs/decisions/EBD-008-harness-bootstrap-amendment.md`: §2.6, §9.2, §9.7; Governance-Only Closure Rule `docs/decisions/EBD-010-permanent-governance-only-closure-rule.md`: §2.6, §9.2, §9.7, and its Supplemental Decisions: §3.1, §9.5, §9.6). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+**Version:** 1.4
 **Category:** Agent Instructions
 **Scope:** When independent review happens during an autonomous run, what it checks, and how verdicts are issued and recorded.
 **Non-scope:** Routine engineering self-checks, and Executive Board review authority under EBD-002.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder (scope and authority rules).
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---
@@ -102,8 +102,8 @@ or "Gate 3b" without the `-E` or `-G` suffix.
 
 - **When:** after the governance closure commit exists locally, before any
   push. Never before `G3b-E` has passed — except in the bootstrap closure
-  (Section 9.2), where no engineering commit exists and so no `G3b-E` exists
-  to wait for.
+  and in a governance-only closure (Section 9.2), where no engineering commit
+  is part of the closure and so no `G3b-E` exists to wait for.
 - **Codex verifies — all required:**
   1. **Exact content equivalence.** The canonical manifest reconstructed from
      the governance commit — path set, statuses, modes, blob identities, the
@@ -113,8 +113,9 @@ or "Gate 3b" without the `-E` or `-G` suffix.
      (Section 9.7). This is a deterministic comparison; reading the file does
      not replace it.
   2. **Lineage.** The manifest's `baseline_commit` is the engineering commit
-     verified at `G3b-E` — or, in the bootstrap closure only, the baseline
-     fixed in Section 9.2 and verified as in Section 9.7 step 1 — and
+     verified at `G3b-E` — or, in the bootstrap closure or a governance-only
+     closure, the baseline fixed in Section 9.2 and verified as in
+     Section 9.7 step 1 — and
      `baseline_commit..HEAD` contains exactly the commits in the run file's
      `Ahead State` and nothing else.
   3. **Scope.** The commit contains closure documentation only — no product
@@ -154,7 +155,7 @@ manifest reviewed, and the findings.
 | `G2` | Bounded correction by Claude Code, then `G2` |
 | `G3a-E` | `G2` — Codex re-reviews the cumulative content and issues a new manifest revision; then `G3a-E` |
 | `G3b-E` | Not applicable: a remote mismatch is a Git-state mismatch (FSC-15) |
-| `G3a-G` | If the correction changes any byte outside the derived-metadata region: Governance Closure Documentation, then `EBD-C` again, then manifest finalization, then `G3a-G`. If it changes only that region: manifest finalization, then `G3a-G` (Section 9.6 step 11) |
+| `G3a-G` | Correction restart (Section 9.6 step 11): the current `EBD-C` recorded `INVALIDATED FOR CORRECTION RESTART`; region reset to Idle; forward correction above the failed commit; independent review where required; a new `EBD-C`; manifest finalization; then `G3a-G` on the corrected tip. Not pushable until that `G3a-G` passes |
 | `G3b-G` | Not applicable: a remote mismatch is a Git-state mismatch (FSC-15) |
 
 A correction made after a commit exists is a **new forward commit**. The
@@ -424,12 +425,39 @@ commit passes `G3b-G`. It applies to no engineering batch. It does not permit
 any other prior baseline, does not permit skipping `G3b-E` where an engineering
 commit exists, and does not exempt governance-only work in general from
 engineering verification. `NONE` is not a valid `batch` value in any other
-manifest. Outside the bootstrap closure, rules 6 and 8 apply unchanged: the
-governance baseline is the engineering commit verified at `G3b-E`.
+manifest. Outside the bootstrap closure and the governance-only closure
+below, rules 6 and 8 apply unchanged: the governance baseline is the
+engineering commit verified at `G3b-E`.
+
+**Governance-only closure — permanent rule (`EBD-010`).** A governance
+closure made while Engineering Batch is `NONE`, after the bootstrap closure,
+uses:
+
+- `batch`: `GOVERNANCE-ONLY`, recorded in the run file's
+  `Governance Closure Batch` field;
+- `baseline_commit`: the exact last remotely verified checkpoint of
+  `claude-safe-review`, recorded in the run file's
+  `Governance Closure Baseline` field before drafting begins.
+
+It is valid only if **all** of these are true:
+
+1. Engineering Batch is `NONE`;
+2. every path in the closure is governance or documentation. Any change to
+   product code, tests, migrations, data, knowledge, secrets, or engineering
+   implementation makes `GOVERNANCE-ONLY` invalid;
+3. it carries no engineering batch's work. Governance-only work is never
+   attached to an unrelated engineering batch to avoid this rule or its
+   gates.
+
+The governance closure sequence applies in full (Section 9.6): `EBD-C`, the
+Governance Closure Manifest, and `G3a-G` are required. After `G3a-G` PASS,
+the push needs a separate Founder authorization, and `G3b-G` is then
+required. Manifest serialization and schema are unchanged. `NONE` remains
+bootstrap-only and is never reused.
 
 Where another harness document says governance closure follows `G3b-E`, it
-describes the standard sequence; for the bootstrap closure only, this
-paragraph governs.
+describes the standard sequence; for the bootstrap closure and the
+governance-only closure, this section governs.
 
 **`manifest_id`** is the SHA-256 of the complete canonical body — every byte
 from the `R` of `REVIEW-MANIFEST` through the LF that ends `END` — written as
@@ -547,6 +575,30 @@ The region never holds a governance decision, activation state, an approval, a
 scope statement, product status, Founder or CTO authority, or any closure
 statement. All of that stays outside the region and is hash-bound.
 
+**Region lifecycle (`EBD-010`, Supplemental Decision).** Every governance
+closure takes the region through one lifecycle:
+
+```text
+Finalized(previous) → Idle(new closure) → Finalized(new closure)
+```
+
+- Opening a new closure belongs to its Draft step (Section 9.6 step 1). If the
+  region still holds the previous closure's finalized manifest, it is reset to
+  Idle then. The reset happens only **before** `EBD-C` for the new closure.
+- The previous manifest is not copied anywhere. It stays, immutably, in the
+  previous closure's commit and in Git history.
+- A direct `Finalized(previous) → Finalized(new)` transition is forbidden.
+- After `EBD-C`, the only change to the region is the deterministic
+  `Idle → Finalized(new closure)` insertion (Section 9.6 step 7).
+- A substantive change after `EBD-C` invalidates it (Section 9.6 step 4). The
+  lifecycle restarts — the region is Idle again — before a new `EBD-C` is
+  issued.
+- After a `G3a-G` FAIL, `Finalized → Idle` is allowed only once the current
+  `EBD-C` is recorded `INVALIDATED FOR CORRECTION RESTART` (Section 9.6
+  step 11). A correction never goes from one Finalized manifest directly to
+  another.
+- `manifest_id` never appears outside the region. The schema does not change.
+
 **Normalization `N`.** Input: the exact bytes `F` of the file.
 
 1. `F` must be valid UTF-8, must not begin with the bytes `EF BB BF`, and must
@@ -608,7 +660,9 @@ omega
 There is one sequence. `AUTONOMOUS_LOOP.md` stages 15–19 are these steps.
 
 1. **Draft.** The governance closure documents are brought to their
-   substantive final state. The derived-metadata region is Idle.
+   substantive final state. The derived-metadata region is Idle — reset from
+   the previous closure's manifest if needed, as Section 9.5 (region
+   lifecycle) defines.
 2. **`EBD-C`.** The CTO reviews and approves that substantive state, as
    EBD-002 requires (`AUTONOMOUS_LOOP.md` §8.4). The `EBD-C` approval record is
    written **before** any final manifest computation, and is itself part of
@@ -618,7 +672,8 @@ There is one sequence. `AUTONOMOUS_LOOP.md` stages 15–19 are these steps.
    of the derived-metadata region.
 4. **Invalidation.** If `EBD-C` causes, requests, or requires any substantive
    change, or any substantive change happens after it for any reason, that
-   `EBD-C` approval is invalid. The draft is updated and `EBD-C` is repeated.
+   `EBD-C` approval is invalid. The draft is updated, the region lifecycle
+   restarts (Section 9.5), and `EBD-C` is repeated.
 5. **Final manifest.** With a valid `EBD-C` and every approval record that
    belongs in the closure present, Claude Code computes the entries natively:
    `blob:` identities as in Section 9.3 for every closure path, and the
@@ -636,10 +691,27 @@ There is one sequence. `AUTONOMOUS_LOOP.md` stages 15–19 are these steps.
 9. **Governance closure commit**, by Claude Code, containing exactly the
    manifest's paths.
 10. **`G3a-G`** reconstructs and verifies (Section 9.7).
-11. **On mismatch**, `G3a-G` fails and nothing is pushed. The correction is a
-    forward commit. If it changes any byte outside the derived-metadata
-    region, in any closure path, the sequence returns to step 1 and `EBD-C` is
-    repeated. If it changes only the region, the sequence returns to step 5.
+11. **On a `G3a-G` FAIL — correction restart** (`EBD-010`, Second
+    Supplemental Decision). For every governance closure, whatever the cause:
+    - The closure is NOT PUSHABLE. The failed local closure commit is never
+      pushed by itself.
+    - Amend, rebase, reset, and any history rewrite are forbidden (FSC-09).
+    - Before any correction, the current `EBD-C` is recorded as
+      `INVALIDATED FOR CORRECTION RESTART`. The closure is then in its
+      pre-`EBD-C` state for correction purposes.
+    - Only after that may the region go from Finalized to Idle, as part of the
+      restart (Section 9.5).
+    - `baseline_commit` does not move to the failed commit. It stays the last
+      remotely verified checkpoint from which the closure began.
+    - Corrections are forward-only. A required correction commit is a new
+      commit above the failed local commit, and `revision` increases by
+      Section 9.2 rule 7.
+    - After the correction: independent review where required; a new
+      `EBD-C` (steps 1–4); then the deterministic `Idle → Finalized`
+      (steps 5–8); then `G3a-G` again on the corrected tip.
+    - The push stays forbidden until the corrected tip passes `G3a-G` and the
+      Founder grants a separate push authorization. `G3b-G` is required after
+      the push.
 
 ### 9.7 Verification at `G3a-G`
 
@@ -666,6 +738,18 @@ does not replace any of them.
    - no engineering commit exists in `baseline_commit..<commit>`, and every
      path in the range is documentation.
 
+   **Governance-only closure (Section 9.2).** In place of that one equality
+   Codex verifies every one of the following, and the gate fails if any does
+   not hold:
+   - the run file in the commit, outside the region, records
+     `Engineering Batch: NONE` and `Governance Closure Batch: GOVERNANCE-ONLY`;
+   - `baseline_commit` equals the `Governance Closure Baseline` field, and
+     equals the commit live `origin/claude-safe-review` points to;
+   - no engineering commit exists in `baseline_commit..<commit>`, and every
+     path in the range is governance or documentation — no product code,
+     tests, migrations, data, knowledge, secrets, or engineering
+     implementation.
+
    The ancestor and expected-commits checks above still apply.
 2. **Path set and blob identities.** Run
    `git -c core.quotepath=false diff --raw --no-renames --no-abbrev <baseline_commit> <commit>`
@@ -677,7 +761,9 @@ does not replace any of them.
    id.
 4. **Header.** `kind` is `GOVERNANCE-CLOSURE`; `schema` is `2`; `batch` is the
    `Engineering Batch` value in the committed run file, outside the region
-   (`NONE` only in the bootstrap closure);
+   (`NONE` only in the bootstrap closure) — except in a governance-only
+   closure, where it is the `Governance Closure Batch` value,
+   `GOVERNANCE-ONLY`;
    `revision` is `git rev-list --count <baseline_commit>..<commit>`;
    `entry_count` is the number of entries.
 5. **Canonical `manifest_id`.** Serialize the canonical body as in Section 9.2
@@ -710,3 +796,6 @@ pushed.
 |---|---|---|---|---|
 | 1.0 | 2026-10-08 | Ratified with the harness. | Founder | `docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md` |
 | 1.1 | 2026-10-08 | Bootstrap Amendment: one-time exception for the initial harness governance closure — fixed `baseline_commit` and `batch: NONE` (§2.6, §9.2, §9.7). No other rule changed. | Founder | `docs/decisions/EBD-008-harness-bootstrap-amendment.md` |
+| 1.2 | 2026-10-08 | Governance-Only Closure Rule: permanent `batch: GOVERNANCE-ONLY` for governance-only closures while Engineering Batch is `NONE`, with the baseline recorded before drafting; `EBD-C`, the manifest, `G3a-G`, a separate Founder push authorization, and `G3b-G` all required; `NONE` stays bootstrap-only (§2.6, §9.2, §9.7). No other rule changed; schema unchanged. | Founder | `docs/decisions/EBD-010-permanent-governance-only-closure-rule.md` |
+| 1.3 | 2026-10-08 | Supplemental Decision to `EBD-010`: derived-metadata region lifecycle `Finalized(previous) → Idle(new closure) → Finalized(new closure)`; reset to Idle only before `EBD-C`; direct Finalized → Finalized forbidden; after `EBD-C` only `Idle → Finalized`; lifecycle restart before a repeated `EBD-C` (§9.5, §9.6). Schema unchanged. | Founder | `docs/decisions/EBD-010-permanent-governance-only-closure-rule.md` (Section 10) |
+| 1.4 | 2026-10-08 | Second Supplemental Decision to `EBD-010`: `G3a-G` failure / correction restart — not pushable; `EBD-C` recorded `INVALIDATED FOR CORRECTION RESTART` before any correction; only then Finalized → Idle; baseline unchanged; forward-only correction above the failed commit; new `EBD-C`, then Idle → Finalized and `G3a-G` on the corrected tip; push only after that PASS and a separate Founder authorization; `G3b-G` after the push (§3.1, §9.5, §9.6 step 11). Schema unchanged. | Founder | `docs/decisions/EBD-010-permanent-governance-only-closure-rule.md` (Section 11) |

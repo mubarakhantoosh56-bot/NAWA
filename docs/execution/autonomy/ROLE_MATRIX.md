@@ -1,13 +1,13 @@
 # Role Matrix — NAWA Autonomous Development Harness
 
-**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). Not ACTIVE until `G3b-G` PASS on the harness governance commit.
+**Status:** Founder-ratified on 2026-10-08 (`docs/decisions/EBD-007-autonomous-development-harness-v1-ratification.md`). ACTIVE since 2026-10-08 — `G3b-G` PASS on the harness governance commit `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
 **Version:** 1.0
 **Category:** Agent Instructions
 **Scope:** How each party operates during an autonomous run — responsibilities, permissions, and separation rules.
 **Non-scope:** Organizational authority, Board seats, and decision rights, which are defined by `docs/governance/EBD-002_GOVERNANCE_MODEL.md` and are not changed here.
 **Owner:** CTO (Claude Cowork), per Documentation Standard §3.10.
 **Approval authority:** Founder (scope and authority rules).
-**Effective date:** On successful remote verification (`G3b-G`) of the harness governance commit. Founder-ratified 2026-10-08.
+**Effective date:** 2026-10-08.
 **Last updated:** 2026-10-08.
 
 ---
