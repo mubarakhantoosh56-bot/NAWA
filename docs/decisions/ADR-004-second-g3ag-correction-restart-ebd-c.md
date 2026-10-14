@@ -1,7 +1,7 @@
 # Architectural Decision Record #004 — Second G3a-G Correction Restart EBD-C
 
-**Status:** APPROVED — CTO — 2026-10-14.
-**Version:** 1.0
+**Status:** INVALIDATED FOR CORRECTION RESTART (2026-10-14; Section 9). Originally APPROVED — CTO — 2026-10-14.
+**Version:** 1.1 — adds the invalidation record (Section 9). Sections 1–8 are unchanged.
 **Category:** Decision Logs
 **Scope:** The CTO's approval, at EBD-002 checkpoint `EBD-C`, of the substantive final state of the third forward correction draft of the post-activation governance reconciliation, after its second `G3a-G` failure and correction restart.
 **Non-scope:** Any Founder decision; any independent gate verdict; the Governance Closure Manifest; staging, commit, or push; any engineering batch.
@@ -135,3 +135,37 @@ This record cites no `manifest_id`; none exists for revision 3.
 - **Date.** The instruction that requested this approval gave the status date
   2026-10-12; the approval was issued on 2026-10-14, and this record carries
   the date of issuance.
+
+## 9. Invalidation record — INVALIDATED FOR CORRECTION RESTART (2026-10-14)
+
+This section is appended; Sections 1–8 above are the original approval and are
+not rewritten. The approval of 2026-10-14 stands as a historical fact.
+
+- **Status:** this correction-restart `EBD-C` is INVALIDATED FOR CORRECTION
+  RESTART, under the `EBD-010` Second Supplemental Decision
+  (`REVIEW_PROTOCOL.md` §9.6 step 11).
+- **Why:** `G3a-G` failed on the third corrected tip
+  `bc9a269c402451163223c5f7968465c58d455836` —
+  `FAIL — THIRD CORRECTED TIP NOT SAFE FOR PUSH`, as stated by the Founder. As
+  reported, the failure is confined to the live checkpoint in the worktree
+  copy of `CURRENT_AUTONOMOUS_RUN.md`, which contradicted Git and itself in
+  four places: the `Governance Commit` field omitted
+  `bc9a269c402451163223c5f7968465c58d455836`; `Why Ahead` still identified
+  `AUTONOMOUS_LOOP.md` stage 18; the `Corrected Tip` field still treated
+  `042af4423159ada092db24c134095ef487e13aed` as the current local HEAD; and
+  the future third forward correction commit was still recorded as not yet
+  created.
+- **Push:** `bc9a269c402451163223c5f7968465c58d455836` was not pushed. The
+  closure is NOT PUSHABLE.
+- **Baseline:** unchanged — `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+- **History:** all three local governance commits —
+  `a5965e0b100c41836c5247c09f84de58f0896105`,
+  `042af4423159ada092db24c134095ef487e13aed`, and
+  `bc9a269c402451163223c5f7968465c58d455836` — remain intact and are not
+  amended, rebased, reset, squashed, or replaced. No history is rewritten. Any
+  correction is a forward-only commit above
+  `bc9a269c402451163223c5f7968465c58d455836`.
+- **Authorization:** `EBD-013` is consumed by
+  `bc9a269c402451163223c5f7968465c58d455836` and authorizes no further commit
+  and no push.
+- **Next:** a new `EBD-C` will be required, with its own Decision Log record.
