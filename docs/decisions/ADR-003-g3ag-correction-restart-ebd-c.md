@@ -1,7 +1,7 @@
 # Architectural Decision Record #003 — G3a-G Correction Restart EBD-C
 
-**Status:** APPROVED — CTO — 2026-10-09.
-**Version:** 1.0
+**Status:** INVALIDATED FOR CORRECTION RESTART (2026-10-09; Section 9). Originally APPROVED — CTO — 2026-10-09.
+**Version:** 1.1 — adds the invalidation record (Section 9). Sections 1–8 are unchanged.
 **Category:** Decision Logs
 **Scope:** The CTO's approval, at EBD-002 checkpoint `EBD-C`, of the substantive final state of the forward correction draft of the post-activation governance reconciliation, after its `G3a-G` failure and correction restart.
 **Non-scope:** Any Founder decision; any independent gate verdict; the Governance Closure Manifest; staging, commit, or push; any engineering batch.
@@ -128,3 +128,32 @@ This record cites no `manifest_id`; none exists for revision 2.
 - **Identifier.** `ADR-003` is the next unused ADR identifier after
   `ADR-002`. It was reserved in `CURRENT_AUTONOMOUS_RUN.md` before this record
   was written.
+
+## 9. Invalidation record — INVALIDATED FOR CORRECTION RESTART (2026-10-09)
+
+This section is appended; Sections 1–8 above are the original approval and are
+not rewritten. The approval of 2026-10-09 stands as a historical fact.
+
+- **Status:** this correction-restart `EBD-C` is INVALIDATED FOR CORRECTION
+  RESTART, under the `EBD-010` Second Supplemental Decision
+  (`REVIEW_PROTOCOL.md` §9.6 step 11).
+- **Why:** `G3a-G` failed on the corrected tip
+  `042af4423159ada092db24c134095ef487e13aed` —
+  `FAIL — G3a-G CORRECTED TIP NOT SAFE FOR PUSH`, as stated by the Founder. As
+  reported, the committed corrected snapshot verified successfully (topology,
+  the revision-2 manifest and its 16 cumulative entries, canonical identities,
+  this record, `EBD-012`, and the derived region). The failure is confined to
+  the live checkpoint in the worktree copy of `CURRENT_AUTONOMOUS_RUN.md`:
+  its Current Work and Pending Work still described pre-`EBD-C`, pre-manifest,
+  and pre-commit work after those stages had completed — an internally
+  contradictory run file (`SESSION_RECOVERY_PROTOCOL.md` class S10).
+- **Push:** the corrected tip was not pushed. The closure is NOT PUSHABLE.
+- **Baseline:** unchanged — `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+- **History:** both local governance commits —
+  `a5965e0b100c41836c5247c09f84de58f0896105` and
+  `042af4423159ada092db24c134095ef487e13aed` — remain intact and are not
+  amended, rebased, reset, squashed, or replaced. Any correction is a forward
+  commit above `042af4423159ada092db24c134095ef487e13aed`.
+- **Authorization:** `EBD-012` is consumed by
+  `042af4423159ada092db24c134095ef487e13aed` and authorizes no further commit.
+- **Next:** a new `EBD-C` will be required, with its own Decision Log record.
