@@ -1,7 +1,7 @@
 # Architectural Decision Record #005 — Third G3a-G Correction Restart EBD-C
 
-**Status:** APPROVED — CTO — 2026-10-15.
-**Version:** 1.0
+**Status:** INVALIDATED FOR CORRECTION RESTART (2026-10-15; Section 9). Originally APPROVED — CTO — 2026-10-15.
+**Version:** 1.1 — adds the invalidation record (Section 9). Sections 1–8 are unchanged.
 **Category:** Decision Logs
 **Scope:** The CTO's approval, at EBD-002 checkpoint `EBD-C`, of the substantive final state of the fourth forward correction draft of the post-activation governance reconciliation, after its third `G3a-G` failure and correction restart.
 **Non-scope:** Any Founder decision; any independent gate verdict; the Governance Closure Manifest; staging, commit, or push; any engineering batch.
@@ -150,3 +150,41 @@ This record cites no `manifest_id`; none exists for revision 4.
   before this record was written.
 - **Date.** This record carries its actual issuance date, 2026-10-15
   (Asia/Amman). It is not backdated.
+
+## 9. Invalidation record — INVALIDATED FOR CORRECTION RESTART (2026-10-15)
+
+This section is appended; Sections 1–8 above are the original approval and are
+not rewritten. The approval of 2026-10-15 stands as a historical fact.
+
+- **Status:** this correction-restart `EBD-C` is INVALIDATED FOR CORRECTION
+  RESTART, under the `EBD-010` Second Supplemental Decision
+  (`REVIEW_PROTOCOL.md` §9.6 step 11).
+- **Why:** `G3a-G` failed on the fourth corrected tip
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240` —
+  `FAIL — G3a-G FOURTH CORRECTED TIP NOT SAFE FOR PUSH`, as stated by the
+  Founder. As reported, the committed closure verified successfully
+  (four-commit forward-only topology, the exact fourth correction commit, the
+  revision-4 manifest and its 20 cumulative entries, the `manifest_id`, the
+  normalized identity, this record, the consumption of `EBD-014`, the original
+  baseline, no push, no history rewrite). The failure is confined to two
+  authoritative-state conflicts in the live worktree copy of
+  `CURRENT_AUTONOMOUS_RUN.md` (`SESSION_RECOVERY_PROTOCOL.md` §4.2, class
+  S10): the `Current Governance Closure` field for the future fourth forward
+  correction commit still recorded it as not yet created, with `EBD-014` not
+  yet effective; and the live Decision Log note still represented `EBD-014` as
+  not yet effective instead of consumed.
+- **Push:** `e1cce4fe2aa2e4604d2ba01b05d8917db266f240` was not pushed. The
+  closure is NOT PUSHABLE.
+- **Baseline:** unchanged — `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+- **History:** all four local governance commits —
+  `a5965e0b100c41836c5247c09f84de58f0896105`,
+  `042af4423159ada092db24c134095ef487e13aed`,
+  `bc9a269c402451163223c5f7968465c58d455836`, and
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240` — remain intact and are not
+  amended, rebased, reset, squashed, or replaced. No history is rewritten. Any
+  correction is a forward-only commit above
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240`.
+- **Authorization:** `EBD-014` is consumed by
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240` and authorizes no further commit
+  and no push.
+- **Next:** a new `EBD-C` will be required, with its own Decision Log record.
