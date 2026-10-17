@@ -1,7 +1,7 @@
 # Architectural Decision Record #006 — Fourth G3a-G Correction Restart EBD-C
 
-**Status:** APPROVED — CTO — 2026-10-15.
-**Version:** 1.0
+**Status:** INVALIDATED FOR CORRECTION RESTART (2026-10-15; Section 9). Originally APPROVED — CTO — 2026-10-15.
+**Version:** 1.1 — adds the invalidation record (Section 9). Sections 1–8 are unchanged.
 **Category:** Decision Logs
 **Scope:** The CTO's approval, at EBD-002 checkpoint `EBD-C`, of the substantive final state of the fifth forward correction draft of the post-activation governance reconciliation, after its fourth `G3a-G` failure and correction restart.
 **Non-scope:** Any Founder decision; any independent gate verdict; the Governance Closure Manifest; staging, commit, or push; any engineering batch.
@@ -152,3 +152,45 @@ This record cites no `manifest_id`; none exists for revision 5.
   before this record was written.
 - **Date.** This record carries its actual issuance date, 2026-10-15
   (Asia/Amman). It is not backdated.
+
+## 9. Invalidation record — INVALIDATED FOR CORRECTION RESTART (2026-10-15)
+
+This section is appended; Sections 1–8 above are the original approval and are
+not rewritten. The approval of 2026-10-15 stands as a historical fact.
+
+- **Status:** this correction-restart `EBD-C` is INVALIDATED FOR CORRECTION
+  RESTART, under the `EBD-010` Second Supplemental Decision
+  (`REVIEW_PROTOCOL.md` §9.6 step 11).
+- **Why:** `G3a-G` failed on the fifth corrected tip
+  `9a5759fcdcadda313620f3c3106e96ecbd77f34d` —
+  `FAIL — G3a-G FIFTH CORRECTED TIP NOT SAFE FOR PUSH`, as stated by the
+  Founder. As reported, the immutable committed closure verified successfully
+  (commit identity, parent and subject, the exact four-path correction delta,
+  the five-commit forward-only topology, the revision-5 manifest and its 22
+  cumulative entries, the canonical manifest and `manifest_id`, the normalized
+  run identity, this record, the consumption of `EBD-015`, derived-region byte
+  integrity, the remote state, and the product-safety boundary). The failure
+  is confined to the live worktree copy of `CURRENT_AUTONOMOUS_RUN.md`: a
+  BLOCKER (`SESSION_RECOVERY_PROTOCOL.md` §4.2, class S10) — the top-level
+  `Fourth Corrected Tip` field still declared
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240` the current local HEAD; and a
+  MAJOR — three historical commit blocks still carried an unqualified
+  present-tense claim that the live derived-metadata region was Idle, which
+  conflicted with the live revision-5 Finalized region.
+- **Push:** `9a5759fcdcadda313620f3c3106e96ecbd77f34d` was not pushed. The
+  closure is NOT PUSHABLE.
+- **Baseline:** unchanged — `4aec1e48a7ee9aac71d2769f11643ebb450b5959`.
+- **History:** all five local governance commits —
+  `a5965e0b100c41836c5247c09f84de58f0896105`,
+  `042af4423159ada092db24c134095ef487e13aed`,
+  `bc9a269c402451163223c5f7968465c58d455836`,
+  `e1cce4fe2aa2e4604d2ba01b05d8917db266f240`, and
+  `9a5759fcdcadda313620f3c3106e96ecbd77f34d` — remain intact and are not
+  amended, rebased, reset, squashed, or replaced. No history is rewritten. Any
+  correction is a forward-only commit above
+  `9a5759fcdcadda313620f3c3106e96ecbd77f34d`.
+- **Authorization:** `EBD-015` is consumed by
+  `9a5759fcdcadda313620f3c3106e96ecbd77f34d` and authorizes no further commit
+  and no push.
+- **Next:** a new Founder authorization and a new `EBD-C`, with its own
+  Decision Log record, will be required.
